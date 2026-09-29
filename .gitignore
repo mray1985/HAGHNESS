@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.log
+*.env
+.env.*
+*.bak
+*.bak.*
+*.orig
+*.rej
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local work artifacts — never commit
+*.zip
+*.sqlite3
+secrets.json
+credentials.json

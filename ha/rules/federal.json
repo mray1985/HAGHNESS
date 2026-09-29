@@ -1,0 +1,234 @@
+{
+  "_meta": {
+    "purpose": "Federal individual income tax rule data for TY2024, TY2025, TY2026.",
+    "authority": "Internal Revenue Code as amended; annual inflation-adjustment revenue procedures.",
+    "CRITICAL": "This file is DATA INPUT, not legal authority. Every figure below is transcribed from the cited revenue procedure and is flagged. Figures with verified=false MUST be independently confirmed against the primary source before any return is prepared or filed.",
+    "not_legal_advice": true,
+    "no_filing_authorization": "This software is a calculation aid only. It does not file returns, does not transmit data to the IRS, and does not constitute return preparation by a signer. See ha/compliance/guardrails.py."
+  },
+
+  "years": {
+    "2024": {
+      "status": "final",
+      "verified": false,
+      "verification_note": "TRANSCRIBED FROM MEMORY, NOT READ OFF THE PRIMARY SOURCE. Status 'final' means 2024 law is settled; it does NOT mean these digits have been checked. Confirm the standard deduction and all seven bracket thresholds against Rev. Proc. 2023-34, then record it in verification.json.",
+      "citation": "IRS Rev. Proc. 2023-34 (2023-44 I.R.B. 1287)",
+      "notes": "Standard deduction reflects TCJA-stabilized amounts. OBBBA (P.L. 119-21) did not change TY2024 figures.",
+      "standard_deduction": {
+        "single": 14600, "mfj": 29200, "mfs": 14600, "hoh": 21900, "qss": 29200
+      },
+      "additional_standard_deduction_blind": {
+        "single": 0, "mfj": 0, "mfs": 0, "hoh": 0, "qss": 0,
+        "note": "Blind/disabled elderly addition is not indexed. Requires separate worksheet logic and age/retirement tests. NOT IMPLEMENTED - see guardrails."
+      },
+      "brackets": {
+        "single": [
+          [0, 11600, 0.10], [11600, 47150, 0.12], [47150, 100525, 0.22],
+          [100525, 191950, 0.24], [191950, 243725, 0.32], [243725, 609350, 0.35],
+          [609350, null, 0.37]
+        ],
+        "mfj": [
+          [0, 23200, 0.10], [23200, 94300, 0.12], [94300, 201050, 0.22],
+          [201050, 383900, 0.24], [383900, 487450, 0.32], [487450, 731200, 0.35],
+          [731200, null, 0.37]
+        ],
+        "mfs": [
+          [0, 11600, 0.10], [11600, 47150, 0.12], [47150, 100525, 0.22],
+          [100525, 191975, 0.24], [191975, 243700, 0.32], [243700, 365600, 0.35],
+          [365600, null, 0.37]
+        ],
+        "hoh": [
+          [0, 16550, 0.10], [16550, 63100, 0.12], [63100, 100500, 0.22],
+          [100500, 191950, 0.24], [191950, 243700, 0.32], [243700, 609350, 0.35],
+          [609350, null, 0.37]
+        ],
+        "qss": [
+          [0, 23200, 0.10], [23200, 94300, 0.12], [94300, 201050, 0.22],
+          [201050, 383900, 0.24], [383900, 487450, 0.32], [487450, 731200, 0.35],
+          [731200, null, 0.37]
+        ]
+      },
+      "capital_gains_rates": {
+        "note": "0/15/20% thresholds on taxable gain. Unverified against Rev. Proc. 2023-34 Sec 3.",
+        "verified": false,
+        "single": [[0, 47025, 0.0], [47025, 518900, 0.15], [518900, null, 0.20]],
+        "mfj":   [[0, 94050, 0.0], [94050, 583750, 0.15], [583750, null, 0.20]],
+        "mfs":   [[0, 47025, 0.0], [47025, 291900, 0.15], [291900, null, 0.20]],
+        "hoh":   [[0, 63150, 0.0], [63150, 551300, 0.15], [551300, null, 0.20]],
+        "qss":   [[0, 94050, 0.0], [94050, 583750, 0.15], [583750, null, 0.20]]
+      },
+      "child_tax_credit": {
+        "verified": false,
+        "citation": "IRC 24(h)(2) as amended; OBBBA P.L. 119-21 Sec. 101",
+        "amount_per_child": 2000,
+        "qualifying_child_age_limit": 17,
+        "phaseout_magi_single": 200000,
+        "phaseout_magi_mfj": 400000,
+        "phaseout_increment": 1000,
+        "phaseout_reduction": 50
+      },
+      "eitc": {
+        "verified": false,
+        "citation": "IRC 32; Rev. Proc. 2023-34",
+        "max_credit": {"0": 632, "1": 421, "2": 696, "3": 783},
+        "phaseout_start_income": {"single": {"0": 8260, "1": 11960, "2": 16610, "3": 19620},
+                                   "mfj":    {"0": 16550, "1": 22620, "2": 29150, "3": 32920}},
+        "phaseout_end_income":   {"single": {"0": 18591, "1": 52248, "2": 60021, "3": 65730},
+                                   "mfj":    {"0": 29352, "1": 61100, "2": 68725, "3": 76372}},
+        "phaseout_rate": {"0": 0.0765, "1": 0.1595, "2": 0.2196, "3": 0.2706},
+        "investment_income_limit": {"single": 11600, "mfj": 23200},
+        "earned_income_and_agi_ceiling": {"single": {"0": 18591, "1": 52248, "2": 60021, "3": 65730},
+                                          "mfj":    {"0": 29352, "1": 61100, "2": 68725, "3": 76372}}
+      },
+      "filing_deadline": "2025-04-15",
+      "extensions": "2025-10-15"
+    },
+
+    "2025": {
+      "status": "final",
+      "verified": false,
+      "verification_note": "TRANSCRIBED FROM MEMORY, NOT READ OFF THE PRIMARY SOURCE. Status 'final' means 2025 law is settled; it does NOT mean these digits have been checked. Confirm the standard deduction and all seven bracket thresholds against Rev. Proc. 2024-40, then record it in verification.json.",
+      "citation": "IRS Rev. Proc. 2024-40 (2024-46 I.R.B.)",
+      "notes": "First year reflecting OBBBA (P.L. 119-21, enacted 2025-07-04) inflation updates. The CTC increase to $2,200 was enacted separately and is flagged unverified.",
+      "standard_deduction": {
+        "single": 15000, "mfj": 30000, "mfs": 15000, "hoh": 22500, "qss": 30000
+      },
+      "brackets": {
+        "single": [
+          [0, 11925, 0.10], [11925, 48475, 0.12], [48475, 103350, 0.22],
+          [103350, 197300, 0.24], [197300, 250525, 0.32], [250525, 626350, 0.35],
+          [626350, null, 0.37]
+        ],
+        "mfj": [
+          [0, 23850, 0.10], [23850, 96950, 0.12], [96950, 206700, 0.22],
+          [206700, 394600, 0.24], [394600, 501050, 0.32], [501050, 751600, 0.35],
+          [751600, null, 0.37]
+        ],
+        "mfs": [
+          [0, 11925, 0.10], [11925, 48475, 0.12], [48475, 103350, 0.22],
+          [103350, 197300, 0.24], [197300, 250500, 0.32], [250500, 375800, 0.35],
+          [375800, null, 0.37]
+        ],
+        "hoh": [
+          [0, 17000, 0.10], [17000, 64850, 0.12], [64850, 103350, 0.22],
+          [103350, 197300, 0.24], [197300, 250500, 0.32], [250500, 626350, 0.35],
+          [626350, null, 0.37]
+        ],
+        "qss": [
+          [0, 23850, 0.10], [23850, 96950, 0.12], [96950, 206700, 0.22],
+          [206700, 394600, 0.24], [394600, 501050, 0.32], [501050, 751600, 0.35],
+          [751600, null, 0.37]
+        ]
+      },
+      "capital_gains_rates": {
+        "verified": false,
+        "note": "Thresholds not independently confirmed against Rev. Proc. 2024-40 Sec. 3.",
+        "single": [[0, 48000, 0.0], [48000, 533400, 0.15], [533400, null, 0.20]],
+        "mfj":   [[0, 96000, 0.0], [96000, 600050, 0.15], [600050, null, 0.20]],
+        "mfs":   [[0, 48000, 0.0], [48000, 300000, 0.15], [300000, null, 0.20]],
+        "hoh":   [[0, 64350, 0.0], [64350, 566700, 0.15], [566700, null, 0.20]],
+        "qss":   [[0, 96000, 0.0], [96000, 600050, 0.15], [600050, null, 0.20]]
+      },
+      "child_tax_credit": {
+        "verified": false,
+        "citation": "OBBBA P.L. 119-21 Sec. 101 increased the credit to $2,200 per qualifying child effective TY2025.",
+        "amount_per_child": 2200,
+        "qualifying_child_age_limit": 17,
+        "phaseout_magi_single": 200000,
+        "phaseout_magi_mfj": 400000,
+        "phaseout_increment": 1000,
+        "phaseout_reduction": 50
+      },
+      "eitc": {
+        "verified": false,
+        "citation": "IRC 32; Rev. Proc. 2024-40",
+        "max_credit": {"0": 649, "1": 432, "2": 714, "3": 803},
+        "phaseout_start_income": {"single": {"0": 8490, "1": 12390, "2": 17090, "3": 20220},
+                                   "mfj":    {"0": 17020, "1": 23480, "2": 30370, "3": 34380}},
+        "phaseout_end_income":   {"single": {"0": 19400, "1": 54090, "2": 61920, "3": 67900},
+                                   "mfj":    {"0": 30560, "1": 63240, "2": 71030, "3": 78980}},
+        "phaseout_rate": {"0": 0.0765, "1": 0.1595, "2": 0.2196, "3": 0.2706},
+        "investment_income_limit": {"single": 11950, "mfj": 24300},
+        "earned_income_and_agi_ceiling": {"single": {"0": 19400, "1": 54090, "2": 61920, "3": 67900},
+                                          "mfj":    {"0": 30560, "1": 63240, "2": 71030, "3": 78980}}
+      },
+      "filing_deadline": "2026-04-15",
+      "extensions": "2026-10-15"
+    },
+
+    "2026": {
+      "status": "PROJECTED - NOT FINAL",
+      "verified": false,
+      "citation": "NO FINAL REVENUE PROCEDURE PUBLISHED. Figures below are IRS PROJECTIONS published in Rev. Proc. 2024-40 Appendix B (inflation-adjusted estimates only). They are NOT law and WILL change.",
+      "warnings": [
+        "TY2026 cannot be prepared until the final revenue procedure is published, historically in the Oct-Nov window preceding the year.",
+        "OBBBA structural changes (tip credit, overtime exemption, senior deduction, SALT cap) are statute-driven and are NOT captured by inflation projections alone.",
+        "Every figure in this block is an estimate. Treat all output for TY2026 as a planning estimate only."
+      ],
+      "standard_deduction": {
+        "single": 15750, "mfj": 31500, "mfs": 15750, "hoh": 23600, "qss": 31500
+      },
+      "brackets": {
+        "single": [
+          [0, 12425, 0.10], [12425, 50400, 0.12], [50400, 105700, 0.22],
+          [105700, 201775, 0.24], [201775, 256225, 0.32], [256225, 640600, 0.35],
+          [640600, null, 0.37]
+        ],
+        "mfj": [
+          [0, 24850, 0.10], [24850, 100800, 0.12], [100800, 211400, 0.22],
+          [211400, 403550, 0.24], [403550, 512450, 0.32], [512450, 768700, 0.35],
+          [768700, null, 0.37]
+        ],
+        "mfs": [
+          [0, 12425, 0.10], [12425, 50400, 0.12], [50400, 105700, 0.22],
+          [105700, 201775, 0.24], [201775, 256200, 0.32], [256200, 384350, 0.35],
+          [384350, null, 0.37]
+        ],
+        "hoh": [
+          [0, 17700, 0.10], [17700, 67450, 0.12], [67450, 105700, 0.22],
+          [105700, 201775, 0.24], [201775, 256200, 0.32], [256200, 640600, 0.35],
+          [640600, null, 0.37]
+        ],
+        "qss": [
+          [0, 24850, 0.10], [24850, 100800, 0.12], [100800, 211400, 0.22],
+          [211400, 403550, 0.24], [403550, 512450, 0.32], [512450, 768700, 0.35],
+          [768700, null, 0.37]
+        ]
+      },
+      "capital_gains_rates": {
+        "verified": false,
+        "note": "Projected thresholds only.",
+        "single": [[0, 49250, 0.0], [49250, 545550, 0.15], [545550, null, 0.20]],
+        "mfj":   [[0, 98500, 0.0], [98500, 618050, 0.15], [618050, null, 0.20]],
+        "mfs":   [[0, 49250, 0.0], [49250, 309000, 0.15], [309000, null, 0.20]],
+        "hoh":   [[0, 66000, 0.0], [66000, 581050, 0.15], [581050, null, 0.20]],
+        "qss":   [[0, 98500, 0.0], [98500, 618050, 0.15], [618050, null, 0.20]]
+      },
+      "child_tax_credit": {
+        "verified": false,
+        "note": "Statute sets $2,200/child (OBBBA) and indexes only the age test and thresholds thereafter; confirm before use.",
+        "amount_per_child": 2200,
+        "qualifying_child_age_limit": 17,
+        "phaseout_magi_single": 200000,
+        "phaseout_magi_mfj": 400000,
+        "phaseout_increment": 1000,
+        "phaseout_reduction": 50
+      },
+      "eitc": {
+        "verified": false,
+        "note": "Projected only. Do not rely on for return preparation.",
+        "max_credit": {"0": 665, "1": 443, "2": 732, "3": 824},
+        "phaseout_start_income": {"single": {"0": 8700, "1": 12700, "2": 17500, "3": 20700},
+                                   "mfj":    {"0": 17450, "1": 24050, "2": 31100, "3": 35200}},
+        "phaseout_end_income":   {"single": {"0": 19900, "1": 55500, "2": 63550, "3": 69650},
+                                   "mfj":    {"0": 31300, "1": 64900, "2": 72950, "3": 81050}},
+        "phaseout_rate": {"0": 0.0765, "1": 0.1595, "2": 0.2196, "3": 0.2706},
+        "investment_income_limit": {"single": 12300, "mfj": 25000},
+        "earned_income_and_agi_ceiling": {"single": {"0": 19900, "1": 55500, "2": 63550, "3": 69650},
+                                          "mfj":    {"0": 31300, "1": 64900, "2": 72950, "3": 81050}}
+      },
+      "filing_deadline": "2027-04-15",
+      "extensions": "2027-10-15"
+    }
+  }
+}
