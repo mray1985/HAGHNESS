@@ -188,3 +188,6 @@ October 2 support-review HTTP checkpoint: scopedhistory/appenddecision routes us
 
 
 October 2 reviewer interface implementation: entry/documentselection/details/download/decision/reason/history added, sharedMFAAPI andCSRF; scopedsignedGEThistory supports selection. Reviewcaughtstalereason/acceptancedecision acrossclientchange; resetapplied. Documentscorrectionsrefreshqueue. JSsyntaxpassed, backendfullsuite199passed2Linux-onlyskipped201total. Browserinteraction/accessibility/liveMFAjourney stillunverified; UIacceptance remainsopen.
+
+
+October 2 actualrenderedreviewUIverification: EdgeheadlessPlaywrightloopback, fictionalinterceptedAPIonly; decisionPOST/CSRF/history/documentdownloadbytes/crossclientreasondecisionhistoryreset pass. Desktop1440x1000/mobile390x844 nohorizontaloverflow/pageerrors; screenshotsoutsideRepovisuallyinspected. BrowserpluginabsentregularPlaywrightfallback. Previewownedserverstopped. No newbackendproductionchange; liveMFA+PGreviewUI/fullaccessibilityremainopen.
