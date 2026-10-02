@@ -152,3 +152,6 @@ October 2 backup-job continuation: operator-only capture_backup now performs pin
 
 
 October 2 least-privilege backup continuation: actual backup capture succeeded through a temporary read-only PostgreSQL login with no administrative attributes. INSERT/UPDATE/DELETE/CREATE denied byACL withreadonlysessionsettingoff. Capture3versions inspectionpassed; temporaryrole/grantsremoved. Savedcredential-freeNOLOGINgroup-role template fordeploymentoperator; hostedrole/TLS/objectpermissions remainunverified. ProductionPythonunchanged; actualrecoveryprobeandharnesssyntaxverified.
+
+
+October 2 scheduler preparation: added a disabled-by-default Linux backup runner and systemd service/timer templates. Explicit activation, complete configuration, private external directories and mounted recovery keys are required. The source object interface exposes reads only; provider credentials must independently enforce read-only access. Bundle names carry the non-secret recovery-key identifier. Daily 03:30 UTC calendar syntax passed actual Linux parsing; no timer was installed or enabled. Independent review found no important defect. Full real-PostgreSQL suite: 181 passed, two Linux-only skipped (183 total). Hosted capture, offhost copy, historical-key recovery, monitoring and retention execution remain open.
