@@ -202,18 +202,20 @@ class PostgresTests(unittest.TestCase):
         self.assertEqual(request('POST',path,body,signed=False)[0],401)
         self.assertEqual(request('POST',path,body,verified=False)[0],403)
         self.assertEqual(request('POST',path,body)[0],404)
+        self.assertFalse(request('GET',path+'?profile=orchard&business=business&year=2026')[1]['can_review'])
         with self.repo.transaction() as conn:
             conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'review_support')")
         accepted=request('POST',path,body)
         self.assertEqual(accepted[0],201)
         self.assertEqual(request('POST',path,body),accepted)
         status,history=request('GET',path+'?profile=orchard&business=business&year=2026')
-        self.assertEqual(status,200);self.assertEqual(len(history['reviews']),1)
+        self.assertEqual(status,200);self.assertEqual(len(history['reviews']),1);self.assertTrue(history['can_review'])
         self.assertEqual(request('GET',path+'?profile=cedar&business=cedar-business&year=2026')[0],404)
         self.assertTrue(request('GET','/api/connected/draft?profile=orchard&business=business&year=2026')[1]['support_review_complete'])
         with self.repo.transaction() as conn:
             conn.execute("DELETE FROM ha_connected.grants WHERE action='review_support'")
         self.assertEqual(request('POST',path,body)[0],404)
+        self.assertFalse(request('GET',path+'?profile=orchard&business=business&year=2026')[1]['can_review'])
         sessions.logout(cookie)
         self.assertEqual(request('GET',path+'?profile=orchard&business=business&year=2026')[0],401)
 

@@ -22,13 +22,15 @@ async function refresh(){
   const list=byId('review-list');list.replaceChildren();
   for(const id of draft.missing_receipts){const item=document.createElement('li');item.textContent='Missing receipt: '+id;list.append(item);}
   for(const id of draft.cash_explanations_missing){const item=document.createElement('li');item.textContent='Explain the cash entry: '+id;list.append(item);}
-  if(draft.support_review_required.length){const item=document.createElement('li');item.textContent=draft.support_review_required.length+' entries still need their supporting information reviewed. A typed record ID does not establish reviewed support.';list.append(item);}
+  const reviewReasons={not_reviewed:'Supporting information has not been reviewed',entry_changed:'The entry changed after review',document_changed:'The supporting document changed after review',needs_information:'The reviewer requested more information',receipt_required:'A current receipt is needed',cash_explanation_required:'Explain the cash entry'};
+  for(const question of draft.support_review_queue||[]){const row=document.createElement('li');row.textContent=question.event_id+': '+question.reasons.map(reason=>reviewReasons[reason]||'Further review needed').join('; ');list.append(row);}
+  if(draft.support_review_required.length&&!draft.support_review_queue){const item=document.createElement('li');item.textContent=draft.support_review_required.length+' entries still need their supporting information reviewed. A typed record ID does not establish reviewed support.';list.append(item);}
   const item=document.createElement('li');item.textContent='Confirm income, expense eligibility and support before final return preparation.';list.append(item);
   await loadSupport();
   if(current!==generation)return;
   status('Draft updated from recorded entries. Final tax calculations remain unavailable.');
 }
-byId('scope-form').addEventListener('submit',async event=>{event.preventDefault();generation++;uploadRevision++;reviewRevision++;pendingReview=null;supportEntries=[];byId('support-reason').value='';byId('support-decision').value='needs_information';byId('support-history').replaceChildren();byId('support-entry').replaceChildren();byId('support-document').replaceChildren(new Option('No document selected',''));byId('support-entry-detail').textContent='';pendingEvent=null;pendingUpload=null;scope=Object.fromEntries(new FormData(event.target));byId('open-hatax').href='/tax?'+new URLSearchParams(scope);for(const id of ['income','expenses','profit','reserve','payments','revision','last-entry'])byId(id).textContent='—';byId('document-list').replaceChildren();byId('review-list').replaceChildren();const current=generation;try{await refresh();if(current===generation)await listDocuments();}catch(error){if(current===generation)status(error.message);}});
+byId('scope-form').addEventListener('submit',async event=>{event.preventDefault();generation++;uploadRevision++;reviewRevision++;pendingReview=null;canReview=false;byId('support-save').disabled=true;byId('support-access').textContent='Checking review access…';supportEntries=[];byId('support-reason').value='';byId('support-decision').value='needs_information';byId('support-history').replaceChildren();byId('support-entry').replaceChildren();byId('support-document').replaceChildren(new Option('No document selected',''));byId('support-entry-detail').textContent='';pendingEvent=null;pendingUpload=null;scope=Object.fromEntries(new FormData(event.target));byId('open-hatax').href='/tax?'+new URLSearchParams(scope);for(const id of ['income','expenses','profit','reserve','payments','revision','last-entry'])byId(id).textContent='—';byId('document-list').replaceChildren();byId('review-list').replaceChildren();const current=generation;try{await refresh();if(current===generation)await listDocuments();}catch(error){if(current===generation)status(error.message);}});
 byId('entry-form').addEventListener('input',()=>{pendingEvent=null;});
 byId('period-form').addEventListener('submit',async event=>{event.preventDefault();if(!scope){status('Open permitted records first.');return;}try{await refresh();}catch(error){status(error.message);}});
 byId('entry-form').addEventListener('submit',async event=>{
@@ -82,13 +84,13 @@ byId('logout').addEventListener('click',async()=>{try{await request('/api/auth/l
   const identity=await request('/api/auth/me');csrf=identity.csrf;byId('login-panel').hidden=true;byId('workspace').hidden=false;byId('logout').hidden=false;status('Signed in. Open a client and business you are permitted to access.');
 }catch(error){status(error.message);}})();
 
-let supportEntries=[],pendingReview=null,reviewRevision=0;
+let supportEntries=[],pendingReview=null,reviewRevision=0,canReview=false;
 function showSupportEntry(){
   const entry=supportEntries.find(e=>e.id===byId('support-entry').value);
   byId('support-entry-detail').textContent=entry?entry.posting_date+' · '+money(entry.amount_minor)+' · '+(entry.method||'Method not recorded')+' · '+(entry.category||'No category')+' · '+(entry.explanation||'No explanation'):'';
 }
 async function loadSupport(){
-  const current=generation;pendingReview=null;
+  const current=generation;pendingReview=null;canReview=false;byId('support-save').disabled=true;
   byId('support-entry').replaceChildren();byId('support-history').replaceChildren();
   byId('support-document').replaceChildren(new Option('No document selected',''));
   try{
@@ -96,6 +98,7 @@ async function loadSupport(){
       request('/api/connected/events?'+scopeQuery()),request('/api/connected/documents?'+scopeQuery()),
       request('/api/connected/support/reviews?'+scopeQuery())]);
     if(current!==generation)return;
+    canReview=history.can_review===true;byId('support-save').disabled=!canReview;byId('support-access').textContent=canReview?'You can record supporting-information decisions for this case.':'You can view supporting records. A permitted reviewer must record the decision.';
     const replaced=new Set(entries.events.filter(e=>e.kind==='correction').map(e=>e.replaces));
     supportEntries=entries.events.filter(e=>!replaced.has(e.id)&&['income','expense','employee_payroll_obligation'].includes(e.effective_kind));
     for(const e of supportEntries)byId('support-entry').append(new Option(e.posting_date+' · '+money(e.amount_minor)+' · '+e.id,e.id));
@@ -103,13 +106,13 @@ async function loadSupport(){
     for(const v of documents.versions.filter(v=>!superseded.has(v.version_id)))byId('support-document').append(new Option(v.document_id+' · '+v.created_at,JSON.stringify([v.document_id,v.version_id])));
     for(const r of history.reviews){const item=document.createElement('li');item.textContent=r.recorded_at+' · '+r.event_id+' · '+(r.decision==='accepted'?'Support checked':'More information needed')+' · '+r.reason+' · '+r.actor;byId('support-history').append(item);}
     showSupportEntry();
-  }catch(error){if(current===generation)byId('support-entry-detail').textContent=error.message;}
+  }catch(error){if(current===generation){byId('support-entry-detail').textContent=error.message;byId('support-access').textContent='Review access could not be confirmed.';}}
 }
 byId('support-entry').addEventListener('change',showSupportEntry);
 byId('support-form').addEventListener('input',()=>{reviewRevision++;pendingReview=null;});
 byId('support-form').addEventListener('submit',async event=>{
-  event.preventDefault();if(!scope)return;
-  const current=generation,revision=reviewRevision,button=event.target.querySelector('button[type=submit]')||event.target.querySelector('button:not([type=button])');button.disabled=true;
+  event.preventDefault();if(!scope||!canReview)return;
+  const current=generation,revision=reviewRevision,button=byId('support-save');button.disabled=true;
   try{
     if(!pendingReview){const review={event_id:byId('support-entry').value,decision:byId('support-decision').value,reason:byId('support-reason').value,idempotency_key:crypto.randomUUID()};
       if(byId('support-document').value){const [document,version]=JSON.parse(byId('support-document').value);review.document_id=document;review.version_id=version;}
@@ -117,7 +120,7 @@ byId('support-form').addEventListener('submit',async event=>{
     await request('/api/connected/support/reviews',pendingReview);
     if(current!==generation||revision!==reviewRevision)return;pendingReview=null;byId('support-reason').value='';await refresh();
     if(current===generation)status('Review decision recorded. Tax preparation and filing still require their own checks.');
-  }catch(error){if(current===generation)status(error.message);}finally{button.disabled=false;}
+  }catch(error){if(current===generation)status(error.message);}finally{button.disabled=!canReview;}
 });
 
 byId('support-download').addEventListener('click',async()=>{

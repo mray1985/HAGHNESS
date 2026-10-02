@@ -159,7 +159,7 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
                     if mutate:
                         body=self.payload()
                         return self.respond(201,reviews.submit(principal,self.scope(body['scope']),body['review']))
-                    return self.respond(200,{'reviews':reviews.history(principal,self.scope(query))})
+                    return self.respond(200,reviews.view(principal,self.scope(query)))
                 if path == '/api/connected/return/estimate' and mutate:
                     body=self.payload()
                     return self.respond(200,estimate_connected_return(ledger,principal,self.scope(body['scope']),body['scenario']))

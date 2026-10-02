@@ -78,3 +78,8 @@ The concurrency regression holds an authenticated receipt read inside the review
 ## Actual identity/session integration
 
 The extended Keycloak composed probe passed support review using the actual password-plus-OTP authenticated HTTPS session, real PostgreSQL and scanner, without injected principal/session or scan bypass. Denied authority/CSRF, accepted support, retry/history, document-correction reopening and foreign/revoked scope denials pass with the same cookie used for books/HATax/documents. The frontend browser test remains a separate fictional-response proof; combined live-identity rendered-browser interaction, hosted storage and real-user enrollment/recovery are not yet established.
+
+
+## Review-access and reason presentation
+
+Scoped history now includes can_review, evaluated inside the shared repository transaction after read authorization. This display hint does not authorize POST; submission rechecks authority. The decision button stays disabled until true capability is confirmed, fails closed on loading/errors and resets on case switch. The screen renders per-entry reopening reasons using textContent and plain labels, including changed documents/entries and missing support. Actual PostgreSQL HTTP tests cover capability before/after explicit grant and after revocation. Actual Edge/Playwright fictional-response tests verify reviewer submission, disabled viewing-only controls, reason text, download bytes, reset, no page errors and desktop/mobile width. Saved task screenshots were inspected; owned preview exited. Combined hosted browser identity/storage remains unverified.

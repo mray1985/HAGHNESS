@@ -112,3 +112,13 @@ class SupportReviews:
                       'decision','reason','actor','recorded_at')
             return [{**dict(zip(fields,row)), 'decision_id':str(row[0]),
                      'recorded_at':row[-1].isoformat()} for row in rows]
+
+    def view(self, principal, scope):
+        with self.repository.transaction():
+            history = self.history(principal, scope)
+            try:
+                authorize(principal, scope, 'review_support', self.repository)
+                can_review = True
+            except PermissionError:
+                can_review = False
+            return {'reviews': history, 'can_review': can_review}

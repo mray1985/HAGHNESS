@@ -197,3 +197,6 @@ October 2 actualPGreview/correctioncoordination: controlledheldreceiptread insid
 
 
 October2 actualMFAreviewintegration: isolatedrealKeycloakpasswordOTP->HAHTTPScallbackcookie->PostgreSQL/ClamD/AESdocumentandreviewAPI passed. MissingCSRF/authority denied, explicitfixturegrantaccepts/retries/history, correctionreopens, foreign/revokedreviewreadwrite denied. No injectedprincipal/session orscanbypass. Evidence saved; identityrealmtemplate unchanged. Linuxcleanupchecks andserviceexit verified separately. HostedSpaces/enrollment/recovery/combinedrenderedlivebrowser remainopen.
+
+
+October2 reviewaccess/reopeningpresentation: scopedcan_review hints checkedwithhistory; UIdefaultdisabled until true, viewerexplanation, explicitreasontext, case/finallyguards. ServerPOSTauthorityunchanged. ActualPGHTTPcapabilityfalsebeforegrant/afterrevocationtruewithgrant passes. Fullsuite200passed2Linux-onlyskipped202total; actualEdgePlaywrightfictionalUIreason/disable/download/reset/mobile/noerrorspass. Reviewnoimportantfindings. Hostedcombinedbrowserjourneyremainopen.
