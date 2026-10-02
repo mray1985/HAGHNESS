@@ -9,7 +9,7 @@ defend.
 from __future__ import annotations
 
 import json
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -34,11 +34,16 @@ CENTS = Decimal("0.01")
 
 def D(value: Any) -> Decimal:
     """Coerce to Decimal via str so binary float error never enters the math."""
-    if isinstance(value, Decimal):
-        return value
     if value is None:
         return Decimal(0)
-    return Decimal(str(value))
+    if isinstance(value,bool) or not isinstance(value,(Decimal,str,int,float)):
+        raise ValueError('A finite numeric amount is required')
+    try:
+        amount=Decimal(str(value))
+        if not amount.is_finite():raise ValueError('A finite numeric amount is required')
+        return amount
+    except InvalidOperation as error:
+        raise ValueError('A finite numeric amount is required') from error
 
 
 def money(value: Any) -> Decimal:

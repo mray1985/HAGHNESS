@@ -269,52 +269,295 @@
     },
 
     "2026": {
-      "status": "PROJECTED - NOT FINAL",
+      "status": "partial",
       "verified": false,
-      "citation": "NO FINAL REVENUE PROCEDURE PUBLISHED. Figures below are IRS PROJECTIONS published in Rev. Proc. 2024-40 Appendix B (inflation-adjusted estimates only). They are NOT law and WILL change.",
+      "citation": "https://www.irs.gov/irb/2025-45_IRB (Rev. Proc. 2025-32, sections 4.01 and 4.14; basic brackets and deductions only)",
       "warnings": [
-        "TY2026 cannot be prepared until the final revenue procedure is published, historically in the Oct-Nov window preceding the year.",
-        "OBBBA structural changes (tip credit, overtime exemption, senior deduction, SALT cap) are statute-driven and are NOT captured by inflation projections alone.",
-        "Every figure in this block is an estimate. Treat all output for TY2026 as a planning estimate only."
+        "Basic ordinary brackets and standard deductions are final published references. Other components remain incomplete or projected; full calculations are planning estimates only.",
+        "Full statutory changes and independent verification remain incomplete. Return preparation is blocked."
       ],
       "standard_deduction": {
-        "single": 15750, "mfj": 31500, "mfs": 15750, "hoh": 23600, "qss": 31500
+        "single": 16100,
+        "mfj": 32200,
+        "mfs": 16100,
+        "hoh": 24150,
+        "qss": 32200
       },
       "brackets": {
         "single": [
-          [0, 12425, 0.10], [12425, 50400, 0.12], [50400, 105700, 0.22],
-          [105700, 201775, 0.24], [201775, 256225, 0.32], [256225, 640600, 0.35],
-          [640600, null, 0.37]
+          [
+            0,
+            12400,
+            0.1
+          ],
+          [
+            12400,
+            50400,
+            0.12
+          ],
+          [
+            50400,
+            105700,
+            0.22
+          ],
+          [
+            105700,
+            201775,
+            0.24
+          ],
+          [
+            201775,
+            256225,
+            0.32
+          ],
+          [
+            256225,
+            640600,
+            0.35
+          ],
+          [
+            640600,
+            null,
+            0.37
+          ]
         ],
         "mfj": [
-          [0, 24850, 0.10], [24850, 100800, 0.12], [100800, 211400, 0.22],
-          [211400, 403550, 0.24], [403550, 512450, 0.32], [512450, 768700, 0.35],
-          [768700, null, 0.37]
+          [
+            0,
+            24800,
+            0.1
+          ],
+          [
+            24800,
+            100800,
+            0.12
+          ],
+          [
+            100800,
+            211400,
+            0.22
+          ],
+          [
+            211400,
+            403550,
+            0.24
+          ],
+          [
+            403550,
+            512450,
+            0.32
+          ],
+          [
+            512450,
+            768700,
+            0.35
+          ],
+          [
+            768700,
+            null,
+            0.37
+          ]
         ],
         "mfs": [
-          [0, 12425, 0.10], [12425, 50400, 0.12], [50400, 105700, 0.22],
-          [105700, 201775, 0.24], [201775, 256200, 0.32], [256200, 384350, 0.35],
-          [384350, null, 0.37]
+          [
+            0,
+            12400,
+            0.1
+          ],
+          [
+            12400,
+            50400,
+            0.12
+          ],
+          [
+            50400,
+            105700,
+            0.22
+          ],
+          [
+            105700,
+            201775,
+            0.24
+          ],
+          [
+            201775,
+            256225,
+            0.32
+          ],
+          [
+            256225,
+            384350,
+            0.35
+          ],
+          [
+            384350,
+            null,
+            0.37
+          ]
         ],
         "hoh": [
-          [0, 17700, 0.10], [17700, 67450, 0.12], [67450, 105700, 0.22],
-          [105700, 201775, 0.24], [201775, 256200, 0.32], [256200, 640600, 0.35],
-          [640600, null, 0.37]
+          [
+            0,
+            17700,
+            0.1
+          ],
+          [
+            17700,
+            67450,
+            0.12
+          ],
+          [
+            67450,
+            105700,
+            0.22
+          ],
+          [
+            105700,
+            201750,
+            0.24
+          ],
+          [
+            201750,
+            256200,
+            0.32
+          ],
+          [
+            256200,
+            640600,
+            0.35
+          ],
+          [
+            640600,
+            null,
+            0.37
+          ]
         ],
         "qss": [
-          [0, 24850, 0.10], [24850, 100800, 0.12], [100800, 211400, 0.22],
-          [211400, 403550, 0.24], [403550, 512450, 0.32], [512450, 768700, 0.35],
-          [768700, null, 0.37]
+          [
+            0,
+            24800,
+            0.1
+          ],
+          [
+            24800,
+            100800,
+            0.12
+          ],
+          [
+            100800,
+            211400,
+            0.22
+          ],
+          [
+            211400,
+            403550,
+            0.24
+          ],
+          [
+            403550,
+            512450,
+            0.32
+          ],
+          [
+            512450,
+            768700,
+            0.35
+          ],
+          [
+            768700,
+            null,
+            0.37
+          ]
         ]
       },
       "capital_gains_rates": {
         "verified": false,
         "note": "Projected thresholds only.",
-        "single": [[0, 49250, 0.0], [49250, 545550, 0.15], [545550, null, 0.20]],
-        "mfj":   [[0, 98500, 0.0], [98500, 618050, 0.15], [618050, null, 0.20]],
-        "mfs":   [[0, 49250, 0.0], [49250, 309000, 0.15], [309000, null, 0.20]],
-        "hoh":   [[0, 66000, 0.0], [66000, 581050, 0.15], [581050, null, 0.20]],
-        "qss":   [[0, 98500, 0.0], [98500, 618050, 0.15], [618050, null, 0.20]]
+        "single": [
+          [
+            0,
+            49250,
+            0.0
+          ],
+          [
+            49250,
+            545550,
+            0.15
+          ],
+          [
+            545550,
+            null,
+            0.2
+          ]
+        ],
+        "mfj": [
+          [
+            0,
+            98500,
+            0.0
+          ],
+          [
+            98500,
+            618050,
+            0.15
+          ],
+          [
+            618050,
+            null,
+            0.2
+          ]
+        ],
+        "mfs": [
+          [
+            0,
+            49250,
+            0.0
+          ],
+          [
+            49250,
+            309000,
+            0.15
+          ],
+          [
+            309000,
+            null,
+            0.2
+          ]
+        ],
+        "hoh": [
+          [
+            0,
+            66000,
+            0.0
+          ],
+          [
+            66000,
+            581050,
+            0.15
+          ],
+          [
+            581050,
+            null,
+            0.2
+          ]
+        ],
+        "qss": [
+          [
+            0,
+            98500,
+            0.0
+          ],
+          [
+            98500,
+            618050,
+            0.15
+          ],
+          [
+            618050,
+            null,
+            0.2
+          ]
+        ]
       },
       "child_tax_credit": {
         "verified": false,
@@ -396,7 +639,8 @@
         "citation": "https://www.irs.gov/irb/2025-45_IRB section 3.06; IRC 32(b)"
       },
       "filing_deadline": "2027-04-15",
-      "extensions": "2027-10-15"
+      "extensions": "2027-10-15",
+      "bracket_status": "final"
     }
   }
 }

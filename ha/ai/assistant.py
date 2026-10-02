@@ -5,10 +5,8 @@ the assistant can answer "what are MY brackets" with the caller's own data.
 
 Design constraints, all deliberate:
 
-* No network. No model weights. No external API. Nothing to download.
-* No generation. Every sentence emitted exists verbatim in a card or is
-  assembled from a field of the rule files. A model that could hallucinate a
-  dollar figure is worse than no model at all in a tax tool.
+* Default card routing is deterministic. An optional public-source library
+  uses a loopback model and marks generated explanations unverified.
 * Every answer carries the citation and verified flag of the card it came from.
 
 Retrieval is Okapi BM25 over card keywords and question variants, which is
@@ -19,6 +17,7 @@ from __future__ import annotations
 
 import math
 import re
+import sqlite3
 from collections import Counter
 from typing import Any
 
@@ -171,9 +170,10 @@ _OWE_RE = re.compile(r"\b(how\s+much|what)\b.*\b(i|my|me)\b.*\b(owe|pay|owed)\b"
 class Assistant:
     """Rule-grounded assistant. Stateless between calls; caller owns history."""
 
-    def __init__(self) -> None:
+    def __init__(self, library=None) -> None:
         self.name = "HA-RuleBot"
         self.version = "0.1.0"
+        self.library = library
 
     # -- public ---------------------------------------------------------
     def ask(
@@ -208,6 +208,12 @@ class Assistant:
 
         # Intent 4 — knowledge card retrieval.
         hits = search(text, top=2)
+        if self.library is not None and (not hits or hits[0][1] < 1000):
+            try:
+                answer=self.library.answer(text,year)
+                if answer is not None:return answer
+            except (OSError,ValueError,KeyError,TypeError,sqlite3.Error):
+                pass
         if hits:
             best, score = hits[0]
             second = hits[1][1] if len(hits) > 1 else 0.0
@@ -267,8 +273,8 @@ class Assistant:
         )
         if not result["verification"]["year_final"]:
             summary += (
-                f"\n\n!! TY{year} figures are PROJECTIONS, not final law. "
-                "Planning estimate only."
+                f"\n\n!! TY{year} rule coverage is incomplete or projected. "
+                "Full calculations are planning estimates only."
             )
         if not result["verification"]["human_checked"]:
             summary += (
@@ -296,11 +302,11 @@ class Assistant:
             "",
         ]
         for row in table["brackets"]:
-            span = f"${row['from']:,.0f}"
+            span = f"${row['from']:,.0f}" if row['from']==0 else f"over ${row['from']:,.0f}"
             if row["to"] is None:
                 span += " and above"
             else:
-                span += f" to ${row['to'] - 1:,.0f}"
+                span += f" through ${row['to']:,.0f}"
             lines.append(f"  {row['rate_label']:>6}   {span}")
         lines.append("")
         lines.append(f"Source: {table['citation']}")

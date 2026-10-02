@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HAGHNESS — HA Tax Software</title>
-<link rel="stylesheet" href="/styles.css">
+<title>HATax · Tax workspace</title>
+<link rel="stylesheet" href="/modern.css">
 </head>
 <body>
 
 <!-- ============================ TITLE BAR ============================ -->
 <div id="titlebar">
   <span class="tb-logo">◈</span>
-  <span class="tb-text">HAGHNESS <em>Tax</em> <span id="tb-version">v0.1.0</span></span>
+  <span class="tb-text">HATax <span id="tb-version">v0.1.0</span></span>
   <span class="tb-spacer"></span>
   <span class="tb-warn" id="tb-warn" title="Read the limited-status statement">⚠ LIMITED STATUS</span>
-  <button class="tb-btn" id="btn-min" title="Minimize">_</button>
-  <button class="tb-btn" id="btn-max" title="Maximize">▢</button>
-  <button class="tb-btn tb-close" id="btn-close" title="Close">✕</button>
+  <button class="tb-btn" id="btn-min" title="Collapse workspace" aria-label="Collapse workspace">−</button>
+  <button class="tb-btn" id="btn-max" title="Toggle focus view" aria-label="Toggle focus view">⛶</button>
+  <button class="tb-btn" id="btn-close" title="Return to assistant" aria-label="Return to assistant">↩</button>
 </div>
 
 <!-- ======================= MESSENGER (AIM STYLE) ===================== -->
@@ -25,7 +25,7 @@
   <div class="ms-left">
     <div class="ms-toolbar">
       <input id="signin-name" class="ms-input" value="taxpayer" spellcheck="false" title="Your screen name">
-      <button id="btn-connect" class="ms-btn">Go Online</button>
+      <button id="btn-connect" class="ms-btn">Start local session</button>
     </div>
 
     <div class="ms-status" id="ms-status">Offline</div>
@@ -36,7 +36,7 @@
     </div>
 
     <div class="buddy-head">
-      <span>Buddy List</span>
+      <span>Tax topics</span>
       <span class="buddy-count" id="buddy-count">0 online</span>
     </div>
 
@@ -51,7 +51,7 @@
   <div class="ms-right">
     <div class="chat-head">
       <div class="chat-who">
-        <span class="chat-screenname" id="chat-who-name">HA-RuleBot</span>
+        <span class="chat-screenname" id="chat-who-name">HATax Assistant</span>
         <span class="chat-presence" id="chat-presence">online</span>
       </div>
       <div class="chat-actions">
@@ -134,7 +134,7 @@
 
 <!-- ========================= STATUS BAR ============================= -->
 <div id="statusbar">
-  <button class="sb-tab active" data-open="messenger">Messenger</button>
+  <button class="sb-tab active" data-open="messenger">Assistant</button>
   <button class="sb-tab" data-open="calculator">Calculator</button>
   <button class="sb-tab" data-open="brackets">Brackets</button>
   <button class="sb-tab" data-open="attestation">Status</button>
@@ -145,7 +145,7 @@
 <!-- ======================= STARTUP MODAL =========================== -->
 <div id="boot" class="boot">
   <div class="boot-card">
-    <h1>◈ HAGHNESS</h1>
+    <h1>HATax</h1>
     <p class="boot-sub">Local individual income tax calculation aid</p>
 
     <div class="boot-warn">

@@ -48,7 +48,8 @@ class TestBracketArithmetic(unittest.TestCase):
         # std 15,750 -> TI 44,250
         # 12,425*.10 + (44,250-12,425)*.12 = 1,242.50 + 3,819.00 = 5,061.50
         r = fed.compute(2026, "single", 60_000)
-        self.assertEqual(r["lines"]["tax_before_credits"], 5_061.5, "5,061.50 expected")
+        # Final 2026: 60,000-16,100=43,900; 1,240+(43,900-12,400)*.12=5,020.
+        self.assertEqual(r["lines"]["tax_before_credits"], 5_020.0)
 
     def test_income_below_standard_deduction_is_untaxed(self):
         for year in available_years():
@@ -193,13 +194,14 @@ class TestEITC(unittest.TestCase):
 
 
 class TestVerificationFlags(unittest.TestCase):
-    def test_ty2026_is_blocked_as_projection(self):
+    def test_ty2026_partial_rule_coverage_is_blocked(self):
         r = fed.compute(2026, "single", 80_000)
         self.assertFalse(r["verification"]["year_final"])
+        self.assertEqual(r['year_status'],'partial')
         self.assertFalse(r["verification"]["may_prepare_return"])
         self.assertIn(
-            "projection", " ".join(r["verification"]["blockers"]).lower(),
-            "must say the figures are a projection",
+            "not been checked", " ".join(r["verification"]["blockers"]).lower(),
+            "final published rules still require independent verification",
         )
 
     def test_final_years_are_still_blocked_until_a_human_checks(self):
@@ -375,23 +377,23 @@ class TestAssistant(unittest.TestCase):
         """"show ME the brackets" must not be read as a Maine tax question."""
         r = self.ai.ask("show me the 2026 brackets", context={"tax_year": "2026"})
         self.assertNotIn("state", r, "must not be routed to a state lookup")
-        self.assertIn("PROJECTED", r["answer"])
+        self.assertNotIn("PROJECTED", r["answer"])
 
     def test_ty2026_personal_result_carries_projection_warning(self):
         r = self.ai.ask(
             "compute my tax",
             context={"tax_year": "2026", "filing_status": "single", "agi": 80_000},
         )
-        self.assertIn("PROJECTION", r["answer"])
+        self.assertIn("incomplete or projected", r["answer"])
 
     def test_uncovered_question_refuses_rather_than_guessing(self):
         r = self.ai.ask("what is the best cryptocurrency to buy")
         self.assertTrue(r["uncovered"])
         self.assertIn("will not improvise", r["answer"])
 
-    def test_ty2026_projection_is_marked_in_brackets(self):
+    def test_ty2026_basic_brackets_are_final_references(self):
         r = self.ai.ask("show me the 2026 brackets", context={"tax_year": "2026"})
-        self.assertIn("PROJECTED", r["answer"])
+        self.assertNotIn("PROJECTED", r["answer"])
 
     def test_search_returns_high_confidence_leader(self):
         hits = search("child tax credit refundable")

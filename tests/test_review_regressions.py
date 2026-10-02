@@ -4,6 +4,16 @@ from ha.engine import federal
 
 
 class ReviewRegressions(unittest.TestCase):
+    def test_final_2026_bracket_reference(self):
+        result=federal.explain_brackets(2026,'single')
+        self.assertEqual(result['standard_deduction'],16100)
+        self.assertEqual(result['brackets'][0]['to'],12400)
+        self.assertEqual(result['year_status'],'final')
+
+    def test_augusta_typo_routes_to_specific_answer(self):
+        from ha.ai.assistant import Assistant
+        answer=Assistant().ask('what is the augsta rule?')
+        self.assertIn('fewer than 15',answer['answer'])
     def test_no_earned_income_cannot_receive_eitc(self):
         for agi in (0, 5000):
             result = federal.compute(2025, 'single', agi, earned_income=0)

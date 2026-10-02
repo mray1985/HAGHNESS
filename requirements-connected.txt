@@ -12,3 +12,4 @@ s3transfer==0.19.2
 six==1.17.0
 tzdata==2026.4
 urllib3==2.8.0
+pypdf==6.13.3

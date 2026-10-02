@@ -1,5 +1,5 @@
 /* ============================================================
-   HAGHNESS — browser client.
+   HATax — browser client.
    Talks only to the local server on 127.0.0.1. No external
    requests, no CDN, no analytics, no fonts from the network.
    ============================================================ */
@@ -89,7 +89,7 @@ function addMsg(who, body, kind, opts = {}) {
   const el = document.createElement('div');
   el.className = `msg ${kind}${opts.flag ? ' flag' : ''}`;
   el.innerHTML =
-    `<span class="who">${esc(who)}:</span><span class="body">${esc(body)}</span>` +
+    `<span class="who">${esc(who)}:</span><span class="body">${esc(opts.cite ? body.replace(/^Source: .+$/gm,'').trim() : body)}</span>` +
     (opts.cite ? `<span class="cite">Source: ${esc(opts.cite)}</span>` : '');
   log.appendChild(el);
   log.scrollTop = log.scrollHeight;
@@ -98,7 +98,7 @@ function addMsg(who, body, kind, opts = {}) {
 
 /* ---------------------------------------------------------- buddies */
 const BUDDIES = [
-  { name: 'HA-RuleBot',       icon: '◆', topic: 'tax rules',     online: true,  bot: true },
+  { name: 'HATax Assistant',       icon: '◆', topic: 'tax rules',     online: true,  bot: true },
   { name: 'Brackets',         icon: '▦', topic: '1040 rates',    online: true,  bot: true },
   { name: 'Credits',          icon: '★', topic: 'CTC · EITC',    online: true,  bot: true },
   { name: 'Deadlines',        icon: '⏱', topic: 'filing dates',  online: true,  bot: true },
@@ -198,11 +198,11 @@ async function sendChat(text) {
   const q = text.trim();
   if (!q) return;
   addMsg(State.screenName, q, 'me');
-  say('HA-RuleBot is typing...');
+  say('HATax Assistant is typing...');
   try {
     const r = await api('/api/chat', { question: q, context: buildContext() });
     const flag = !r.verified || !!r.refused || !!r.uncovered;
-    addMsg('HA-RuleBot', r.answer, 'bot', {
+    addMsg('HATax Assistant', r.answer, 'bot', {
       cite: (r.citations || []).join(' · '),
       flag,
     });
@@ -211,7 +211,7 @@ async function sendChat(text) {
     Chime.message();
     say(`answered from ${r.cards?.length || (r.computed ? 'engine' : 0)} source(s)`);
   } catch (err) {
-    addMsg('HA-RuleBot', 'Error: ' + err.message, 'sys', { flag: true });
+    addMsg('HATax Assistant', 'Error: ' + err.message, 'sys', { flag: true });
     say('error');
   }
 }
@@ -293,8 +293,8 @@ function renderBrackets(t) {
   const rows = t.brackets.map(b => `
     <tr>
       <td>${b.rate_label}</td>
-      <td class="num">${usd(b.from)}</td>
-      <td class="num">${b.to === null ? 'and above' : usd(b.to - 1)}</td>
+      <td class="num">${b.from === 0 ? usd(0) : 'Over '+usd(b.from)}</td>
+      <td class="num">${b.to === null ? 'No upper limit' : usd(b.to)}</td>
     </tr>`).join('');
   $('#bracket-output').innerHTML = `
     ${t.year_status === 'final' ? '' :
@@ -307,7 +307,8 @@ function renderBrackets(t) {
         ? `<div>Unverified: <code>${esc(t.unverified_items.join(', '))}</code></div>` : ''}
     </div>
     <table class="res">
-      <thead><tr><th>Rate</th><th class="num">From</th><th class="num">To</th></tr></thead>
+      <caption>Marginal rates on taxable income after deductions</caption>
+      <thead><tr><th scope="col">Rate</th><th scope="col" class="num">Income above</th><th scope="col" class="num">Up to and including</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   show('brackets');
@@ -370,15 +371,16 @@ function renderAttestation(a) {
 
 /* ---------------------------------------------------------- wiring */
 function show(name) {
+  $$('.panel').forEach(p => p.classList.remove('minimized'));
   $$('.panel').forEach(p => { p.hidden = p.id !== name; });
   $$('.sb-tab').forEach(t => t.classList.toggle('active', t.dataset.open === name));
+  $$('.sb-tab').forEach(t => {t.setAttribute('aria-selected',String(t.dataset.open===name));t.tabIndex=t.dataset.open===name?0:-1;});
 }
 
 function fillSelects() {
   const ys = $('#c-year');
   ys.innerHTML = State.years.map(y => {
-    const projected = y === '2026';
-    return `<option value="${y}"${projected ? ' title="Projected — not final law"' : ''}>${y}${projected ? ' (projected)' : ''}</option>`;
+    return `<option value="${y}">${y}</option>`;
   }).join('');
   ys.value = State.year;
 
@@ -412,7 +414,7 @@ async function boot2() {
     say(`ready · ${s.jurisdictions.length} jurisdictions loaded`);
   } catch (err) {
     say('cannot reach local server: ' + err.message);
-    addMsg('HA-RuleBot', 'Cannot reach the local server. Is `python ha/server.py` running?',
+    addMsg('HATax Assistant', 'Cannot reach the local server. Is `python ha/server.py` running?',
       'sys', { flag: true });
   }
 }
@@ -468,17 +470,17 @@ function connect() {
   State.screenName = $('#signin-name').value.trim() || 'taxpayer';
   const st = $('#ms-status');
   if (State.connected) {
-    st.textContent = `Online as ${State.screenName}`;
+    st.textContent = `Local session: ${State.screenName}`;
     st.classList.add('online');
-    addMsg('AIM', `Welcome aboard, ${State.screenName}.`, 'sys');
-    addMsg('HA-RuleBot',
-      'Ask me anything about federal tax rules, or set an AGI in the Calculator ' +
-      'and ask what you owe. Everything runs on this machine.', 'bot');
+    addMsg('HATax', `Welcome, ${State.screenName}.`, 'sys');
+    addMsg('HATax Assistant',
+      'Ask a tax question, or enter your figures in the Calculator. Answers ' +
+      'depend on available sources and the selected tax year. This session runs locally.', 'bot');
     Chime.connect();
   } else {
     st.textContent = 'Offline';
     st.classList.remove('online');
-    addMsg('AIM', 'You have signed off.', 'sys');
+    addMsg('HATax', 'Local session ended.', 'sys');
     Chime.away();
   }
   renderBuddies();
@@ -515,13 +517,15 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-brackets').addEventListener('click', doBrackets);
   $('#btn-clearout').addEventListener('click', () => { $('#calc-output').innerHTML = ''; say('cleared'); });
 
-  $$('.sb-tab').forEach(t => t.addEventListener('click', () => show(t.dataset.open)));
+  $$('.sb-tab').forEach(t => t.addEventListener('click', () => {show(t.dataset.open);if(t.dataset.open==='brackets')doBrackets();}));
+  $('#statusbar').setAttribute('role','tablist');$('#statusbar').setAttribute('aria-label','Tax workspace');
+  const tabs=$$('.sb-tab');tabs.forEach((tab,index)=>{tab.id='tab-'+tab.dataset.open;tab.setAttribute('role','tab');tab.setAttribute('aria-controls',tab.dataset.open);tab.setAttribute('aria-selected',String(index===0));tab.tabIndex=index===0?0:-1;
+    const panel=$('#'+tab.dataset.open);panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',tab.id);panel.tabIndex=0;
+    tab.addEventListener('keydown',event=>{let target;if(event.key==='ArrowRight')target=(index+1)%tabs.length;if(event.key==='ArrowLeft')target=(index+tabs.length-1)%tabs.length;if(event.key==='Home')target=0;if(event.key==='End')target=tabs.length-1;if(target!==undefined){event.preventDefault();tabs[target].focus();}});
+  });
   $$('[data-close]').forEach(x => x.addEventListener('click', () => show('messenger')));
 
-  /* titlebar buttons are decorative — this is a web page, not a window */
-  $('#btn-close').addEventListener('click', () => {
-    addMsg('AIM', 'Nice try. This is a web page — use the tab bar at the bottom.', 'sys');
-  });
-  $('#btn-min').addEventListener('click', () => say('minimized (decorative)'));
-  $('#btn-max').addEventListener('click', () => say('maximized (decorative)'));
+  $('#btn-close').addEventListener('click', () => show('messenger'));
+  $('#btn-min').addEventListener('click', () => {$$('.panel').filter(p=>!p.hidden).forEach(p=>p.classList.add('minimized'));say('Workspace collapsed. Choose a tab to reopen.');});
+  $('#btn-max').addEventListener('click', () => {document.body.classList.toggle('focus-mode');say(document.body.classList.contains('focus-mode')?'Focus view':'Standard view');});
 });

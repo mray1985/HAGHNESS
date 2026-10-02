@@ -357,7 +357,7 @@ def compute(
     blockers.append('EITC eligibility and official EIC table lookup are not implemented; formula scenarios are not filing amounts.')
     if not year_final:
         blockers.append(
-            f"TY{tax_year} rule data is a projection, not final law. "
+            f"TY{tax_year} rule coverage is incomplete or projected. "
             "No return may be prepared from it."
         )
     if not human_checked:
@@ -464,7 +464,7 @@ def explain_brackets(tax_year: str | int, filing_status: str) -> dict[str, Any]:
     return {
         "tax_year": str(tax_year),
         "citation": year.get("citation"),
-        "year_status": year.get("status"),
+        "year_status": year.get("bracket_status", year.get("status")),
         "filing_status": status,
         "standard_deduction": float(D(year["standard_deduction"][status])),
         "brackets": table,

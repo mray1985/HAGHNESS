@@ -1,7 +1,8 @@
-# HAGHNESS
+# HATax
 
-**Local individual income tax calculation aid.** Runs entirely in your browser on
-a machine that never talks to the network.
+**Local individual income tax calculation aid.** Uses a local Python service and
+browser workspace. Calculations are deterministic; optional explanations use
+retrieved public IRS passages and a model running on this machine.
 
 Built from the repository inventory in `HA_GitHub_IRS_100_Page_Inventory_2026-09-29.xlsx`,
 following IRS rules as published. Covers federal Form 1040 core mechanics for
@@ -13,17 +14,18 @@ following IRS rules as published. Covers federal Form 1040 core mechanics for
 
 | | |
 |---|---|
-| **What it is** | A calculation aid, offline, deterministic |
+| **What it is** | A local calculation aid with optional source-backed model explanations |
 | **What it is not** | Tax advice · return preparation · filing |
 | **Does it file** | **No.** No e-file, no MeF export, no transmission to the IRS or anywhere else |
 | **Does it phone home** | **No.** The calculation path opens no network sockets |
 | **Is it a complete return** | **No.** AGI is a *caller input*. See scope below |
-| **TY2026** | **Projection only.** No final revenue procedure exists yet |
+| **TY2026** | Basic ordinary brackets and standard deductions updated from Rev. Proc. 2025-32; full return rules remain unverified |
 
 ### The verification ledger — please read
 
-Every statutory figure in this repo was **transcribed, not read off a primary
-source.** The engine therefore defaults to reporting:
+Rule values require independent verification. Some reference values have been
+updated against primary IRS publications; that does not validate a complete
+return. The engine defaults to reporting:
 
 ```
 may_prepare_return = false
@@ -62,6 +64,22 @@ python ha/server.py
 ```
 
 Binds to **loopback only** by default, so it is not reachable from your network.
+
+### Optional local IRS assistant
+
+The default cards work without a downloaded model. For broader explanations,
+install the source-ingestion dependencies from `requirements-connected.txt`,
+run `python scripts/build_tax_library.py`, and make `qwen3:4b` available in
+Ollama. Restart the local server afterward. Public-source ingestion requires
+internet access; runtime model requests go to `127.0.0.1:11434`.
+
+The initial index contains 2025 IRS Publications 17, 334, 527 and Form 1040
+instructions. Retrieval filters by tax year. Generated answers carry retrieved
+source links and remain unverified; they cannot authorize return preparation.
+All-year, state and Form 1041 source coverage is unfinished. See
+[implementation references](docs/HATAX-BUILD-REFERENCES.md) for examples used,
+checks performed and remaining work. Model files and the local source index
+are ignored by Git and are not included in the DigitalOcean preview.
 
 ### Tests
 
@@ -177,7 +195,7 @@ exists verbatim in a rule card or is assembled from an engine field.
 |---|---|---|
 | 2024 | Final law, **not yet checked by a human** | Rev. Proc. 2023-34 |
 | 2025 | Final law, **not yet checked by a human** | Rev. Proc. 2024-40 |
-| 2026 | **Projection** — blocks return preparation | Rev. Proc. 2024-40 App. B |
+| 2026 | Basic brackets/deductions updated; full return preparation blocked | Rev. Proc. 2025-32 |
 
 Sub-rules flagged `verified: false` throughout: capital gains thresholds, CTC,
 EITC. `ha/rules/verification.json` lists exactly what to confirm in each.

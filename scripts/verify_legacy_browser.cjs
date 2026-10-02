@@ -1,0 +1,22 @@
+const assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/mitch/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+(async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
+const page=await browser.newPage({viewport:{width:1400,height:900}});let errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(process.env.HA_BROWSER_URL||'http://127.0.0.1:8765/');await page.locator('#btn-boot').click();
+await page.locator('[data-open=calculator]').click();
+assert.equal(await page.locator('#messenger').isVisible(),false,'Messenger must not remain behind calculator');
+assert.equal(await page.locator('#calculator').isVisible(),true);
+await page.locator('#btn-brackets').click();await page.locator('#bracket-output table').waitFor();
+assert.equal(await page.locator('#calculator').isVisible(),false);
+assert.equal(await page.locator('#messenger').isVisible(),false);
+await page.locator('#btn-min').click();assert.equal(await page.locator('#brackets').isVisible(),false);
+await page.locator('[data-open=messenger]').click();assert.equal(await page.locator('#messenger').isVisible(),true);
+await page.locator('#btn-max').click();assert.equal(await page.locator('body').evaluate(el=>el.classList.contains('focus-mode')),true);
+await page.locator('#btn-max').click();assert.equal(await page.locator('body').evaluate(el=>el.classList.contains('focus-mode')),false);
+await page.locator('[data-open=calculator]').click();await page.locator('#btn-close').click();assert.equal(await page.locator('#messenger').isVisible(),true);
+await page.locator('[data-open=messenger]').focus();await page.keyboard.press('ArrowRight');assert.equal(await page.locator('[data-open=calculator]').evaluate(el=>el===document.activeElement),true);
+await page.keyboard.press('Enter');assert.equal(await page.locator('#calculator').isVisible(),true);
+const response=await page.request.post(new URL('/api/chat',page.url()).href,{data:{question:'what is the augsta rule?',context:{tax_year:'2025'}}});assert.equal(response.status(),200);assert.match((await response.json()).answer,/fewer than 15/i);
+await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+assert.deepEqual(errors,[]);console.log('PASS: panels, brackets, collapse/focus/return controls, keyboard tabs, Augusta answer, mobile overflow and page errors.');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});

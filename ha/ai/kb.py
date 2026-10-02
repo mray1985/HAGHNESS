@@ -17,6 +17,15 @@ from typing import Any
 #: verified=True  -> figure taken from a final authority cited in the card
 #: verified=False -> structure is right, figures need confirmation at source
 CARDS: list[dict[str, Any]] = [
+    {
+        'id':'rental.augusta','topic':'rental property',
+        'keywords':['augusta','augsta','280a','14 day rental','rent home'],
+        'questions':['what is the augusta rule','what is the augsta rule'],
+        'verified':False,
+        'citation':'https://www.irs.gov/taxtopics/tc415 ; IRC 280A(g)',
+        'answer':('The Augusta rule is the nickname for IRC 280A(g). If a dwelling is used as your residence and rented for fewer than 15 days during the tax year, the rental income is excluded and rental expenses are not deductible. Count all rental days for the year, not 14 days per renter.\n\n'
+                  'A business renting an owner’s home is a separate deduction question: a genuine business purpose, reasonable rent, documentation and related-party rules need review. The nickname does not automatically make a business deduction allowable. Tell me the tax year, rental days, personal use and who is renting the property.'),
+    },
     # ---------------------------------------------------------------- scope
     {
         "id": "scope.what_this_is",
@@ -56,12 +65,10 @@ CARDS: list[dict[str, Any]] = [
         "verified": True,
         "citation": "rules/federal.json -> years.2026",
         "answer": (
-            "No. TY2026 data is a PROJECTION, not final law. Those figures are the IRS "
-            "estimates published in advance of the final revenue procedure, which is "
-            "historically released in the October-November window before the year starts. "
-            "OBBBA structural changes are statute-driven and are not captured by inflation "
-            "projection alone. Any TY2026 output is planning only, and the engine blocks "
-            "return preparation for it."
+            "The basic 2026 ordinary-income brackets and standard deductions are "
+            "published in IRS Rev. Proc. 2025-32 and have been updated here. Other "
+            "rules and complete-return calculations still require independent "
+            "verification. HATax continues to block return preparation."
         ),
     },
 

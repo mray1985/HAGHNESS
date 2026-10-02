@@ -44,7 +44,8 @@ from ha.rules import FILING_STATUS_LABELS, available_years  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
-ASSISTANT = Assistant()
+from ha.ai.library import TaxLibrary
+ASSISTANT = Assistant(TaxLibrary(ROOT/'.connected-local/tax-library/library.sqlite3'))
 
 _CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -93,9 +94,11 @@ class Handler(BaseHTTPRequestHandler):
         if length > _MAX_STATIC_BYTES:
             return {}
         try:
-            return json.loads(self.rfile.read(length).decode("utf-8"))
+            value=json.loads(self.rfile.read(length).decode("utf-8"))
+            if not isinstance(value,dict):raise ValueError('JSON object required')
+            return value
         except (ValueError, UnicodeDecodeError):
-            return {}
+            raise ValueError('Valid JSON object required')
 
     def _static(self, rel: str) -> None:
         target = (WEB / rel.lstrip("/")).resolve()
@@ -133,6 +136,12 @@ class Handler(BaseHTTPRequestHandler):
         return self._static(route)
 
     def do_POST(self) -> None:
+        try:
+            return self._post()
+        except (ValueError,TypeError,KeyError):
+            return self._send_json({'error':'Check the entered values and request format'},400)
+
+    def _post(self) -> None:
         route = urlparse(self.path).path
         if route == "/api/calculate":
             return self._api_calculate()
@@ -249,7 +258,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def _api_chat(self) -> None:
         data = self._body()
-        question = (data.get("question") or "").strip()
+        question=data.get('question','')
+        if not isinstance(question,str) or not isinstance(data.get('context',{}),dict):
+            raise ValueError('Text question and object context required')
+        question=question.strip()
         if not question:
             return self._send_json({"error": "question is required"}, 400)
         try:
