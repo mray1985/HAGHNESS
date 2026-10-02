@@ -11,7 +11,7 @@
     "document_versions": 2,
     "support_reviews": 1
   },
-  "elapsed_seconds": 7.54,
+  "elapsed_seconds": 7.312,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,
@@ -45,6 +45,7 @@
   "temporary_backup_role_removed": true,
   "transferred_bundle_database_restore": "passed_actual_pg_restore",
   "transfer_store": "local SDK-shaped fictional adapter; not DigitalOcean",
+  "transferred_support_review_queue_matches": true,
   "transferred_tables_match_snapshot": true,
   "transferred_original_and_correction": "passed",
   "transferred_book_profit_minor": 118000,

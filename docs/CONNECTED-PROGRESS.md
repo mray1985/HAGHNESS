@@ -179,3 +179,6 @@ October 2 support-review database foundation: separate explicitreview_support pe
 
 
 October 2 support-review service: sharedtransaction scoped explicitreview/readauthority, serveractor/time, exacteventfingerprint/idempotentretries, currentdocumenthead authenticatedbytes, expensereceiptandcashexplanationacceptancegates; orderedscopedhistory. ActualPGtestcoversacceptance/forgedactor/conflictingretry/corruptmissingstalereceipts/cashmissing/revokedreviewer. Reviewnoimportantissues(codeonly). Fullsuite197passed2Linux-onlyskipped199total. API/UI/correctionawareprojectionstillopen; nofilingortaxapproval implied.
+
+
+October 2 correction-aware support projection: validlatestdecisionscancomplete supportqueue; eventfingerprint/documentheadchangesor reconsideration reopenwithreasons. Currentlinkedreceipt resolvesreceiptflag; no money/filing change. ActualPGcoverage accepts/reopens distinctstates, fullsuite198passed2Linux-onlyskipped200total. Independentreviewnoimportantfinding(codeonly). Actual encryptedtransferredrestorecomparesnonemptyreviewqueue as wellas6tables. UI/API/racestressandlivehosted gates remainopen.

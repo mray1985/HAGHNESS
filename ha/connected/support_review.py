@@ -11,6 +11,38 @@ def fingerprint(value):
                                     ensure_ascii=False).encode()).hexdigest()
 
 
+def apply_support_reviews(projection, events, reviews, versions):
+    """Project support state without changing money or granting filing authority."""
+    latest = {r['event_id']: r for r in reviews}
+    current = {(v.document_id, v.version_id) for v in versions}
+    superseded = {v.previous_version_id for v in versions if v.previous_version_id}
+    selected = set(projection['source_event_ids'])
+    queue, supported_receipts = [], set()
+    for event in Ledger._effective(events):
+        if event['id'] not in selected or event['effective_kind'] not in ('income','expense','employee_payroll_obligation'):
+            continue
+        review = latest.get(event['id']) or latest.get(event.get('replaces'))
+        reasons = []
+        if review is None:
+            reasons.append('not_reviewed')
+        else:
+            if review['event_fingerprint'] != fingerprint(event): reasons.append('entry_changed')
+            document, version = review['document_id'], review['version_id']
+            valid_document = (document, version) in current and version not in superseded
+            if document is not None and not valid_document: reasons.append('document_changed')
+            if review['decision'] != 'accepted': reasons.append('needs_information')
+            if valid_document and review['event_fingerprint'] == fingerprint(event):
+                supported_receipts.add(event['id'])
+            if event['effective_kind'] == 'expense' and not valid_document: reasons.append('receipt_required')
+            if event.get('method') == 'cash' and not has_text(event.get('explanation')): reasons.append('cash_explanation_required')
+        if reasons: queue.append({'event_id': event['id'], 'reasons': reasons})
+    projection['missing_receipts'] = [e for e in projection['missing_receipts'] if e not in supported_receipts]
+    projection.update(support_review_required=[q['event_id'] for q in queue],
+                      support_review_complete=not queue, support_review_queue=queue,
+                      support_revision=len(reviews))
+    return projection
+
+
 class SupportReviews:
     def __init__(self, repository, documents):
         if documents.repository is not repository:

@@ -121,5 +121,13 @@ class PostgresLedger:
     def project(self, principal, scope, period, month=1, reserve_rate='0.25'):
         with self.repository.transaction() as conn:
             authorize(principal,scope,'read',self.repository)
-            ledger = Ledger(self.repository,{scope:self.repository.events(conn,scope)})
-            return ledger.project(principal,scope,period,month,reserve_rate)
+            self.repository.lock_scope(conn,scope)
+            events=self.repository.events(conn,scope)
+            ledger = Ledger(self.repository,{scope:events})
+            projection=ledger.project(principal,scope,period,month,reserve_rate)
+            rows=conn.execute('SELECT event_id,event_fingerprint,document_id,version_id,decision '
+                'FROM ha_connected.support_reviews WHERE profile_id=%s AND business_id=%s AND tax_year=%s ORDER BY seq',
+                self.repository.scope_values(scope)).fetchall()
+            reviews=[dict(zip(('event_id','event_fingerprint','document_id','version_id','decision'),row)) for row in rows]
+            from .support_review import apply_support_reviews
+            return apply_support_reviews(projection,events,reviews,self.repository.list_versions(scope))

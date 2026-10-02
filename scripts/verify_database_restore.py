@@ -219,6 +219,10 @@ def main():
     transfer_repo=PostgresRepository(transfer_dsn)
     if PostgresLedger(transfer_repo).project(owner,scope,'year')['book_profit_minor']!=118000:
         raise ValueError('Transferred books differ')
+    recovered_support=recovered_ledger.project(owner,scope,'year')
+    transferred_support=PostgresLedger(transfer_repo).project(owner,scope,'year')
+    if not recovered_support['support_review_queue'] or recovered_support['support_review_queue']!=transferred_support['support_review_queue']:
+        raise ValueError('Transferred support review state differs')
     transfer_documents=Documents(transfer_repo,transfer_objects,lambda data,mime:False)
     for version,expected in ((original,b'fictional original receipt'),(corrected,b'fictional corrected receipt')):
         if transfer_documents.read(owner,scope,version.document_id,version.version_id)!=expected:
@@ -279,7 +283,7 @@ def main():
               'read_only_backup_role_capture':'passed','backup_role_write_denials':denials,'temporary_backup_role_removed':True,
               'transferred_bundle_database_restore':'passed_actual_pg_restore',
               'transfer_store':'local SDK-shaped fictional adapter; not DigitalOcean',
-              'transferred_tables_match_snapshot':True,'transferred_original_and_correction':'passed',
+              'transferred_support_review_queue_matches':True,'transferred_tables_match_snapshot':True,'transferred_original_and_correction':'passed',
               'transferred_book_profit_minor':118000,'transferred_cross_profile_denial':'passed',
               'hosted_storage_restore':'not_run','scanner':'synthetic fixture bypass only'}
     (ROOT/'docs/DATABASE-RESTORE-EVIDENCE.json').write_text(json.dumps(report,indent=2)+'\n')

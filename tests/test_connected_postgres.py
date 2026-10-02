@@ -129,6 +129,11 @@ class PostgresTests(unittest.TestCase):
         accepted=service.submit(self.owner,self.scope,request)
         self.assertEqual(service.submit(self.owner,self.scope,request),accepted)
         self.assertEqual(len(service.history(self.owner,self.scope)),1)
+        reviewed=self.ledger.project(self.owner,self.scope,'year')
+        self.assertTrue(reviewed['support_review_complete'])
+        self.assertEqual(reviewed['missing_receipts'],[])
+        self.assertEqual(reviewed['book_profit_minor'],-1000)
+        self.assertFalse(reviewed['filing_authorized'])
         self.assertEqual(service.history(self.owner,self.scope)[0]['actor'],self.owner.subject)
         with self.assertRaises(ValueError):service.submit(self.owner,self.scope,{**request,'reason':'different'})
         objects.data[version.object_key]=b'corrupted'
@@ -140,6 +145,9 @@ class PostgresTests(unittest.TestCase):
         objects.data[version.object_key]=b'fictional receipt'
         docs.correct(self.owner,self.scope,version.document_id,BytesIO(b'corrected receipt'),'text/plain','review-doc-fix','Correction')
         with self.assertRaises(ValueError):service.submit(self.owner,self.scope,{**request,'idempotency_key':'stale-doc'})
+        stale=self.ledger.project(self.owner,self.scope,'year')
+        self.assertIn('document_changed',stale['support_review_queue'][0]['reasons'])
+        self.assertFalse(stale['support_review_complete'])
         self.ledger.post_event(self.owner,self.scope,dict(id='cash-review',date='2026-10-02',kind='income',method='cash',amount_minor=1000))
         with self.assertRaises(ValueError):
             service.submit(self.owner,self.scope,dict(event_id='cash-review',decision='accepted',reason='Review',idempotency_key='cash-no-explanation'))
@@ -147,3 +155,21 @@ class PostgresTests(unittest.TestCase):
             conn.execute("DELETE FROM ha_connected.grants WHERE action='review_support'")
         with self.assertRaises(PermissionError):service.submit(self.owner,self.scope,request)
         self.assertFalse(self.ledger.project(self.owner,self.scope,'year')['support_review_complete'])
+
+    def test_review_reopens_after_money_correction_and_reconsideration(self):
+        from ha.connected.documents import Documents,MemoryObjects
+        from ha.connected.support_review import SupportReviews
+        self.ledger.post_event(self.owner,self.scope,dict(id='review-income',date='2026-10-02',kind='income',amount_minor=1000))
+        service=SupportReviews(self.repo,Documents(self.repo,MemoryObjects(),lambda data,mime:True))
+        with self.repo.transaction() as conn:
+            conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'review_support')")
+        request=dict(event_id='review-income',decision='accepted',reason='Checked income',idempotency_key='income-review')
+        service.submit(self.owner,self.scope,request)
+        self.assertTrue(self.ledger.project(self.owner,self.scope,'year')['support_review_complete'])
+        service.submit(self.owner,self.scope,{**request,'decision':'needs_information','idempotency_key':'income-reconsider'})
+        self.assertFalse(self.ledger.project(self.owner,self.scope,'year')['support_review_complete'])
+        self.ledger.post_event(self.owner,self.scope,dict(id='income-fixed',date='2026-10-03',kind='correction',replaces='review-income',reason='New amount',amount_minor=2000))
+        draft=self.ledger.project(self.owner,self.scope,'year')
+        self.assertEqual(draft['income_minor'],2000)
+        self.assertIn('entry_changed',draft['support_review_queue'][0]['reasons'])
+        self.assertEqual(len(service.history(self.owner,self.scope)),2)
