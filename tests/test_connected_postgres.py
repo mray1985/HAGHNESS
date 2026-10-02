@@ -216,3 +216,51 @@ class PostgresTests(unittest.TestCase):
         self.assertEqual(request('POST',path,body)[0],404)
         sessions.logout(cookie)
         self.assertEqual(request('GET',path+'?profile=orchard&business=business&year=2026')[0],401)
+
+    def test_document_correction_waits_for_inflight_review_then_reopens_queue(self):
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError
+        from threading import Event, local
+        from io import BytesIO
+        from ha.connected.documents import Documents,MemoryObjects
+        from ha.connected.support_review import SupportReviews
+        entered,release,attempted=Event(),Event(),Event()
+        worker=local()
+        original_lock=self.repo.lock_scope
+        def observed_lock(conn,scope):
+            if getattr(worker,'correcting',False):attempted.set()
+            return original_lock(conn,scope)
+        self.repo.lock_scope=observed_lock
+        self.addCleanup(setattr,self.repo,'lock_scope',original_lock)
+        class BlockingObjects(MemoryObjects):
+            def get(self,key,version):
+                entered.set()
+                if not release.wait(10):raise RuntimeError('Fixture release timeout')
+                return super().get(key,version)
+        docs=Documents(self.repo,BlockingObjects(),lambda data,mime:True)
+        original=docs.upload(self.owner,self.scope,BytesIO(b'original fictional receipt'),'text/plain','race-original')
+        self.ledger.post_event(self.owner,self.scope,dict(id='race-expense',date='2026-10-02',kind='expense',amount_minor=1000))
+        with self.repo.transaction() as conn:
+            conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'review_support')")
+        service=SupportReviews(self.repo,docs)
+        request=dict(event_id='race-expense',decision='accepted',reason='Checked original',idempotency_key='race-review',
+                     document_id=original.document_id,version_id=original.version_id)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            review=pool.submit(service.submit,self.owner,self.scope,request)
+            try:
+                self.assertTrue(entered.wait(5))
+                def correct():
+                    worker.correcting=True
+                    return docs.correct(self.owner,self.scope,original.document_id,
+                        BytesIO(b'corrected fictional receipt'),'text/plain','race-correction','Changed source')
+                correction=pool.submit(correct)
+                self.assertTrue(attempted.wait(5))
+                with self.assertRaises(TimeoutError):correction.result(timeout=0.2)
+            finally:release.set()
+            self.assertEqual(review.result(timeout=5)['decision'],'accepted')
+            corrected=correction.result(timeout=5)
+        self.assertEqual(corrected.previous_version_id,original.version_id)
+        draft=self.ledger.project(self.owner,self.scope,'year')
+        self.assertFalse(draft['support_review_complete'])
+        self.assertIn('document_changed',draft['support_review_queue'][0]['reasons'])
+        self.assertEqual(draft['expense_minor'],1000)
+        self.assertEqual(len(service.history(self.owner,self.scope)),1)
