@@ -255,6 +255,9 @@ def eitc(
     credit_ei = phase(earned_income)
     credit_agi = phase(agi_without_eitc)
     credit = min(credit_ei, credit_agi)
+    # IRC 32 requires earned income. Eligibility/phase-in remain incomplete.
+    if earned_income <= 0:
+        credit = credit_ei = Decimal(0)
 
     # Hard ceiling: no credit at all if either measure exceeds the limit.
     if earned_income > ceiling or agi_without_eitc > ceiling:
@@ -305,6 +308,8 @@ def compute(
         raise ValueError("AGI cannot be negative in this engine.")
 
     gain_d = money(net_capital_gain)
+    if gain_d < 0:
+        raise ValueError('Capital losses require a netting/AGI workflow not supported by this engine.')
     standard_deduction = D(year["standard_deduction"][status])
     taxable_income = max(Decimal(0), agi_d - standard_deduction)
     brackets = year["brackets"][status]

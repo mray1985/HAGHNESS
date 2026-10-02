@@ -60,6 +60,6 @@ byId('document-form').addEventListener('submit',async event=>{
   }catch(error){if(current===generation)status(error.message);}finally{button.disabled=false;}
 });
 byId('logout').addEventListener('click',async()=>{try{await request('/api/auth/logout',{});location.reload();}catch(error){status(error.message);}});
-(async()=>{try{const health=await request('/api/health');if(!health.login_configured)byId('setup-message').textContent='AWS sign-in is not configured. This page cannot yet open client records.';
+(async()=>{try{const health=await request('/api/health');if(!health.login_configured)byId('setup-message').textContent='Protected sign-in is not configured. This page cannot yet open client records.';
   const identity=await request('/api/auth/me');csrf=identity.csrf;byId('login-panel').hidden=true;byId('workspace').hidden=false;byId('logout').hidden=false;status('Signed in. Open a client and business you are permitted to access.');
 }catch(error){status(error.message);}})();
