@@ -94,3 +94,8 @@ The new fixture uses its own temporary PostgreSQL cluster under the installed `p
 For the local run, add `--connected-session` to the MFA probe command and execute the fixture as Linux root. The helper waits for the next TOTP period because the initial standalone probe already consumed the fixture's current code. This fixture wait is not a production login-latency measurement.
 
 This proves the local server/API connection. It does not prove hosted DigitalOcean/Spaces, real-user OTP enrollment/recovery, browser interaction, document backup scheduling, final tax calculations or filing. Local object keys are ephemeral fixture keys; external recovery and Spaces still require their own end-to-end evidence.
+
+
+## Real MFA support-review session extension
+
+October2 composed local probe now includes the support-review API under the actual Keycloak password/OTP to HA HTTPS callback session. Missing CSRF and missing explicit review permission fail before a fictional grant is inserted. The same opaque cookie accepts scanned receipt support, preserves retry/history, and reopens advertising review after document correction. Foreign review history and active-session read/write after grant revocation fail. Actual PostgreSQL16, ClamD and AES-GCM fixture objects participate. Saved KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json identifies these checks separately. This is API/protocol evidence, not a live rendered browser, hosted Spaces, enrollment or recovery proof. Runtime uploads remain unactivated.

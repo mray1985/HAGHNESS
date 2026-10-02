@@ -176,6 +176,20 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             payload={'scope':scope,'mime':'text/plain','data':base64.b64encode(b'Fictional receipt original').decode(),'idempotency_key':'original'}
             api('POST','/api/connected/documents',payload,status=403)
             original=api('POST','/api/connected/documents',payload,status=201,csrf=csrf)
+            review={'scope':scope,'review':{'event_id':'advertising','decision':'accepted',
+                'reason':'Fictional receipt checked','idempotency_key':'live-review',
+                'document_id':original['document_id'],'version_id':original['version_id']}}
+            api('POST','/api/connected/support/reviews',review,status=403)
+            api('POST','/api/connected/support/reviews',review,status=404,csrf=csrf)
+            with repository.transaction() as conn:
+                conn.execute('INSERT INTO ha_connected.grants VALUES (%s,%s,%s,%s,%s)',
+                    (subject,'orchard','business',2026,'review_support'))
+            accepted=api('POST','/api/connected/support/reviews',review,status=201,csrf=csrf)
+            if api('POST','/api/connected/support/reviews',review,status=201,csrf=csrf)!=accepted:
+                raise ValueError('Review retry changed decision')
+            if 'advertising' in api('GET','/api/connected/draft?'+query)['support_review_required']:
+                raise ValueError('Accepted support remains queued')
+            api('GET','/api/connected/support/reviews?profile=cedar&business=cedar-business&year=2026',status=404)
             corrected=api('POST','/api/connected/document/corrections',{**payload,'document':original['document_id'],
                 'reason':'Fictional correction','idempotency_key':'correction','data':base64.b64encode(b'Fictional receipt correction').decode()},status=201,csrf=csrf)
             for version,text in ((original,b'Fictional receipt original'),(corrected,b'Fictional receipt correction')):
@@ -183,6 +197,11 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
                 result=api('GET','/api/connected/document?'+query+suffix)
                 if base64.b64decode(result['data'])!=text:raise ValueError('Preserved document read mismatch')
                 api('GET','/api/connected/document?profile=cedar&business=cedar-business&year=2026'+suffix,status=404)
+            reviewed_draft=api('GET','/api/connected/draft?'+query)
+            advertising=next(item for item in reviewed_draft['support_review_queue'] if item['event_id']=='advertising')
+            if 'document_changed' not in advertising['reasons']:raise ValueError('Corrected support did not reopen')
+            if len(api('GET','/api/connected/support/reviews?'+query)['reviews'])!=1:
+                raise ValueError('Review history changed')
             before_objects=set(objects.root.iterdir())
             eicar=b'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
             api('POST','/api/connected/documents',{**payload,'idempotency_key':'rejected','data':base64.b64encode(eicar).decode()},status=400,csrf=csrf)
@@ -194,11 +213,15 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             api('GET','/api/auth/me')
             api('GET','/api/connected/draft?'+query,status=404)
             api('GET','/api/connected/document?'+query+suffix,status=404)
+            api('GET','/api/connected/support/reviews?'+query,status=404)
+            api('POST','/api/connected/support/reviews',review,status=404,csrf=csrf)
             call(callback,expected=404)  # HA pending exchange is single use.
             api('POST','/api/auth/logout',{},csrf=csrf)
             api('GET','/api/auth/me',status=401)
             api('GET','/api/connected/draft?'+query,status=401)
-            return {'real_mfa_https_callback':'passed','same_session_books_tax_documents':'passed',
+            return {'real_mfa_https_callback':'passed','same_session_books_tax_documents':'passed','same_real_mfa_session_support_review':'passed',
+                'review_csrf_and_explicit_authority_denials':True,'review_retry_history_preserved':True,
+                'review_document_correction_reopens_queue':True,'review_foreign_scope_and_revocation_denials':True,
                 'postgresql':'isolated real PostgreSQL 16 Unix-socket cluster',
                 'scanner':'actual ClamD with project container policy','objects':'AES-GCM encrypted local fixture objects; not Spaces',
                 'cross_profile_document_and_books_denial':True,'csrf_upload_denial':True,'original_and_correction_preserved':True,

@@ -73,3 +73,8 @@ Actual headless Microsoft Edge/Playwright on the loopback page exercised review 
 ## Real PostgreSQL review/correction coordination
 
 The concurrency regression holds an authenticated receipt read inside the review transaction, then starts a document correction on a second worker. An instrumentation signal confirms correction reached the real scope-lock call before its future is observed blocked. Releasing the review allows its acceptance to commit, then the correction completes. Projection reopens the queue with document_changed, preserves the one prior decision and keeps the expense total unchanged. Instrumentation delegates the actual lock unchanged, restores it on cleanup and releases the blocked reader in finally. Review identified the original timing-only assertion as insufficient; the lock-attempt signal fixes that evidence gap. This proves the local controlled review-first ordering; exhaustive stress, reverse scheduling and hosted behavior remain separate verification work. Full database-backed regression202 total:200 passed,two Linux-only skips.
+
+
+## Actual identity/session integration
+
+The extended Keycloak composed probe passed support review using the actual password-plus-OTP authenticated HTTPS session, real PostgreSQL and scanner, without injected principal/session or scan bypass. Denied authority/CSRF, accepted support, retry/history, document-correction reopening and foreign/revoked scope denials pass with the same cookie used for books/HATax/documents. The frontend browser test remains a separate fictional-response proof; combined live-identity rendered-browser interaction, hosted storage and real-user enrollment/recovery are not yet established.

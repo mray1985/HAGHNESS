@@ -194,3 +194,6 @@ October 2 actualrenderedreviewUIverification: EdgeheadlessPlaywrightloopback, fi
 
 
 October 2 actualPGreview/correctioncoordination: controlledheldreceiptread inside review, confirmedsecondworkerreal-lockattempt before blockedobservation; acceptancecommit thencorrectionqueuesdocument_changed, priorhistorykept, expenseunchanged. Reviewfixstrengthened timingonlyassertionwithattemptsignal; noremainingimportantfinding. Fullsuite200passed2Linux-onlyskipped202total. Productionunchanged; combinedliveMFAreviewjourney, broaderstressandhostedverification remainopen.
+
+
+October2 actualMFAreviewintegration: isolatedrealKeycloakpasswordOTP->HAHTTPScallbackcookie->PostgreSQL/ClamD/AESdocumentandreviewAPI passed. MissingCSRF/authority denied, explicitfixturegrantaccepts/retries/history, correctionreopens, foreign/revokedreviewreadwrite denied. No injectedprincipal/session orscanbypass. Evidence saved; identityrealmtemplate unchanged. Linuxcleanupchecks andserviceexit verified separately. HostedSpaces/enrollment/recovery/combinedrenderedlivebrowser remainopen.

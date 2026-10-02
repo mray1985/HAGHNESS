@@ -24,6 +24,11 @@
   "connected_session_checks": {
     "real_mfa_https_callback": "passed",
     "same_session_books_tax_documents": "passed",
+    "same_real_mfa_session_support_review": "passed",
+    "review_csrf_and_explicit_authority_denials": true,
+    "review_retry_history_preserved": true,
+    "review_document_correction_reopens_queue": true,
+    "review_foreign_scope_and_revocation_denials": true,
     "postgresql": "isolated real PostgreSQL 16 Unix-socket cluster",
     "scanner": "actual ClamD with project container policy",
     "objects": "AES-GCM encrypted local fixture objects; not Spaces",
