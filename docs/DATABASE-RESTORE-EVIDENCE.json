@@ -10,7 +10,7 @@
     "ledger_events": 6,
     "document_versions": 2
   },
-  "elapsed_seconds": 4.951,
+  "elapsed_seconds": 7.026,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,
@@ -40,6 +40,12 @@
     "create_table"
   ],
   "temporary_backup_role_removed": true,
+  "transferred_bundle_database_restore": "passed_actual_pg_restore",
+  "transfer_store": "local SDK-shaped fictional adapter; not DigitalOcean",
+  "transferred_tables_match_snapshot": true,
+  "transferred_original_and_correction": "passed",
+  "transferred_book_profit_minor": 118000,
+  "transferred_cross_profile_denial": "passed",
   "hosted_storage_restore": "not_run",
   "scanner": "synthetic fixture bypass only"
 }

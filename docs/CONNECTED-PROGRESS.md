@@ -161,3 +161,6 @@ October 2 off-host copy preparation: operator-only transfer authenticates a priv
 
 
 October 2 recovery-download continuation: operator-only bounded off-host downloader authenticates encrypted artifacts in private staging before exclusive publication, inventory last. Existing destinations preserved; corruption/oversize reject before publication. Independent review found no important defect within trusted-parent boundary. Nine transfer/recovery tests pass, including distinct original/correction roundtrip added after the full regression (191total189passed2Linux-onlyskipped). Download does not run pg_restore; separately recovered snapshot rows and historical key remain required. Actual DigitalOcean capture/download/restoration, provider rights, catalog, scheduler integration and retention operations remain open.
+
+
+October 2 transferred-bundle recovery proof: actual PostgreSQL restore now runs from a downloaded encrypted bundle through the copy/download helpers and a local fictional SDK adapter. All five snapshot tables match; profit118000minor, distinct original/correction bytes and foreign-profile denial pass. Actualread-onlycaptureproofstillpasses. Savedreport elapsed7.026seconds singlelocalfixture, hostedstore explicitlynotrun. Productioncodeunchanged; no paid/providerresourceoperation.

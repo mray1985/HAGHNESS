@@ -20,6 +20,7 @@ from psycopg.types.json import Jsonb
 from ha.connected.postgres import PostgresRepository,PostgresLedger
 from ha.connected.domain import Principal,Scope
 from ha.connected.documents import Documents
+from ha.connected.backup_transfer import copy_bundle, recover_bundle
 from ha.connected.backup_job import capture_backup
 from ha.connected.backup_bundle import create_bundle,inspect_bundle,digest
 from ha.connected.backup_inventory import build_inventory,verify_inventory
@@ -173,6 +174,49 @@ def main():
     for version,expected in ((original,b'fictional original receipt'),(corrected,b'fictional corrected receipt')):
         if bundled_documents.read(owner,scope,version.document_id,version.version_id)!=expected:
             raise ValueError('Bundled object recovery differs')
+    # SDK-shaped local ciphertext store: exercises transfer plumbing, not a provider.
+    class FictionalStore:
+        def __init__(self, root):
+            self.root = root; root.mkdir(mode=0o700)
+        def path(self, bucket, name):
+            return self.root / hashlib.sha256((bucket+'|'+name).encode()).hexdigest()
+        def upload_fileobj(self, reader, bucket, name, ExtraArgs):
+            if ExtraArgs.get('ACL') != 'private':raise ValueError('Private copy required')
+            with self.path(bucket,name).open('xb') as writer:shutil.copyfileobj(reader,writer)
+        def get_object(self, Bucket, Key):
+            return {'Body':self.path(Bucket,Key).open('rb')}
+    transfer_store=FictionalStore(recovery_root/'fictional-offhost-store')
+    copied=copy_bundle(bundle,backup_key_path.read_bytes(),versions,transfer_store,'fictional-backups')
+    downloaded=recovery_root/'downloaded-bundle'
+    recover_bundle(transfer_store,'fictional-backups',copied['prefix'],backup_key_path.read_bytes(),
+                   versions,downloaded,(bundle/'database.habackup').stat().st_size)
+    downloaded_dump=recovery_root/'downloaded-restore.dump'
+    decrypt_backup(downloaded/'database.habackup',downloaded_dump,backup_key_path.read_bytes())
+    transfer_database='ha_transfer_restore_'+uuid.uuid4().hex
+    with psycopg.connect(config['dsn'],autocommit=True) as conn:
+        conn.execute(psycopg.sql.SQL('CREATE DATABASE {}').format(psycopg.sql.Identifier(transfer_database)))
+    subprocess.run([str(BIN/'pg_restore.exe'),*args,'-d',transfer_database,'--no-owner','--no-acl',
+                    str(downloaded_dump)],env=env,check=True)
+    transfer_dsn=make_conninfo(**{**params,'dbname':transfer_database})
+    with psycopg.connect(transfer_dsn) as conn:
+        for table,before in snapshot_rows.items():
+            after=conn.execute(psycopg.sql.SQL('SELECT * FROM ha_connected.{}').format(
+                psycopg.sql.Identifier(table))).fetchall()
+            if sorted(before,key=repr)!=sorted(after,key=repr):raise ValueError('Transferred table differs')
+        transfer_versions=[repository._version(row) for row in conn.execute(
+            'SELECT * FROM ha_connected.document_versions').fetchall()]
+    _,transfer_objects=inspect_bundle(downloaded,backup_key_path.read_bytes(),transfer_versions)
+    transfer_repo=PostgresRepository(transfer_dsn)
+    if PostgresLedger(transfer_repo).project(owner,scope,'year')['book_profit_minor']!=118000:
+        raise ValueError('Transferred books differ')
+    transfer_documents=Documents(transfer_repo,transfer_objects,lambda data,mime:False)
+    for version,expected in ((original,b'fictional original receipt'),(corrected,b'fictional corrected receipt')):
+        if transfer_documents.read(owner,scope,version.document_id,version.version_id)!=expected:
+            raise ValueError('Transferred document differs')
+    try:
+        transfer_documents.read(owner,Scope('cedar','cedar-business',2026),original.document_id,original.version_id)
+    except PermissionError:pass
+    else:raise ValueError('Transferred documents exposed another profile')
     job_bundle=recovery_root/'job-bundle'
     role='ha_backup_'+uuid.uuid4().hex
     role_password=secrets.token_urlsafe(32)
@@ -220,6 +264,10 @@ def main():
               'completed_bundle_inspection':'passed','bundled_document_recovery':'passed','bundle_database_dump_matches_restore':'passed',
               'consistent_backup_job':'passed','backup_job_current_document_versions':job['document_versions'],
               'read_only_backup_role_capture':'passed','backup_role_write_denials':denials,'temporary_backup_role_removed':True,
+              'transferred_bundle_database_restore':'passed_actual_pg_restore',
+              'transfer_store':'local SDK-shaped fictional adapter; not DigitalOcean',
+              'transferred_tables_match_snapshot':True,'transferred_original_and_correction':'passed',
+              'transferred_book_profit_minor':118000,'transferred_cross_profile_denial':'passed',
               'hosted_storage_restore':'not_run','scanner':'synthetic fixture bypass only'}
     (ROOT/'docs/DATABASE-RESTORE-EVIDENCE.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))
