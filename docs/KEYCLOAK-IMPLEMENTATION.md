@@ -49,3 +49,14 @@ identity recovery credentials in repository evidence.
 
 References: [Keycloak authentication and step-up configuration](https://www.keycloak.org/docs/latest/server_admin/index.html),
 [Keycloak ID-token construction](https://github.com/keycloak/keycloak/blob/main/services/src/main/java/org/keycloak/protocol/oidc/TokenManager.java).
+
+
+## Local real-runtime preparation
+
+October 2: installed Ubuntu OpenJDK 25 and downloaded official Keycloak 26.8.0 using scripts/setup_local_keycloak.py. The published GitHub asset SHA-256 matches the saved archive. Local files remain under ignored .connected-local/keycloak; no identity credentials are committed. The setup now stages downloads/extraction and publishes completed results, with an extraction completion marker. The marker records original extraction provenance, not a continuous integrity check of every mutable runtime file.
+
+scripts/verify_keycloak_runtime.py starts its own HTTPS-only loopback dev runtime with a temporary certificate and isolated temporary H2 database. It verifies master discovery, exact issuer/JWKS URL and RSA key availability using certificate and hostname verification. It terminates its own process group. The saved KEYCLOAK-RUNTIME-EVIDENCE.json does not claim password/OTP or application-realm verification.
+
+Development H2 and a locally trusted test certificate are fixture choices, not hosted configuration. Next: build the required application realm/client/OTP flow, prove signed ACR/AMR from actual completed authentication, then connect HA's session and document access. The independent hosted MFA requirement remains incomplete.
+
+Official setup source: [Keycloak OpenJDK guide](https://www.keycloak.org/getting-started/getting-started-zip).

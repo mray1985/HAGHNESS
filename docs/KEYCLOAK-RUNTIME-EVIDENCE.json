@@ -1,0 +1,11 @@
+{
+  "environment": "local Ubuntu Keycloak dev runtime only",
+  "https_discovery": "passed",
+  "hostname_and_certificate_verification": true,
+  "rsa_keys_available": true,
+  "issuer": "https://127.0.0.1:8843/realms/master",
+  "mfa_login": "not_run",
+  "application_realm": "not_configured_by_this_harness",
+  "hosted_identity": "not_run",
+  "runtime_uploads_activated": false
+}

@@ -126,3 +126,6 @@ October 2 scanner policy continuation: researched official ClamAV container meta
 
 
 October 2 live document-service continuation: fourteen actual Linux checks now include Documents with real ClamD and encrypted objects, clean original/correction preservation, no publication on rejected upload/correction, and authorization before foreign stream access. Saved report explicitly identifies volatile metadata/permissions and synthetic MFA principal; live provider login/storage/database integration remains open.
+
+
+October 2 real identity-runtime preparation: official Keycloak 26.8.0 archive checksum verified; Java 25 runtime installed locally. Actual HTTPS discovery/JWKS probe uses explicit certificate verification and loopback binding, with an isolated temporary database. Password/OTP flow and actual application login remain unverified. Review-driven staged setup prevents interrupted artifacts being mistaken for complete installation. See KEYCLOAK-IMPLEMENTATION.md and saved runtime/distribution evidence.
