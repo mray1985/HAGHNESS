@@ -22,6 +22,7 @@ Routes
 from __future__ import annotations
 
 import json
+import os
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -45,7 +46,8 @@ from ha.rules import FILING_STATUS_LABELS, available_years  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 from ha.ai.library import TaxLibrary
-ASSISTANT = Assistant(TaxLibrary(ROOT/'.connected-local/tax-library/library.sqlite3'))
+ASSISTANT = Assistant(TaxLibrary(ROOT/'.connected-local/tax-library/library.sqlite3',
+                               generate=os.environ.get('HATAX_ENABLE_LOCAL_MODEL')=='1'))
 
 _CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -143,6 +145,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def _post(self) -> None:
         route = urlparse(self.path).path
+        if route == '/api/return/estimate':
+            from ha.returns import estimate_w2
+            return self._send_json(estimate_w2(self._body()))
         if route == "/api/calculate":
             return self._api_calculate()
         if route == "/api/state":

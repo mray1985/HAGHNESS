@@ -31,3 +31,6 @@ Rebuild public-source library with `.venv/Scripts/python.exe scripts/build_tax_l
 Fresh code review found that marking the whole 2026 ruleset final overstated the publication status of untouched components. Repaired this with a partial year status and a separate final basic-bracket status. Full calculation output retains an incomplete/projected warning; basic bracket references display their final IRS publication correctly. Contradictory old year warnings were removed.
 
 Verification: 97 tests passed with real local PostgreSQL and no skipped database tests. Browser checks passed for exclusive panels, bracket loading, collapse/focus/return controls, keyboard tabs, Augusta typo response, mobile overflow and page errors. These checks establish application behavior, not independent tax certification or generated-answer quality.
+
+
+Follow-up: Qwen3:4b download completed. The first real IRS-source answer timed out at 90 seconds and slowed the machine; the model was unloaded. Default assistant lookup now returns source excerpts without generation. HATAX_ENABLE_LOCAL_MODEL=1 opts in for further performance testing; generated accuracy remains unvalidated. See HATAX-FORM-FIRST-PROGRESS.md for the new primary return flow.

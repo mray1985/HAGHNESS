@@ -4,6 +4,15 @@
 browser workspace. Calculations are deterministic; optional explanations use
 retrieved public IRS passages and a model running on this machine.
 
+The home page now starts with **About you → Click your form → W-2 confirmation
+→ Layout choice → Matching box entry → State questions → Review**. Multiple
+W-2s and state rows are supported. The live preview currently includes only
+single-filer W-2 wages, the basic standard deduction, ordinary federal brackets
+and box 2 withholding. Other boxes are captured but their tax treatment is
+unfinished. No complete return, official PDF export, document import or filing
+is available. Client identity stays in page memory; refreshing clears entries.
+Use fictional information until durable protected return storage is connected.
+
 Built from the repository inventory in `HA_GitHub_IRS_100_Page_Inventory_2026-09-29.xlsx`,
 following IRS rules as published. Covers federal Form 1040 core mechanics for
 **TY2024, TY2025 and TY2026**, with a reference view of **all 50 states + DC**.
@@ -70,7 +79,10 @@ Binds to **loopback only** by default, so it is not reachable from your network.
 The default cards work without a downloaded model. For broader explanations,
 install the source-ingestion dependencies from `requirements-connected.txt`,
 run `python scripts/build_tax_library.py`, and make `qwen3:4b` available in
-Ollama. Restart the local server afterward. Public-source ingestion requires
+Ollama. Generation is opt-in with `HATAX_ENABLE_LOCAL_MODEL=1`; the first real
+local-model test timed out after 90 seconds, so default source lookup returns
+excerpts without invoking it. Restart the local server after configuration.
+Public-source ingestion requires
 internet access; runtime model requests go to `127.0.0.1:11434`.
 
 The initial index contains 2025 IRS Publications 17, 334, 527 and Form 1040
@@ -85,11 +97,12 @@ are ignored by Git and are not included in the DigitalOcean preview.
 
 ```bash
 python -m unittest discover -s tests -t .
-# 45 tests
+# Current suite: 104 tests; database cases require the local test database.
 ```
 
-Every expected value was computed by hand from the cited authority and the
-arithmetic is written into the assertion message, so a failure shows the
+Tests check selected scenarios and application behavior; they do not establish
+independent tax certification. Some original assertions document their
+arithmetic, so a failure shows the
 calculation rather than two numbers disagreeing.
 
 ---

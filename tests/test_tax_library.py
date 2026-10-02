@@ -24,3 +24,8 @@ class TaxLibraryTests(unittest.TestCase):
         library=TaxLibrary(self.path,transport=lambda payload:dict(answer='Explanation',supported=True,source_ids=['one']))
         result=library.answer('rented residence',2025)
         self.assertFalse(result['verified']);self.assertFalse(result['may_prepare_return'])
+    def test_excerpt_mode_never_calls_model(self):
+        def forbidden(payload):raise AssertionError('Model must not run in excerpt mode')
+        result=TaxLibrary(self.path,transport=forbidden,generate=False).answer('rented residence',2025)
+        self.assertEqual(result['confidence'],'source_excerpt_unverified')
+        self.assertFalse(result['may_prepare_return'])

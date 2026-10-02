@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 const {chromium}=require('C:/Users/mitch/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
 const page=await browser.newPage({viewport:{width:1400,height:900}});let errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.goto(process.env.HA_BROWSER_URL||'http://127.0.0.1:8765/');await page.locator('#btn-boot').click();
+await page.goto(process.env.HA_BROWSER_URL||'http://127.0.0.1:8765/tools.html');await page.locator('#btn-boot').click();
 await page.locator('[data-open=calculator]').click();
 assert.equal(await page.locator('#messenger').isVisible(),false,'Messenger must not remain behind calculator');
 assert.equal(await page.locator('#calculator').isVisible(),true);

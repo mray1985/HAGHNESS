@@ -6,6 +6,19 @@ import unittest
 from ha.server import Handler
 
 class LegacyValidationTests(unittest.TestCase):
+    def test_w2_endpoint_returns_scenario_without_identity(self):
+        server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        try:
+            conn=HTTPConnection(*server.server_address,timeout=5)
+            conn.request('POST','/api/return/estimate',json.dumps({'tax_year':'2025','w2s':[{'box1':45000,'box2':5200}],'profile':{'name':'Fictional Person','ssn':'000-00-0000'}}),{'Content-Type':'application/json'})
+            response=conn.getresponse();raw=response.read().decode();conn.close()
+            self.assertEqual(response.status,200)
+            self.assertEqual(json.loads(raw)['refund'],1928.50)
+            self.assertNotIn('Fictional Person',raw);self.assertNotIn('000-00-0000',raw)
+        finally:
+            server.shutdown();server.server_close();thread.join()
+
     def test_malformed_inputs_return_json_errors_without_disconnect(self):
         server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
         thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
