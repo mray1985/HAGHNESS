@@ -73,3 +73,29 @@ Remaining: protected durable return drafts, document import, all other document
 types, all filing statuses, eligibility/credits, additional W-2 treatments, state
 engines, Form 1041, official PDF mapping/export, payment/refund/investment integration,
 signature/security completion and filing. These are not presented as completed.
+
+
+## 1099-R increment · October 2, 2026
+
+Added confirmation before layout choice, standard/stacked entry layouts, numbered
+1099-R fields, recipient prefill and repeated state/local rows. Captured identity
+stays in page memory; only calculation fields go to the local estimate endpoint.
+Normal code 7 non-IRA distributions with reported taxable amounts and confirmed
+no rollover or special treatment join the basic single-filer estimate. Unknown
+taxable amounts, IRA/Roth/rollover/other codes and special amounts hold tax, refund
+and balance values for review. Corrected documents also require review.
+
+Source references: IRS 2025 Form 1099-R recipient instructions
+(https://www.irs.gov/pub/irs-prior/f1099r--2025.pdf), and 2026 payer instructions
+(https://www.irs.gov/pub/irs-pdf/i1099r.pdf). Layouts are entry copies, not IRS
+PDF export. All prior filing, state, credit and protected-storage limitations remain.
+
+Verification: 111 tests passed with real PostgreSQL, including contradictory
+box 8/9a/11 regression cases and shared 2025 standard-deduction checks.
+Browser checks verified confirmation/layout selection, $25,000 normal distribution
+with $2,500 withholding producing the limited $1,575 estimate, unknown-taxable
+review hold, layout preservation, additional state row and review navigation.
+
+The old calculator and document preview now use the same standard-deduction
+rule table. Updated all 2025 filing statuses from IRS Publication 501; existing
+human-verification and preparation blockers are preserved.

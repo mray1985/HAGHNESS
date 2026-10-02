@@ -35,7 +35,7 @@
       "checked_on": null,
       "against": "IRS Rev. Proc. 2024-40",
       "items_to_confirm": [
-        "standard_deduction: single 15000, mfj 30000, mfs 15000, hoh 22500, qss 30000",
+        "standard_deduction: single 15750, mfj 31500, mfs 15750, hoh 23625, qss 31500 (updated from IRS 2025 Publication 501; human verification remains pending)",
         "brackets.single: 11925 / 48475 / 103350 / 197300 / 250525 / 626350",
         "brackets.mfj: 23850 / 96950 / 206700 / 394600 / 501050 / 751600",
         "brackets.mfs: 11925 / 48475 / 103350 / 197300 / 250500 / 375800",

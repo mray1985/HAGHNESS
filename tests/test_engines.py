@@ -27,7 +27,7 @@ class TestBracketArithmetic(unittest.TestCase):
     def test_ty2025_single_65000_taxable(self):
         # 11,925*.10 + (48,475-11,925)*.12 + (65,000-48,475)*.22
         # = 1,192.50 + 4,386.00 + 3,635.50 = 9,214.00
-        r = fed.compute(2025, "single", 80_000)
+        r = fed.compute(2025, "single", 80_750)
         self.assertEqual(r["lines"]["taxable_income"], 65_000.0)
         self.assertEqual(r["lines"]["tax_before_credits"], 9_214.0, "9,214.00 expected")
 
@@ -39,10 +39,10 @@ class TestBracketArithmetic(unittest.TestCase):
         self.assertEqual(r["lines"]["tax_before_credits"], 4_016.0, "4,016.00 expected")
 
     def test_ty2025_mfj_100000_agi(self):
-        # std 30,000 -> TI 70,000
-        # 23,850*.10 + (70,000-23,850)*.12 = 2,385.00 + 5,538.00 = 7,923.00
+        # std 31,500 -> TI 68,500
+        # 23,850*.10 + (68,500-23,850)*.12 = 2,385.00 + 5,358.00 = 7,743.00
         r = fed.compute(2025, "mfj", 100_000)
-        self.assertEqual(r["lines"]["tax_before_credits"], 7_923.0, "7,923.00 expected")
+        self.assertEqual(r["lines"]["tax_before_credits"], 7_743.0, "7,743.00 expected")
 
     def test_ty2026_single_60000_agi(self):
         # std 15,750 -> TI 44,250
@@ -75,21 +75,21 @@ class TestBracketArithmetic(unittest.TestCase):
 
 class TestCapitalGainsStacking(unittest.TestCase):
     def test_gain_fully_inside_zero_band_pays_nothing(self):
-        # TY2025 single, AGI 30,000 -> TI 15,000. Ordinary = 5,000.
+        # TY2025 single, AGI 30,750 -> TI 15,000. Ordinary = 5,000.
         # 0% ceiling is 48,000, so all 10,000 of gain sits in the 0% band and
         # the ordinary tax attributable to it is fully removed. Total tax = tax
         # on the 5,000 of ordinary income only = 500.00
-        r = fed.compute(2025, "single", 30_000, net_capital_gain=10_000)
+        r = fed.compute(2025, "single", 30_750, net_capital_gain=10_000)
         d = r["capital_gains_detail"]
         self.assertEqual(d["zero_rate_amount"], 10_000.0, "all gain in 0% band")
         self.assertEqual(d["fifteen_rate_amount"], 0.0)
         self.assertEqual(r["lines"]["tax_before_credits"], 500.0, "500.00 expected")
 
     def test_no_headroom_jumps_straight_to_fifteen_percent(self):
-        # TY2025 single, AGI 100,000 -> TI 85,000, ordinary 65,000.
+        # TY2025 single, AGI 100,750 -> TI 85,000, ordinary 65,000.
         # 0% ceiling 48,000 is already exceeded by ordinary income, so the
         # whole 20,000 gain is at 15%.
-        r = fed.compute(2025, "single", 100_000, net_capital_gain=20_000)
+        r = fed.compute(2025, "single", 100_750, net_capital_gain=20_000)
         d = r["capital_gains_detail"]
         self.assertEqual(d["zero_rate_amount"], 0.0, "no 0% headroom")
         self.assertEqual(d["fifteen_rate_amount"], 20_000.0)
@@ -98,7 +98,7 @@ class TestCapitalGainsStacking(unittest.TestCase):
 
     def test_bracket_ceiling_is_not_double_counted(self):
         """Exactly at a band edge must not tax a dollar twice."""
-        exact = fed.compute(2025, "single", 15_000 + 11_925)  # TI lands on 11,925
+        exact = fed.compute(2025, "single", 15_750 + 11_925)  # TI lands on 11,925
         self.assertEqual(exact["lines"]["tax_before_credits"], 1_192.5, "1,192.50 expected")
 
     def test_twenty_percent_band(self):
@@ -136,8 +136,8 @@ class TestChildTaxCredit(unittest.TestCase):
                          "250,000 is under the 400,000 MFJ threshold")
 
     def test_unused_ctc_is_not_refunded(self):
-        # AGI 20,000 -> TI 5,000 -> tax 500. CTC base 4,400, only 500 usable.
-        r = fed.compute(2025, "single", 20_000, qualifying_children=2)
+        # AGI 20,750 -> TI 5,000 -> tax 500. CTC base 4,400, only 500 usable.
+        r = fed.compute(2025, "single", 20_750, qualifying_children=2)
         ctc = r["credits"]["child_tax_credit"]
         self.assertEqual(ctc["base"], 4_400.0)
         self.assertEqual(ctc["used_against_tax"], 500.0, "only offsets tax owed")
@@ -364,7 +364,7 @@ class TestAssistant(unittest.TestCase):
                 "agi": 80_000, "qualifying_children": 1,
             },
         )
-        self.assertIn("7,014.00", r["answer"])
+        self.assertIn("6,849.00", r["answer"])
 
     def test_personal_answer_warns_that_figures_are_unchecked(self):
         r = self.ai.ask(

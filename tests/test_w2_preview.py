@@ -30,3 +30,11 @@ class W2PreviewTests(unittest.TestCase):
 
     def test_support_is_explicitly_single_filer_only(self):
         with self.assertRaises(ValueError):estimate_w2({'filing_status':'mfj','w2s':[]})
+
+    def test_preview_and_legacy_brackets_share_updated_2025_deductions(self):
+        from ha.engine.federal import explain_brackets
+        from ha.rules import year_block
+        self.assertEqual(year_block('2025')['standard_deduction'],
+                         {'single':15750,'mfj':31500,'mfs':15750,'hoh':23625,'qss':31500})
+        preview=estimate_w2({'tax_year':'2025','w2s':[{'box1':45000,'box2':0}]})
+        self.assertEqual(preview['standard_deduction'],explain_brackets('2025','single')['standard_deduction'])
