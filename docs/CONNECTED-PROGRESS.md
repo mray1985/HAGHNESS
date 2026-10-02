@@ -185,3 +185,6 @@ October 2 correction-aware support projection: validlatestdecisionscancomplete s
 
 
 October 2 support-review HTTP checkpoint: scopedhistory/appenddecision routes useexisting session+CSRF andsharedPostgres/documentservice. ActualHTTPandrealPGtestpasses401/403/noauthority404/acceptance/retry/history/foreign404/draftqueue/revocation/logout. SyntheticMFAsessionexplicit; liveproviderreviewjourney/UI notverified. Fullsuite199passed2Linux-onlyskipped201total. Nohostedactivation orautomaticreviewgrants.
+
+
+October 2 reviewer interface implementation: entry/documentselection/details/download/decision/reason/history added, sharedMFAAPI andCSRF; scopedsignedGEThistory supports selection. Reviewcaughtstalereason/acceptancedecision acrossclientchange; resetapplied. Documentscorrectionsrefreshqueue. JSsyntaxpassed, backendfullsuite199passed2Linux-onlyskipped201total. Browserinteraction/accessibility/liveMFAjourney stillunverified; UIacceptance remainsopen.

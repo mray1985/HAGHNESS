@@ -24,9 +24,11 @@ async function refresh(){
   for(const id of draft.cash_explanations_missing){const item=document.createElement('li');item.textContent='Explain the cash entry: '+id;list.append(item);}
   if(draft.support_review_required.length){const item=document.createElement('li');item.textContent=draft.support_review_required.length+' entries still need their supporting information reviewed. A typed record ID does not establish reviewed support.';list.append(item);}
   const item=document.createElement('li');item.textContent='Confirm income, expense eligibility and support before final return preparation.';list.append(item);
+  await loadSupport();
+  if(current!==generation)return;
   status('Draft updated from recorded entries. Final tax calculations remain unavailable.');
 }
-byId('scope-form').addEventListener('submit',async event=>{event.preventDefault();generation++;uploadRevision++;pendingEvent=null;pendingUpload=null;scope=Object.fromEntries(new FormData(event.target));byId('open-hatax').href='/tax?'+new URLSearchParams(scope);for(const id of ['income','expenses','profit','reserve','payments','revision','last-entry'])byId(id).textContent='—';byId('document-list').replaceChildren();byId('review-list').replaceChildren();const current=generation;try{await refresh();if(current===generation)await listDocuments();}catch(error){if(current===generation)status(error.message);}});
+byId('scope-form').addEventListener('submit',async event=>{event.preventDefault();generation++;uploadRevision++;reviewRevision++;pendingReview=null;supportEntries=[];byId('support-reason').value='';byId('support-decision').value='needs_information';byId('support-history').replaceChildren();byId('support-entry').replaceChildren();byId('support-document').replaceChildren(new Option('No document selected',''));byId('support-entry-detail').textContent='';pendingEvent=null;pendingUpload=null;scope=Object.fromEntries(new FormData(event.target));byId('open-hatax').href='/tax?'+new URLSearchParams(scope);for(const id of ['income','expenses','profit','reserve','payments','revision','last-entry'])byId(id).textContent='—';byId('document-list').replaceChildren();byId('review-list').replaceChildren();const current=generation;try{await refresh();if(current===generation)await listDocuments();}catch(error){if(current===generation)status(error.message);}});
 byId('entry-form').addEventListener('input',()=>{pendingEvent=null;});
 byId('period-form').addEventListener('submit',async event=>{event.preventDefault();if(!scope){status('Open permitted records first.');return;}try{await refresh();}catch(error){status(error.message);}});
 byId('entry-form').addEventListener('submit',async event=>{
@@ -71,7 +73,7 @@ byId('document-form').addEventListener('submit',async event=>{
     if(current!==generation||revision!==uploadRevision)return;
     await request(path,pendingUpload);
     if(current!==generation||revision!==uploadRevision)return;
-    pendingUpload=null;form.reset();await listDocuments();
+    pendingUpload=null;form.reset();await listDocuments();await refresh();
     if(current===generation)status(correction?'Corrected version saved. The original is preserved.':'Private document uploaded and linked to this case.');
   }catch(error){if(current===generation&&revision===uploadRevision)status(error.message);}finally{button.disabled=false;}
 });
@@ -79,3 +81,52 @@ byId('logout').addEventListener('click',async()=>{try{await request('/api/auth/l
 (async()=>{try{const health=await request('/api/health');if(!health.login_configured)byId('setup-message').textContent='Protected sign-in is not configured. This page cannot yet open client records.';
   const identity=await request('/api/auth/me');csrf=identity.csrf;byId('login-panel').hidden=true;byId('workspace').hidden=false;byId('logout').hidden=false;status('Signed in. Open a client and business you are permitted to access.');
 }catch(error){status(error.message);}})();
+
+let supportEntries=[],pendingReview=null,reviewRevision=0;
+function showSupportEntry(){
+  const entry=supportEntries.find(e=>e.id===byId('support-entry').value);
+  byId('support-entry-detail').textContent=entry?entry.posting_date+' · '+money(entry.amount_minor)+' · '+(entry.method||'Method not recorded')+' · '+(entry.category||'No category')+' · '+(entry.explanation||'No explanation'):'';
+}
+async function loadSupport(){
+  const current=generation;pendingReview=null;
+  byId('support-entry').replaceChildren();byId('support-history').replaceChildren();
+  byId('support-document').replaceChildren(new Option('No document selected',''));
+  try{
+    const [entries,documents,history]=await Promise.all([
+      request('/api/connected/events?'+scopeQuery()),request('/api/connected/documents?'+scopeQuery()),
+      request('/api/connected/support/reviews?'+scopeQuery())]);
+    if(current!==generation)return;
+    const replaced=new Set(entries.events.filter(e=>e.kind==='correction').map(e=>e.replaces));
+    supportEntries=entries.events.filter(e=>!replaced.has(e.id)&&['income','expense','employee_payroll_obligation'].includes(e.effective_kind));
+    for(const e of supportEntries)byId('support-entry').append(new Option(e.posting_date+' · '+money(e.amount_minor)+' · '+e.id,e.id));
+    const superseded=new Set(documents.versions.map(v=>v.previous_version_id));
+    for(const v of documents.versions.filter(v=>!superseded.has(v.version_id)))byId('support-document').append(new Option(v.document_id+' · '+v.created_at,JSON.stringify([v.document_id,v.version_id])));
+    for(const r of history.reviews){const item=document.createElement('li');item.textContent=r.recorded_at+' · '+r.event_id+' · '+(r.decision==='accepted'?'Support checked':'More information needed')+' · '+r.reason+' · '+r.actor;byId('support-history').append(item);}
+    showSupportEntry();
+  }catch(error){if(current===generation)byId('support-entry-detail').textContent=error.message;}
+}
+byId('support-entry').addEventListener('change',showSupportEntry);
+byId('support-form').addEventListener('input',()=>{reviewRevision++;pendingReview=null;});
+byId('support-form').addEventListener('submit',async event=>{
+  event.preventDefault();if(!scope)return;
+  const current=generation,revision=reviewRevision,button=event.target.querySelector('button[type=submit]')||event.target.querySelector('button:not([type=button])');button.disabled=true;
+  try{
+    if(!pendingReview){const review={event_id:byId('support-entry').value,decision:byId('support-decision').value,reason:byId('support-reason').value,idempotency_key:crypto.randomUUID()};
+      if(byId('support-document').value){const [document,version]=JSON.parse(byId('support-document').value);review.document_id=document;review.version_id=version;}
+      pendingReview={scope:{...scope},review};}
+    await request('/api/connected/support/reviews',pendingReview);
+    if(current!==generation||revision!==reviewRevision)return;pendingReview=null;byId('support-reason').value='';await refresh();
+    if(current===generation)status('Review decision recorded. Tax preparation and filing still require their own checks.');
+  }catch(error){if(current===generation)status(error.message);}finally{button.disabled=false;}
+});
+
+byId('support-download').addEventListener('click',async()=>{
+  if(!scope||!byId('support-document').value){status('Select a document first.');return;}
+  const current=generation,[documentId,version]=JSON.parse(byId('support-document').value);
+  try{const result=await request('/api/connected/document?'+scopeQuery()+'&'+new URLSearchParams({document:documentId,version}));
+    if(current!==generation)return;
+    const bytes=Uint8Array.from(atob(result.data),c=>c.charCodeAt(0));
+    const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
+    const link=document.createElement('a');link.href=url;link.download='supporting-document';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(error){if(current===generation)status(error.message);}
+});

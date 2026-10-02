@@ -148,6 +148,8 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
                     return self.respond(200,{'ok':True},[('Set-Cookie','__Host-ha_session=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0')])
                 if path == '/api/connected/draft' and not mutate:
                     return self.respond(200,ledger.project(principal,self.scope(query),query.get('period','year'),int(query.get('month','1'))))
+                if path == '/api/connected/events' and not mutate:
+                    return self.respond(200,{'events':ledger.history(principal,self.scope(query))})
                 if path == '/api/connected/events' and mutate:
                     body = self.payload()
                     return self.respond(201,ledger.post_event(principal,self.scope(body['scope']),body['event']))
