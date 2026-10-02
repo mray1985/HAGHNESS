@@ -87,6 +87,8 @@ class Documents:
 
     def correct(self, principal, scope, document_id, stream, mime, idempotency_key, reason):
         authorize(principal, scope, 'correct', self.repository)
+        if not isinstance(document_id,str) or not document_id.strip() or len(document_id)>200:
+            raise ValueError('Existing document ID required')
         if not isinstance(reason, str) or not reason.strip() or len(reason) > 2000:
             raise ValueError('Correction reason required')
         return self._write(principal, scope, stream, mime, idempotency_key, document_id, reason)

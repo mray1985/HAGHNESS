@@ -1,6 +1,6 @@
 'use strict';
 const byId=id=>document.getElementById(id);
-let csrf='',scope=null,pendingEvent=null,pendingUpload=null,generation=0;
+let csrf='',scope=null,pendingEvent=null,pendingUpload=null,generation=0,uploadRevision=0;
 const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value/100);
 function status(message){byId('status').textContent=message;}
 async function request(path,body){
@@ -24,7 +24,7 @@ async function refresh(){
   const item=document.createElement('li');item.textContent='Confirm income, expense eligibility and support before final return preparation.';list.append(item);
   status('Draft updated from recorded entries. Final tax calculations remain unavailable.');
 }
-byId('scope-form').addEventListener('submit',async event=>{event.preventDefault();generation++;pendingEvent=null;pendingUpload=null;scope=Object.fromEntries(new FormData(event.target));for(const id of ['income','expenses','profit','reserve','payments','revision','last-entry'])byId(id).textContent='—';byId('document-list').replaceChildren();byId('review-list').replaceChildren();const current=generation;try{await refresh();if(current===generation)await listDocuments();}catch(error){if(current===generation)status(error.message);}});
+byId('scope-form').addEventListener('submit',async event=>{event.preventDefault();generation++;uploadRevision++;pendingEvent=null;pendingUpload=null;scope=Object.fromEntries(new FormData(event.target));for(const id of ['income','expenses','profit','reserve','payments','revision','last-entry'])byId(id).textContent='—';byId('document-list').replaceChildren();byId('review-list').replaceChildren();const current=generation;try{await refresh();if(current===generation)await listDocuments();}catch(error){if(current===generation)status(error.message);}});
 byId('entry-form').addEventListener('input',()=>{pendingEvent=null;});
 byId('period-form').addEventListener('submit',async event=>{event.preventDefault();if(!scope){status('Open permitted records first.');return;}try{await refresh();}catch(error){status(error.message);}});
 byId('entry-form').addEventListener('submit',async event=>{
@@ -49,15 +49,29 @@ async function listDocuments(){
   try{const result=await request('/api/connected/documents?'+scopeQuery());if(current!==generation)return;for(const version of result.versions){const item=document.createElement('li');item.textContent=version.document_id+' · '+version.created_at+' · '+(version.previous_version_id?'corrected version':'original');list.append(item);}}
   catch(error){if(current!==generation)return;const item=document.createElement('li');item.textContent=error.message;list.append(item);}
 }
-byId('document-form').addEventListener('change',()=>{pendingUpload=null;});
+byId('document-form').addEventListener('input',()=>{uploadRevision++;pendingUpload=null;});
+byId('document-form').addEventListener('change',()=>{uploadRevision++;pendingUpload=null;});
 byId('document-form').addEventListener('submit',async event=>{
   event.preventDefault();if(!scope){status('Open a permitted client and business first.');return;}
-  const file=event.target.elements.file.files[0];if(!file||file.size>20*1024*1024){status('Choose a file no larger than 20 MiB.');return;}
-  const button=event.target.querySelector('button');button.disabled=true;
-  const current=generation;
-  try{if(!pendingUpload){const bytes=new Uint8Array(await file.arrayBuffer());let raw='';for(let i=0;i<bytes.length;i+=8192)raw+=String.fromCharCode(...bytes.subarray(i,i+8192));pendingUpload={scope,mime:file.type,data:btoa(raw),idempotency_key:crypto.randomUUID()};}
-    if(current!==generation)return;await request('/api/connected/documents',pendingUpload);if(current!==generation)return;pendingUpload=null;event.target.reset();await listDocuments();status('Private document uploaded and linked to this case.');
-  }catch(error){if(current===generation)status(error.message);}finally{button.disabled=false;}
+  const form=event.target;const file=form.elements.file.files[0];
+  if(!file||file.size>20*1024*1024){status('Choose a file no larger than 20 MiB.');return;}
+  const correction=form.elements.mode.value==='correction';
+  const documentId=form.elements.document.value.trim(),reason=form.elements.reason.value.trim();
+  if(correction&&(!documentId||!reason)){status('Enter the original document ID and explain what changed.');return;}
+  const button=form.querySelector('button');button.disabled=true;
+  const current=generation,revision=uploadRevision,uploadScope={...scope};
+  const path=correction?'/api/connected/document/corrections':'/api/connected/documents';
+  try{if(!pendingUpload){const bytes=new Uint8Array(await file.arrayBuffer());
+      if(current!==generation||revision!==uploadRevision)return;
+      let raw='';for(let i=0;i<bytes.length;i+=8192)raw+=String.fromCharCode(...bytes.subarray(i,i+8192));
+      pendingUpload={scope:uploadScope,mime:file.type,data:btoa(raw),idempotency_key:crypto.randomUUID()};
+      if(correction){pendingUpload.document=documentId;pendingUpload.reason=reason;}}
+    if(current!==generation||revision!==uploadRevision)return;
+    await request(path,pendingUpload);
+    if(current!==generation||revision!==uploadRevision)return;
+    pendingUpload=null;form.reset();await listDocuments();
+    if(current===generation)status(correction?'Corrected version saved. The original is preserved.':'Private document uploaded and linked to this case.');
+  }catch(error){if(current===generation&&revision===uploadRevision)status(error.message);}finally{button.disabled=false;}
 });
 byId('logout').addEventListener('click',async()=>{try{await request('/api/auth/logout',{});location.reload();}catch(error){status(error.message);}});
 (async()=>{try{const health=await request('/api/health');if(!health.login_configured)byId('setup-message').textContent='Protected sign-in is not configured. This page cannot yet open client records.';

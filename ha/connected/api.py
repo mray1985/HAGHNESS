@@ -158,6 +158,16 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin):
                     scope = self.scope(query)
                     authorize(principal,scope,'read',documents.repository)
                     return self.respond(200,{'versions':[asdict(v) for v in documents.repository.list_versions(scope)]})
+                if path == '/api/connected/document/corrections' and mutate:
+                    if documents is None:
+                        return self.respond(503,{'error':'Private document storage is not configured'})
+                    body=self.payload()
+                    scope=self.scope(body['scope'])
+                    authorize(principal,scope,'correct',documents.repository)
+                    data=base64.b64decode(body['data'],validate=True)
+                    result=documents.correct(principal,scope,body['document'],BytesIO(data),
+                                             body['mime'],body['idempotency_key'],body['reason'])
+                    return self.respond(201,asdict(result))
                 if path == '/api/connected/document' and not mutate:
                     if documents is None:
                         return self.respond(503,{'error':'Private document storage is not configured'})

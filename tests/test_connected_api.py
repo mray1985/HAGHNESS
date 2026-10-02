@@ -57,6 +57,7 @@ class ApiTests(unittest.TestCase):
 
     def test_unconfigured_documents_cannot_return_fake_success(self):
         self.assertEqual(self.request('POST','/api/connected/documents',{'scope':{'profile':'orchard','business':'business','year':2026}})[0],503)
+        self.assertEqual(self.request('POST','/api/connected/document/corrections',{})[0],503)
 
     def test_logout_revokes_session(self):
         self.assertEqual(self.request('POST','/api/auth/logout',{})[0],200)

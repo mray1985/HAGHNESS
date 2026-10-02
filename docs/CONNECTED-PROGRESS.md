@@ -77,3 +77,19 @@ synthetic signed-token evidence, not deployed provider-policy or live MFA proof.
 The Day 8 objective remains incomplete: actual hosted identity/storage, retention,
 provider recovery, payment agreements/timings and the full connected journey are
 not yet verified.
+
+October 2 correction continuation: connected API now exposes corrected document
+versions through `/api/connected/document/corrections`, with session/CSRF and
+per-scope correction permission before document processing. UI allows selecting
+original versus correction, entering original ID and change reason. File reads
+snapshot the scope and discard stale edits/scope switches before upload.
+
+Independent review found that falsy document IDs could create originals using
+correction permission. Fixed in Documents.correct; empty/null/false/list/whitespace
+IDs now fail validation. Regression observed RED then GREEN with correction-only
+grants. Tests also verify original/corrected byte reads, links, idempotent retries,
+revoked correction permission, cross-profile denial and disabled-storage refusal.
+
+Protected browser interaction is not verified yet because hosted identity and
+storage/scanning remain unconfigured. JavaScript syntax passed; no runtime storage
+is activated by this increment. Full Day 8 goal remains incomplete.
