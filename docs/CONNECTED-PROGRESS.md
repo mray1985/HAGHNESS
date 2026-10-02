@@ -170,3 +170,6 @@ October 2 integrated scheduler-copy checkpoint: optional backup-job offhost copy
 
 
 October 2 durable receipt continuation: disabled runner now writes exclusive private verified-copy locator with region/bucket/prefix/time/snapshot/non-secretkeyID/count. Explicitcopyverified doesnotclaimrestoreordeleteauthorization. Atomicpublication/syncfailcleanup/existingreceiptpreservationtested. ActualPGfictionalSDKjobreceiptpassed. Independentreviewnoimportantfindings; fullsuite195passed2Linux-onlyskipped197total. Offhostreceipt/catalogpreservation, liveproviderpermissions/keyrecovery/monitoring/retention/activationstillopen.
+
+
+October 2 support-review investigation: confirmed queue intentionally never clears and schema lacks reviewer permission. Saved SUPPORT-REVIEW-IMPLEMENTATION.md specifying separate authority, append-only exact-reference decisions, correction invalidation, shared transaction locks and extended restore coverage. Consulted official PostgreSQL constraints/locking references. No support decisions can yet be approved; runtime unchanged. This specification is preparation for implementation, not completed workflow evidence.
