@@ -1,6 +1,8 @@
 {
   "environment": "local fictional PostgreSQL only",
   "database_restore": "passed",
+  "database_backup_encryption": "passed_authenticated_stream",
+  "database_recovery_key": "separate ignored recovery-key file; excluded from archive",
   "tables": {
     "profiles": 2,
     "businesses": 2,
@@ -8,7 +10,7 @@
     "ledger_events": 6,
     "document_versions": 2
   },
-  "elapsed_seconds": 2.02,
+  "elapsed_seconds": 2.877,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,

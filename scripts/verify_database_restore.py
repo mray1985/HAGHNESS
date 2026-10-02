@@ -18,6 +18,7 @@ from psycopg.types.json import Jsonb
 from ha.connected.postgres import PostgresRepository,PostgresLedger
 from ha.connected.domain import Principal,Scope
 from ha.connected.documents import Documents
+from ha.connected.backup_archive import encrypt_backup, decrypt_backup
 from ha.connected.encrypted_objects import EncryptedLocalObjects
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -72,10 +73,19 @@ def main():
     started = time.perf_counter()
     subprocess.run([str(BIN/'pg_dump.exe'),*args,'-d',source_name,'--schema=ha_connected','--format=custom',
                     '--no-owner','--no-acl','--file='+str(archive)],env=env,check=True)
-    restored_name = 'ha_restore_'+uuid.uuid4().hex
+    backup_key_path=key_root/(run_id+'-database.key')
+    with backup_key_path.open('xb') as handle:
+        handle.write(AESGCM.generate_key(bit_length=256))
+    encrypted_archive=recovery_root/'database.habackup'
+    decrypt_archive=recovery_root/'restore.dump'
+    encrypt_backup(archive,encrypted_archive,backup_key_path.read_bytes())
+    decrypt_backup(encrypted_archive,decrypt_archive,backup_key_path.read_bytes())
+    if decrypt_archive.read_bytes()!=archive.read_bytes():
+        raise ValueError('Authenticated database backup differs')
+    restored_name = 'ha_restore_' +uuid.uuid4().hex
     with psycopg.connect(config['dsn'],autocommit=True) as conn:
         conn.execute(psycopg.sql.SQL('CREATE DATABASE {}').format(psycopg.sql.Identifier(restored_name)))
-    subprocess.run([str(BIN/'pg_restore.exe'),*args,'-d',restored_name,'--no-owner','--no-acl',str(archive)],env=env,check=True)
+    subprocess.run([str(BIN/'pg_restore.exe'),*args,'-d',restored_name,'--no-owner','--no-acl',str(decrypt_archive)],env=env,check=True)
     recovered_dsn = make_conninfo(**{**params,'dbname':restored_name})
     with psycopg.connect(source_dsn) as original_db, psycopg.connect(recovered_dsn) as recovered_db:
         counts = {}
@@ -120,7 +130,7 @@ def main():
     else:
         raise ValueError('Restored object accepted wrong encryption key')
     elapsed = time.perf_counter()-started
-    report = {'environment':'local fictional PostgreSQL only','database_restore':'passed','tables':counts,
+    report = {'environment':'local fictional PostgreSQL only','database_restore':'passed','database_backup_encryption':'passed_authenticated_stream', 'database_recovery_key':'separate ignored recovery-key file; excluded from archive','tables':counts,
               'elapsed_seconds':round(elapsed,3),'source_database_preserved':True,'fixture_source':'new isolated database; existing test data untouched',
               'recovered_book_profit_minor':118000,'recovered_cross_profile_denial':'passed',
               'aws_backup_restore':'not_run','document_object_restore':'passed_local_encrypted_files',
