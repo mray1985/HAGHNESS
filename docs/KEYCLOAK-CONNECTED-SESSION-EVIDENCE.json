@@ -1,0 +1,45 @@
+{
+  "environment": "local Ubuntu Keycloak dev runtime only",
+  "https_discovery": "passed",
+  "hostname_and_certificate_verification": true,
+  "rsa_keys_available": true,
+  "issuer": "https://127.0.0.1:8843/realms/ha",
+  "mfa_login": "passed",
+  "mfa_checks": {
+    "password_alone_requires_otp": true,
+    "incorrect_otp_rejected": true,
+    "correct_otp_completed": true,
+    "signed_token_accepted_by_ha_verifier": true,
+    "authorization_code_replay_rejected": true,
+    "otp_enrollment": "pre-enrolled fictional fixture; not tested",
+    "application_session_reuse": "not_run"
+  },
+  "application_realm": "ha_imported_and_discovered",
+  "realm_checks": {
+    "missing_pkce_rejected": true,
+    "password_challenge_available": true,
+    "unregistered_callback_rejected": true,
+    "password_direct_grant_disabled": true
+  },
+  "connected_session_checks": {
+    "real_mfa_https_callback": "passed",
+    "same_session_books_tax_documents": "passed",
+    "postgresql": "isolated real PostgreSQL 16 Unix-socket cluster",
+    "scanner": "actual ClamD with project container policy",
+    "objects": "AES-GCM encrypted local fixture objects; not Spaces",
+    "cross_profile_document_and_books_denial": true,
+    "csrf_upload_denial": true,
+    "original_and_correction_preserved": true,
+    "eicar_upload_rejected_without_metadata_or_object": true,
+    "grant_revocation_denies_active_session": true,
+    "callback_replay_rejected": true,
+    "logout_revokes_access": true,
+    "book_profit_minor": 118000,
+    "refund_withheld_pending_business_review": true,
+    "hosted_workflow": "not_run",
+    "otp_enrollment": "pre-enrolled fictional fixture; not tested"
+  },
+  "realm_template_sha256": "3d831b9c4f264e2659394d7dc9fb594c12a179943fb58bb8be7127e05d460c75",
+  "hosted_identity": "not_run",
+  "runtime_uploads_activated": false
+}
