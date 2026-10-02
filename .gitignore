@@ -21,3 +21,5 @@ desktop.ini
 *.sqlite3
 secrets.json
 credentials.json
+.venv/
+.connected-local/
