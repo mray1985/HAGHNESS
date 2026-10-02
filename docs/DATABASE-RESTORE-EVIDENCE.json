@@ -8,10 +8,18 @@
     "ledger_events": 6,
     "document_versions": 2
   },
-  "elapsed_seconds": 1.367,
+  "elapsed_seconds": 2.02,
   "source_database_preserved": true,
+  "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,
   "recovered_cross_profile_denial": "passed",
   "aws_backup_restore": "not_run",
-  "document_object_restore": "not_run"
+  "document_object_restore": "passed_local_encrypted_files",
+  "document_versions_recovered": 2,
+  "document_cross_profile_denial": "passed",
+  "wrong_key_denial": "passed",
+  "encrypted_backup_plaintext_check": "passed",
+  "key_storage": "separate ignored local recovery-key directory; not copied with object backup",
+  "hosted_storage_restore": "not_run",
+  "scanner": "synthetic fixture bypass only"
 }

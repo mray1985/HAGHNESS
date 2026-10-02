@@ -46,3 +46,18 @@ Integration verification: 113 tests passed with real PostgreSQL. Browser verifie
 HA Bookin -> HATax -> W-2 layout -> live $1,928.50 limited refund scenario from
 $45,000 wages and $5,200 withholding. No browser errors captured. Independent
 review found no material defect. Screenshot uses fictional identity only.
+
+October 2 recovery continuation: implemented a local-only encrypted immutable
+file adapter using AES-256-GCM with a caller-supplied separate key. Followed
+cryptography's official AEAD documentation (https://cryptography.io/en/latest/hazmat/primitives/aead/).
+Tests verify ciphertext persistence, overwrite rejection, wrong-key/tamper/object-swap
+rejection and path/version validation. Hosted runtime does not select this adapter.
+
+Actual recovery harness now creates an isolated source database rather than
+resetting the existing test database. pg_dump/restore plus encrypted object copies
+recovered both original and corrected fictional receipt bytes, correction links,
+118000 minor-unit book profit and cross-profile denials. Wrong keys were rejected.
+Fresh measured recovery time: 2.020 seconds locally. Key files remain outside
+source control and outside the object backup. ACL management, hosted key recovery,
+rotation, scanning, backup retention enforcement and cloud recovery remain release
+gates. Updated evidence is in docs/DATABASE-RESTORE-EVIDENCE.json.
