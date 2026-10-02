@@ -1,0 +1,17 @@
+{
+  "environment": "local Ubuntu ClamD; fictional samples only",
+  "engine": "ClamAV 1.5.4/28141/Fri Oct  2 01:26:12 2026",
+  "checks": {
+    "clean_text_accepted": true,
+    "eicar_rejected": true,
+    "encrypted_pdf_rejected": true,
+    "engine_expanded_file_limit_rejected": false,
+    "oversized_input_rejected": true,
+    "unavailable_socket_rejected": true
+  },
+  "verification_passed": false,
+  "elapsed_seconds": 5.042,
+  "socket_mode": "0o660",
+  "hosted_verification": "not_run",
+  "runtime_uploads_activated": false
+}

@@ -117,3 +117,6 @@ October 2 Linux deployment continuation: native systemd service, explicit Keyclo
 
 
 October 2 encrypted database backup continuation: streaming authenticated archives now protect pg_dump contents with a separately stored recovery key. Actual isolated restore recovered six events and two document versions with cross-profile denials. Review-driven atomic publication prevents a partial archive appearing at its final path. Final full suite passed 160 tests with real PostgreSQL; final archive tests and actual restore rerun passed. Independent follow-up review confirmed the publication fix. A Windows socket-abort error on the first full run did not recur. Hosted schedules and retention remain open. See ENCRYPTED-DATABASE-BACKUPS.md.
+
+
+October 2 actual Linux scanner verification: installed local ClamAV and official signatures, verified clean/EICAR/encrypted-PDF/unavailable-socket behavior through the real adapter. Expanded ZIP limit probes returned clean unexpectedly; saved evidence marks the overall policy gate failed. Runtime uploads remain unactivated. Four encrypted-backup tests also passed on actual Linux. See DOCUMENT-SCANNING.md and LIVE-SCANNER-EVIDENCE.json.

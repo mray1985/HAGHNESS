@@ -34,3 +34,12 @@ The current Unix-socket scanner requires a Linux runtime sharing a protected soc
 ## Verification limits
 
 Tests exercise framing, fragmented replies, rejection paths, total deadline, no publication after scan failure, explicit configuration, key-file size and POSIX policy simulation, and same-session server wiring. Independent review found no important defect. Windows tests do not establish Linux filesystem permissions or a working ClamAV engine. Actual provider/scanner integration, key recovery, scheduled backups and the signed-in end-to-end journey remain open.
+
+
+## Actual Linux engine probe
+
+October 2: installed ClamAV 1.5.4 in the existing local Ubuntu test environment and fetched/tested official main, daily and bytecode signature databases. scripts/verify_live_scanner.py launches its own temporary Unix-socket daemon, then terminates it. No application uploads were activated.
+
+Clean text was accepted; EICAR and an encrypted fictional PDF were rejected. The adapter rejected input over 20 MiB and an unavailable socket. The actual socket had mode 0660. However, an expanding ZIP fixture was returned clean despite configured MaxFileSize 25M, MaxScanSize 100M and AlertExceedsMax. Both 26 MiB and 101 MiB zero-filled expansions were probed. The saved latest report explicitly marks verification_passed false; this gate must be investigated rather than treated as passing. ZIP uploads are not an allowed document type, but that fact does not prove embedded-content limit behavior is safe.
+
+See LIVE-SCANNER-EVIDENCE.json. Official project discussion also records scan-limit edge cases: [AlertExceedsMax issue](https://github.com/Cisco-Talos/clamav/issues/633). That discussion is context, not proof of the cause in this run. Expanded-content behavior, malformed samples, production signature freshness monitoring and hosted verification remain open. The local daemon test is stronger evidence than protocol mocks, but does not establish the full document protection policy.
