@@ -206,3 +206,6 @@ October 2 offhostlocatorcontinuation: disabledrunner publishes private receipt.j
 
 
 October2 locatorretrievalcontinuation: read-only retrieve_receipt supports hostlosswithoutlocalreceipt, explicitoperatorbucket/prefix/region, bounded64KiBclosedGET, strictschema/duplicates/mismatchrejection. Locatorremainsunauthenticatedhint; archives/externalkey/reconciliationrequired. Tenreceipttests andactualisolatedPGrestorefictionalstore retrievalpassed. Fullsuite207passed2Linux-onlyskipped209total; independentreviewnoimportantdefect. Automaticlisting/liveDigitalOcean/historicalkeyrecovery/monitoring/retentionactivationopen.
+
+
+October2 protectedtaxsavingfoundation: confirmedcurrentHATaxinputs volatileonrefresh. Addedversionedboundedinputcodec preservingpartialprofile/W2/1099R/multistate/rawstrings/blanks; rejectscomputedestimates/unexpectedfields/duplicates/wrongyear/excessivevalues. Fourtests pass; independentreviewfieldmatchconfirmed. Fullsuite211passed2Linux-onlyskipped213total. TAX-INPUT-PERSISTENCE.md records distinctsaveauthority, encryptedappendonlyreferences, optimisticversion/idempotency, scopedMFAAPI/UI andactualrestoregates. No saving/reopeningUI/API/storage implemented yet; no change to currentmemory-onlybehavior orfilingreadiness.
