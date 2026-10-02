@@ -4,6 +4,7 @@ Requires dev_postgres.py setup. Creates new source and recovery databases,
 leaving existing test data untouched; never drops a database. This is local evidence, not AWS Backup.
 """
 import json
+import hashlib
 import shutil
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ from psycopg.types.json import Jsonb
 from ha.connected.postgres import PostgresRepository,PostgresLedger
 from ha.connected.domain import Principal,Scope
 from ha.connected.documents import Documents
+from ha.connected.backup_inventory import build_inventory,verify_inventory
 from ha.connected.backup_archive import encrypt_backup, decrypt_backup
 from ha.connected.encrypted_objects import EncryptedLocalObjects
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -71,14 +73,36 @@ def main():
     args = ['-h','127.0.0.1','-p','55432','-U','ha_test_admin']
     archive = LOCAL/('backup-'+uuid.uuid4().hex+'.dump')
     started = time.perf_counter()
-    subprocess.run([str(BIN/'pg_dump.exe'),*args,'-d',source_name,'--schema=ha_connected','--format=custom',
-                    '--no-owner','--no-acl','--file='+str(archive)],env=env,check=True)
+    with psycopg.connect(source_dsn) as snapshot_db:
+        snapshot_db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+        snapshot=snapshot_db.execute('SELECT pg_export_snapshot()').fetchone()[0]
+        snapshot_rows={}
+        for table in ('profiles','businesses','grants','ledger_events','document_versions'):
+            query=psycopg.sql.SQL('SELECT * FROM ha_connected.{}').format(psycopg.sql.Identifier(table))
+            snapshot_rows[table]=snapshot_db.execute(query).fetchall()
+        versions=[repository._version(row) for row in snapshot_rows['document_versions']]
+        # A separate committed upload after the exported snapshot must not enter this backup.
+        documents.upload(owner,scope,BytesIO(b'fictional post-snapshot receipt'),'text/plain','after-snapshot')
+        subprocess.run([str(BIN/'pg_dump.exe'),*args,'-d',source_name,'--schema=ha_connected','--format=custom',
+                        '--snapshot='+snapshot,'--no-owner','--no-acl','--file='+str(archive)],env=env,check=True)
+
     backup_key_path=key_root/(run_id+'-database.key')
     with backup_key_path.open('xb') as handle:
         handle.write(AESGCM.generate_key(bit_length=256))
     encrypted_archive=recovery_root/'database.habackup'
     decrypt_archive=recovery_root/'restore.dump'
     encrypt_backup(archive,encrypted_archive,backup_key_path.read_bytes())
+    archive_hash=hashlib.sha256(encrypted_archive.read_bytes()).hexdigest()
+    inventory=build_inventory(run_id,versions,EncryptedLocalObjects(object_backup,key_path.read_bytes),archive_hash)
+    inventory_plain=recovery_root/'inventory.json'
+    inventory_plain.write_text(json.dumps(inventory,sort_keys=True),encoding='utf-8')
+    inventory_encrypted=recovery_root/'inventory.habackup'
+    encrypt_backup(inventory_plain,inventory_encrypted,backup_key_path.read_bytes())
+    recovered_inventory=recovery_root/'recovered-inventory.json'
+    decrypt_backup(inventory_encrypted,recovered_inventory,backup_key_path.read_bytes())
+    inventory=json.loads(recovered_inventory.read_text(encoding='utf-8'))
+    if inventory['database_archive_sha256']!=hashlib.sha256(encrypted_archive.read_bytes()).hexdigest():
+        raise ValueError('Database archive does not match encrypted inventory')
     decrypt_backup(encrypted_archive,decrypt_archive,backup_key_path.read_bytes())
     if decrypt_archive.read_bytes()!=archive.read_bytes():
         raise ValueError('Authenticated database backup differs')
@@ -91,11 +115,15 @@ def main():
         counts = {}
         for table in ('profiles','businesses','grants','ledger_events','document_versions'):
             query = psycopg.sql.SQL('SELECT * FROM ha_connected.{}').format(psycopg.sql.Identifier(table))
-            before = original_db.execute(query).fetchall()
+            before = snapshot_rows[table]
             after = recovered_db.execute(query).fetchall()
             if sorted(before, key=repr) != sorted(after, key=repr):
                 raise ValueError('Recovered table differs: '+table)
             counts[table] = len(after)
+    with psycopg.connect(source_dsn) as conn:
+        source_version_count=conn.execute('SELECT count(*) FROM ha_connected.document_versions').fetchone()[0]
+    if source_version_count!=3 or counts['document_versions']!=2:
+        raise ValueError('Exported snapshot included a later committed upload')
     recovered_ledger = PostgresLedger(PostgresRepository(recovered_dsn))
     if recovered_ledger.project(owner,scope,'year')['book_profit_minor'] != 118000:
         raise ValueError('Recovered draft disagrees with fixture')
@@ -129,6 +157,9 @@ def main():
         pass
     else:
         raise ValueError('Restored object accepted wrong encryption key')
+    with psycopg.connect(recovered_dsn) as conn:
+        restored_versions=[repository._version(row) for row in conn.execute('SELECT * FROM ha_connected.document_versions').fetchall()]
+    verify_inventory(inventory,restored_versions,EncryptedLocalObjects(restored_objects,key_path.read_bytes),archive_hash)
     elapsed = time.perf_counter()-started
     report = {'environment':'local fictional PostgreSQL only','database_restore':'passed','database_backup_encryption':'passed_authenticated_stream', 'database_recovery_key':'separate ignored recovery-key file; excluded from archive','tables':counts,
               'elapsed_seconds':round(elapsed,3),'source_database_preserved':True,'fixture_source':'new isolated database; existing test data untouched',
@@ -137,6 +168,7 @@ def main():
               'document_versions_recovered':2,'document_cross_profile_denial':'passed',
               'wrong_key_denial':'passed','encrypted_backup_plaintext_check':'passed',
               'key_storage':'separate ignored local recovery-key directory; not copied with object backup',
+              'consistent_exported_snapshot':'passed', 'post_snapshot_upload_excluded':True, 'source_document_versions_after_snapshot':source_version_count, 'encrypted_version_inventory_restore':'passed', 'database_archive_inventory_binding':'passed',
               'hosted_storage_restore':'not_run','scanner':'synthetic fixture bypass only'}
     (ROOT/'docs/DATABASE-RESTORE-EVIDENCE.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))

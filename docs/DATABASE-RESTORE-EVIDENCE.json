@@ -10,7 +10,7 @@
     "ledger_events": 6,
     "document_versions": 2
   },
-  "elapsed_seconds": 2.877,
+  "elapsed_seconds": 3.741,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,
@@ -22,6 +22,11 @@
   "wrong_key_denial": "passed",
   "encrypted_backup_plaintext_check": "passed",
   "key_storage": "separate ignored local recovery-key directory; not copied with object backup",
+  "consistent_exported_snapshot": "passed",
+  "post_snapshot_upload_excluded": true,
+  "source_document_versions_after_snapshot": 3,
+  "encrypted_version_inventory_restore": "passed",
+  "database_archive_inventory_binding": "passed",
   "hosted_storage_restore": "not_run",
   "scanner": "synthetic fixture bypass only"
 }
