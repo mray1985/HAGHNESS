@@ -14,7 +14,12 @@ import subprocess
 import tempfile
 import time
 from ha.connected.scanner import ClamDScanner
-from ha.connected.documents import MAX_BYTES
+from ha.connected.documents import MAX_BYTES,Documents,MemoryDocumentRepository
+from ha.connected.encrypted_objects import EncryptedLocalObjects
+from ha.connected.domain import Principal,Scope
+from datetime import datetime,timedelta,timezone
+from tests.test_connected_access import Repository
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 def main():
     parser=argparse.ArgumentParser()
@@ -84,12 +89,41 @@ LeaveTemporaryFiles no
                     'nested_26m_member_rejected':not scanner(nested.getvalue(),'application/zip'),
                     'oversized_input_rejected':not scanner(bytes(MAX_BYTES+1),'application/pdf'),
                     'unavailable_socket_rejected':not ClamDScanner(str(root/'missing.sock'))(b'fixture','text/plain')}
+                repository=MemoryDocumentRepository(Repository())
+                owner=Principal('orchard-owner',datetime.now(timezone.utc)+timedelta(minutes=5),True)
+                scope=Scope('orchard','business',2026)
+                key=AESGCM.generate_key(bit_length=256)
+                objects=EncryptedLocalObjects(root/'objects',lambda:key)
+                documents=Documents(repository,objects,scanner)
+                original=documents.upload(owner,scope,BytesIO(b'Fictional original receipt'),'text/plain','original')
+                corrected=documents.correct(owner,scope,original.document_id,BytesIO(b'Fictional corrected receipt'),'text/plain','corrected','Fictional correction')
+                before_objects=list((root/'objects').iterdir())
+                before_versions=len(repository.versions)
+                rejected=0
+                for number,(payload,mime) in enumerate(((eicar,'text/plain'),(encrypted,'application/pdf'))):
+                    try:documents.upload(owner,scope,BytesIO(payload),mime,'reject-'+str(number))
+                    except ValueError:rejected+=1
+                try:documents.correct(owner,scope,original.document_id,BytesIO(eicar),'text/plain','bad-correction','Fictional rejected correction')
+                except ValueError:rejected+=1
+                class Unreadable:
+                    def read(self,*args):raise AssertionError('Unauthorized stream was read')
+                denied=False
+                try:documents.upload(owner,Scope('cedar','cedar-business',2026),Unreadable(),'text/plain','foreign')
+                except PermissionError:denied=True
+                checks.update({
+                    'service_rejected_uploads_and_correction':rejected==3,
+                    'service_rejections_publish_nothing':len(repository.versions)==before_versions and list((root/'objects').iterdir())==before_objects,
+                    'service_preserves_original_and_correction':documents.read(owner,scope,original.document_id,original.version_id)==b'Fictional original receipt' and documents.read(owner,scope,original.document_id,corrected.version_id)==b'Fictional corrected receipt',
+                    'service_denies_foreign_scope_before_read':denied,
+                    'service_objects_encrypted':all(b'Fictional' not in item.read_bytes() for item in before_objects)})
                 report={'environment':'local Ubuntu ClamD; fictional samples only',
                     'engine':subprocess.check_output(['clamd','--version'],text=True).strip(),
                     'checks':checks,'verification_passed':all(checks.values()),'elapsed_seconds':round(time.perf_counter()-started,3),
                     'socket_mode':oct(socket.stat().st_mode&0o777),
                     'container_policy_enabled':bool(args.container_policy),
                     'container_policy_sha256':hashlib.sha256(Path(args.container_policy).read_bytes()).hexdigest() if args.container_policy else None,
+                    'document_repository':'volatile synthetic permissions/metadata; actual encrypted local objects',
+                    'identity':'synthetic MFA principal; not live login',
                     'hosted_verification':'not_run','runtime_uploads_activated':False}
                 Path(args.report).write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
                 print(json.dumps(report))

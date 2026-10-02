@@ -123,3 +123,6 @@ October 2 actual Linux scanner verification: installed local ClamAV and official
 
 
 October 2 scanner policy continuation: researched official ClamAV container metadata signatures, added an explicit >25 MiB member policy, and verified nine real Linux probes including boundary/nested rejection. Baseline failure remains saved. Full 64-bit policy range accepted by the actual engine; forged metadata/ZIP64 and hosted verification still open. Independent review found no remaining important defect in this change.
+
+
+October 2 live document-service continuation: fourteen actual Linux checks now include Documents with real ClamD and encrypted objects, clean original/correction preservation, no publication on rejected upload/correction, and authorization before foreign stream access. Saved report explicitly identifies volatile metadata/permissions and synthetic MFA principal; live provider login/storage/database integration remains open.

@@ -10,13 +10,20 @@
     "member_at_26m_rejected": true,
     "nested_26m_member_rejected": true,
     "oversized_input_rejected": true,
-    "unavailable_socket_rejected": true
+    "unavailable_socket_rejected": true,
+    "service_rejected_uploads_and_correction": true,
+    "service_rejections_publish_nothing": true,
+    "service_preserves_original_and_correction": true,
+    "service_denies_foreign_scope_before_read": true,
+    "service_objects_encrypted": true
   },
   "verification_passed": true,
-  "elapsed_seconds": 5.343,
+  "elapsed_seconds": 5.344,
   "socket_mode": "0o660",
   "container_policy_enabled": true,
   "container_policy_sha256": "ec6ea940a6658352c237996364141c8ec4a11692e64331db43d87c5c318421b3",
+  "document_repository": "volatile synthetic permissions/metadata; actual encrypted local objects",
+  "identity": "synthetic MFA principal; not live login",
   "hosted_verification": "not_run",
   "runtime_uploads_activated": false
 }

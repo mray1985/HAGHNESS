@@ -52,3 +52,10 @@ A project-maintained ha-container-policy.cdb now complements AlertExceedsMax, us
 An isolated database overlay retained official signatures and added only this policy. The nine saved checks in LIVE-SCANNER-POLICY-EVIDENCE.json passed: clean text, EICAR, encrypted PDF, 101 MiB expanded member, exact 25 MiB boundary, 26 MiB member, nested 26 MiB member, adapter input limit and missing socket. The report records the policy hash. LIVE-SCANNER-EVIDENCE.json preserves the failing baseline rather than overwriting it. Independent review found the initial 4 GiB range cap; it was removed and the real-engine run passed again.
 
 This closes the reproduced local member-size case with the additional policy. It does not make a clean verdict a safety guarantee or finish malformed/embedded-format testing, freshness monitoring, hosted integration or runtime activation. Deployment must install and preserve the policy alongside official signatures, verify its hash, and rerun all activation gates.
+
+
+## Document-service integration probe
+
+The live Linux harness now runs Documents with real ClamD, the added container policy and actual AES-GCM local object files. Fourteen checks pass. Clean original/correction versions remain readable separately; EICAR/encrypted-PDF uploads and an EICAR correction publish no new object or metadata version. An unrelated profile is denied before the stream is read. Ciphertext files do not contain the fictional plaintext marker.
+
+Permission/metadata repositories and the MFA principal are synthetic fixtures. This is not a real Keycloak login, PostgreSQL-backed upload, Spaces upload or hosted journey. Those gates remain open. The temporary object directory is removed after the daemon stops; no runtime configuration is activated.
