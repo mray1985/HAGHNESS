@@ -6,6 +6,7 @@ from .api import create_server
 from .auth import Sessions, TokenVerifier
 from .oauth import CognitoLogin
 from .postgres import PostgresRepository, PostgresLedger
+from .document_configuration import build_documents
 
 
 def build_server(address, origin, environment=None):
@@ -48,8 +49,8 @@ def build_server(address, origin, environment=None):
                                   lambda token:keys.get_signing_key_from_jwt(token).key)
         login=KeycloakLogin(issuer,env['HA_KEYCLOAK_CLIENT'],origin+'/api/auth/callback',verifier)
         ledger=PostgresLedger(PostgresRepository(env['HA_DATABASE_URL']))
-    # Private uploads stay unavailable until an actual scanning provider is wired.
-    return create_server(address, Sessions(), ledger, None, login, origin)
+    documents=build_documents(env,ledger.repository if ledger is not None else None)
+    return create_server(address, Sessions(), ledger, documents, login, origin)
 
 
 def main():

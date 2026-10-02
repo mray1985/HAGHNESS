@@ -14,7 +14,7 @@ The optional Cognito configuration (`HA_AUTH_PROVIDER=cognito`) requires all of 
 
 Cognito must enforce software-token MFA and authorization-code login. The server verifies that configuration before login, uses PKCE and browser-bound state, and validates the signed identity token. Sessions and login handshakes currently reside in one process: use exactly one worker until a shared session store is implemented. Restarting the service ends sessions.
 
-Document uploads remain unavailable in the runtime until an actual scanning provider and private storage configuration are integrated. The S3 adapter and document service have tests, but those tests do not establish cloud deployment readiness.
+Document uploads remain unavailable by default. Explicit Spaces/key/ClamD configuration can now wire the service into the existing session; see DOCUMENT-SCANNING.md for deployment and live verification requirements. The S3 adapter and document service have tests, but those tests do not establish cloud deployment readiness.
 
 Run the database-backed test suite using the ignored local PostgreSQL fixture:
 

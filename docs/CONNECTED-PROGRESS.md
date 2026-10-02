@@ -100,3 +100,6 @@ October 2 retention continuation: implemented a non-destructive 35-day/12-calend
 
 October 2 Spaces continuation: official compatibility/versioning research informed a client-encrypted private Spaces adapter. Exact provider-version reads, bucket/object/key-ID binding, key rotation and bounded stream closure are tested. Six focused cases pass; independent review found no important defect. No hosted deployment or runtime upload activation is claimed.
 Verification for Spaces continuation: full suite passed 136 tests with real isolated PostgreSQL; git diff whitespace check passed.
+
+October 2 scanning continuation: implemented fail-closed ClamD INSTREAM over local Unix socket and explicit Spaces/mounted-key runtime configuration. Partial configuration rejects startup, default remains locked. Scanner rejection publishes neither objects nor metadata. Shared session/CSRF/scope APIs now receive the configured Documents service. Independent review found no important defect. Live daemon policy/signatures, Linux permissions, hosted bucket and recovery verification remain open.
+Scanning continuation verification: 148 tests passed against real isolated PostgreSQL; whitespace check passed.
