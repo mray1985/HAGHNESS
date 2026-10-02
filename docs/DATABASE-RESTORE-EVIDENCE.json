@@ -8,9 +8,10 @@
     "businesses": 2,
     "grants": 5,
     "ledger_events": 6,
-    "document_versions": 2
+    "document_versions": 2,
+    "support_reviews": 1
   },
-  "elapsed_seconds": 7.403,
+  "elapsed_seconds": 7.54,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,

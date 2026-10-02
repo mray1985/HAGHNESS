@@ -73,6 +73,15 @@ def main():
     documents = Documents(repository,objects,lambda data,mime:True)
     original = documents.upload(owner,scope,BytesIO(b'fictional original receipt'),'text/plain','restore-original')
     corrected=documents.correct(owner,scope,original.document_id,BytesIO(b'fictional corrected receipt'),'text/plain','restore-corrected','Correction')
+    # Fixture decision only: no runtime reviewer approval is implied.
+    with repository.transaction() as conn:
+        event_id=conn.execute('SELECT event_id FROM ha_connected.ledger_events ORDER BY seq LIMIT 1').fetchone()[0]
+        conn.execute("""INSERT INTO ha_connected.support_reviews
+            (decision_id,profile_id,business_id,tax_year,event_id,event_fingerprint,document_id,version_id,
+             decision,reason,actor,idempotency_key,request_fingerprint)
+            VALUES (%s,'orchard','business',2026,%s,%s,%s,%s,'needs_information',
+                    'Fictional review fixture','fixture-reviewer','review-fixture',%s)""",
+            (uuid.uuid4(),event_id,'a'*64,original.document_id,original.version_id,'b'*64))
     shutil.copytree(source_objects,object_backup)
     env = dict(os.environ,PGPASSWORD=params['password'])
     args = ['-h','127.0.0.1','-p','55432','-U','ha_test_admin']
@@ -82,7 +91,7 @@ def main():
         snapshot_db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         snapshot=snapshot_db.execute('SELECT pg_export_snapshot()').fetchone()[0]
         snapshot_rows={}
-        for table in ('profiles','businesses','grants','ledger_events','document_versions'):
+        for table in ('profiles','businesses','grants','ledger_events','document_versions','support_reviews'):
             query=psycopg.sql.SQL('SELECT * FROM ha_connected.{}').format(psycopg.sql.Identifier(table))
             snapshot_rows[table]=snapshot_db.execute(query).fetchall()
         versions=[repository._version(row) for row in snapshot_rows['document_versions']]
@@ -118,7 +127,7 @@ def main():
     recovered_dsn = make_conninfo(**{**params,'dbname':restored_name})
     with psycopg.connect(source_dsn) as original_db, psycopg.connect(recovered_dsn) as recovered_db:
         counts = {}
-        for table in ('profiles','businesses','grants','ledger_events','document_versions'):
+        for table in ('profiles','businesses','grants','ledger_events','document_versions','support_reviews'):
             query = psycopg.sql.SQL('SELECT * FROM ha_connected.{}').format(psycopg.sql.Identifier(table))
             before = snapshot_rows[table]
             after = recovered_db.execute(query).fetchall()

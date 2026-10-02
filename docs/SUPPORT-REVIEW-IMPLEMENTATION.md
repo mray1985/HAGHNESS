@@ -38,3 +38,8 @@ PostgreSQL 16 constraints: https://www.postgresql.org/docs/16/ddl-constraints.ht
 PostgreSQL explicit locks: https://www.postgresql.org/docs/17/explicit-locking.html
 
 The official references support composite foreign-key integrity and transaction-level lock coordination. Advisory locks require every participating write path to cooperate; they do not automatically lock arbitrary application operations. The design above is an application decision, not a claim that the database implements the workflow for us.
+
+
+## Implemented foundation checkpoint
+
+Migration002 now provides explicit review_support grant vocabulary and support_reviews with scoped event/document-version foreign keys, bounded fields, decision/request fingerprints and idempotency uniqueness. Update/delete triggers preserve history. Migration runs serialized under a transaction advisory lock and does not grant review authority to anyone. Real PostgreSQL tests prove foreign-scope and missing-document rejection, no automatic review grants and durable append-only rows. The recovery fixture now restores and compares all six tables, including one fictional needs_information decision, through transferred encrypted ciphertext. Service methods, HTTP actions, reviewer interface, byte authentication/current-head validation and correction-aware queue projection are still unimplemented. Database rows alone are not evidence that the client review workflow is complete.

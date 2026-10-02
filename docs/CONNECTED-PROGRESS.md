@@ -173,3 +173,6 @@ October 2 durable receipt continuation: disabled runner now writes exclusive pri
 
 
 October 2 support-review investigation: confirmed queue intentionally never clears and schema lacks reviewer permission. Saved SUPPORT-REVIEW-IMPLEMENTATION.md specifying separate authority, append-only exact-reference decisions, correction invalidation, shared transaction locks and extended restore coverage. Consulted official PostgreSQL constraints/locking references. No support decisions can yet be approved; runtime unchanged. This specification is preparation for implementation, not completed workflow evidence.
+
+
+October 2 support-review database foundation: separate explicitreview_support permissionvocabulary withnoautomaticgrants; scoped durabledecisiontable, fingerprints/idempotency/appendonlyconstraints. Serializedmigrationcompatibleexistingfixture. ActualPGscope/missingdocument/UPDATEDELETEdenialtests passed; backuptransferactualrestorecompares6tablesincluding1fixturedecision. Reviewnoimportantfinding(codeonlynoDSNrerun). Fullsuite196passed2Linux-onlyskipped198total. Reviewer service/API/UI/currentheadandcorrectioninvalidationstillopen; queue stillcannotclear.

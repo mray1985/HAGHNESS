@@ -30,9 +30,11 @@ class PostgresRepository:
                 self.active.reset(token)
 
     def migrate(self):
-        source = Path(__file__).resolve().parents[2]/'migrations/001_connected.sql'
+        folder = Path(__file__).resolve().parents[2]/'migrations'
         with self.transaction() as conn:
-            conn.execute(source.read_text())
+            conn.execute("SELECT pg_advisory_xact_lock(hashtextextended('ha-schema-migrations',0))")
+            for name in ('001_connected.sql','002_support_reviews.sql'):
+                conn.execute((folder/name).read_text(encoding='utf-8'))
 
     def profile_for_business(self, business):
         with self.transaction() as conn:

@@ -84,3 +84,30 @@ class PostgresTests(unittest.TestCase):
             outcomes = list(pool.map(correct,range(2)))
         self.assertEqual(sum(outcomes),1)
         self.assertEqual(self.ledger.project(self.owner,self.scope,'year')['income_minor'],2000)
+
+    def test_support_review_scope_integrity_and_append_only_history(self):
+        import uuid
+        import psycopg
+        self.ledger.post_event(self.owner,self.scope,dict(id='review-sale',date='2026-10-02',kind='income',amount_minor=1000))
+        statement = """INSERT INTO ha_connected.support_reviews
+            (decision_id,profile_id,business_id,tax_year,event_id,event_fingerprint,decision,reason,actor,idempotency_key,request_fingerprint)
+            VALUES (%s,%s,%s,2026,'review-sale',%s,'needs_information','Provide support','fixture-reviewer',%s,%s)"""
+        with self.repo.transaction() as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM ha_connected.grants WHERE action='review_support'").fetchone()[0],0)
+            conn.execute(statement,(uuid.uuid4(),'orchard','business','a'*64,'review-key','b'*64))
+        with self.assertRaises(psycopg.errors.ForeignKeyViolation):
+            with self.repo.transaction() as conn:
+                conn.execute(statement,(uuid.uuid4(),'cedar','cedar-business','a'*64,'foreign-review','b'*64))
+        with self.assertRaises(psycopg.errors.ForeignKeyViolation):
+            with self.repo.transaction() as conn:
+                conn.execute("""INSERT INTO ha_connected.support_reviews
+                    (decision_id,profile_id,business_id,tax_year,event_id,event_fingerprint,document_id,version_id,
+                     decision,reason,actor,idempotency_key,request_fingerprint)
+                    VALUES (%s,'orchard','business',2026,'review-sale',%s,'missing-document','missing-version',
+                            'accepted','Review fixture','fixture-reviewer','missing-reference',%s)""",
+                    (uuid.uuid4(),'a'*64,'b'*64))
+        for command in ("UPDATE ha_connected.support_reviews SET reason='Changed'",'DELETE FROM ha_connected.support_reviews'):
+            with self.assertRaises(psycopg.errors.CheckViolation):
+                with self.repo.transaction() as conn:conn.execute(command)
+        with PostgresRepository(DSN).transaction() as conn:
+            self.assertEqual(conn.execute('SELECT count(*) FROM ha_connected.support_reviews').fetchone()[0],1)
