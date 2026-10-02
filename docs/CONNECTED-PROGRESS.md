@@ -95,3 +95,5 @@ storage/scanning remain unconfigured. JavaScript syntax passed; no runtime stora
 is activated by this increment. Full Day 8 goal remains incomplete.
 
 October 2 growth continuation: recovered Day 7 agenda confirms no earlier Schwab proposal existed. Saved a new unsent discussion draft, documented refund contribution-year confirmation, refreshed non-AWS provider status and published bank-data pricing. Provider access, full costs and completion times remain unverified. Documentation-only change; no new application test claim.
+
+October 2 retention continuation: implemented a non-destructive 35-day/12-calendar-month UTC backup planner and operator CLI. Protects latest snapshot and explicit holds; invalid inventories fail closed. Four focused tests pass; full prior regression run passed 129 tests before the fourth case. Independent review found no important defect. Hosted schedule, complete snapshot inventory, lifecycle enforcement and recovery-key operations remain unconfigured. See BACKUP-RETENTION.md.
