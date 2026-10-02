@@ -42,3 +42,5 @@ HATax is now included in the same connected-service container at `/tax`. The
 HA Bookin header links to the form-first preview. This is stateless arithmetic
 with page-memory drafts, not protected persistence or filing. Local integration
 preview: `http://127.0.0.1:8768/`; hosted deployment remains unprovisioned.
+
+October 2 storage continuation: selected private versioned DigitalOcean Spaces Standard Storage with client-side AES-GCM and an external historical-key resolver. Adapter implemented and reviewed; no bucket or key service provisioned. See docs/SPACES-DOCUMENT-STORAGE.md. Runtime uploads remain disabled pending scanner/key/policy configuration.

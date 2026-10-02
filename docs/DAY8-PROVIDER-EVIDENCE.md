@@ -8,7 +8,7 @@ Checked October 2, 2026. This supersedes the earlier AWS-first plan. Research an
 |---|---|---|
 | Application and database | DigitalOcean deployment configuration; PostgreSQL | User-controlled account/resources, reviewed quote, private connectivity and deployed verification |
 | Authentication | Independent Keycloak PKCE with signed MFA claims | Deployed realm, tested password/OTP policy and browser session; sessions currently single-process |
-| Private documents | Immutable version service; local AES-GCM recovery fixture | Select/configure hosted private storage, external key management, scanner and operational access policies |
+| Private documents | Private versioned Spaces target; client AES-GCM adapter and local recovery fixture | Select/configure hosted private storage, external key management, scanner and operational access policies |
 | Bank data | Stripe Financial Connections candidate | Provider account, permissions, ownership availability and sandbox verification |
 | Reserve accounts/payment movement | Stripe Treasury candidate | US private-preview access, eligibility, agreement and quoted charges |
 | Federal tax payment | Client-controlled IRS Direct Pay | Correct tax type/year, authorization and confirmation; no HA automatic payment API established |
@@ -61,4 +61,3 @@ For future measurements, record environment, trial ID, start/end UTC, elapsed se
 | Costs/times | Published bank-data rates and one local recovery measurement; full quote/provider timings pending |
 
 Latest code verification before this documentation update: 126 tests passed with real PostgreSQL. No application code changed in this update. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.
-
