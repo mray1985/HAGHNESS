@@ -173,3 +173,46 @@ class PostgresTests(unittest.TestCase):
         self.assertEqual(draft['income_minor'],2000)
         self.assertIn('entry_changed',draft['support_review_queue'][0]['reasons'])
         self.assertEqual(len(service.history(self.owner,self.scope)),2)
+
+    def test_support_review_http_session_csrf_scope_and_revocation(self):
+        import threading
+        import http.client
+        from ha.connected.api import create_server
+        from ha.connected.auth import Sessions
+        from ha.connected.documents import Documents,MemoryObjects
+        self.ledger.post_event(self.owner,self.scope,dict(id='http-income',date='2026-10-02',kind='income',amount_minor=1000))
+        sessions=Sessions(); cookie,csrf=sessions.open(self.owner)
+        server=create_server(('127.0.0.1',0),sessions,self.ledger,Documents(self.repo,MemoryObjects(),lambda data,mime:True),None,'https://ha.example')
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        def cleanup():
+            server.shutdown();server.server_close();thread.join(5)
+        self.addCleanup(cleanup)
+        def request(method,path,body=None,signed=True,verified=True):
+            headers={'Content-Type':'application/json','Origin':'https://ha.example'}
+            if signed:headers['Cookie']='__Host-ha_session='+cookie
+            if verified:headers['X-HA-CSRF']=csrf
+            client=http.client.HTTPConnection(*server.server_address,timeout=5)
+            try:
+                client.request(method,path,json.dumps(body) if body is not None else None,headers)
+                response=client.getresponse();return response.status,json.loads(response.read())
+            finally:client.close()
+        path='/api/connected/support/reviews'
+        body={'scope':{'profile':'orchard','business':'business','year':2026},
+              'review':{'event_id':'http-income','decision':'accepted','reason':'Verified income','idempotency_key':'http-review'}}
+        self.assertEqual(request('POST',path,body,signed=False)[0],401)
+        self.assertEqual(request('POST',path,body,verified=False)[0],403)
+        self.assertEqual(request('POST',path,body)[0],404)
+        with self.repo.transaction() as conn:
+            conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'review_support')")
+        accepted=request('POST',path,body)
+        self.assertEqual(accepted[0],201)
+        self.assertEqual(request('POST',path,body),accepted)
+        status,history=request('GET',path+'?profile=orchard&business=business&year=2026')
+        self.assertEqual(status,200);self.assertEqual(len(history['reviews']),1)
+        self.assertEqual(request('GET',path+'?profile=cedar&business=cedar-business&year=2026')[0],404)
+        self.assertTrue(request('GET','/api/connected/draft?profile=orchard&business=business&year=2026')[1]['support_review_complete'])
+        with self.repo.transaction() as conn:
+            conn.execute("DELETE FROM ha_connected.grants WHERE action='review_support'")
+        self.assertEqual(request('POST',path,body)[0],404)
+        sessions.logout(cookie)
+        self.assertEqual(request('GET',path+'?profile=orchard&business=business&year=2026')[0],401)

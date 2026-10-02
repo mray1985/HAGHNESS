@@ -20,9 +20,14 @@ class RequestVerificationError(Exception):
     pass
 
 
-def create_server(address, sessions, ledger, documents, login, allowed_origin):
+def create_server(address, sessions, ledger, documents, login, allowed_origin, *, reviews=None):
     if not allowed_origin.startswith('https://'):
         raise ValueError('HTTPS browser origin required')
+    if reviews is None and ledger is not None and documents is not None:
+        from .postgres import PostgresRepository
+        if isinstance(ledger.repository, PostgresRepository) and documents.repository is ledger.repository:
+            from .support_review import SupportReviews
+            reviews = SupportReviews(ledger.repository, documents)
 
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
@@ -146,6 +151,13 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin):
                 if path == '/api/connected/events' and mutate:
                     body = self.payload()
                     return self.respond(201,ledger.post_event(principal,self.scope(body['scope']),body['event']))
+                if path == '/api/connected/support/reviews':
+                    if reviews is None:
+                        return self.respond(503,{'error':'Supporting-record review is not configured'})
+                    if mutate:
+                        body=self.payload()
+                        return self.respond(201,reviews.submit(principal,self.scope(body['scope']),body['review']))
+                    return self.respond(200,{'reviews':reviews.history(principal,self.scope(query))})
                 if path == '/api/connected/return/estimate' and mutate:
                     body=self.payload()
                     return self.respond(200,estimate_connected_return(ledger,principal,self.scope(body['scope']),body['scenario']))

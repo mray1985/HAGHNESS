@@ -182,3 +182,6 @@ October 2 support-review service: sharedtransaction scoped explicitreview/readau
 
 
 October 2 correction-aware support projection: validlatestdecisionscancomplete supportqueue; eventfingerprint/documentheadchangesor reconsideration reopenwithreasons. Currentlinkedreceipt resolvesreceiptflag; no money/filing change. ActualPGcoverage accepts/reopens distinctstates, fullsuite198passed2Linux-onlyskipped200total. Independentreviewnoimportantfinding(codeonly). Actual encryptedtransferredrestorecomparesnonemptyreviewqueue as wellas6tables. UI/API/racestressandlivehosted gates remainopen.
+
+
+October 2 support-review HTTP checkpoint: scopedhistory/appenddecision routes useexisting session+CSRF andsharedPostgres/documentservice. ActualHTTPandrealPGtestpasses401/403/noauthority404/acceptance/retry/history/foreign404/draftqueue/revocation/logout. SyntheticMFAsessionexplicit; liveproviderreviewjourney/UI notverified. Fullsuite199passed2Linux-onlyskipped201total. Nohostedactivation orautomaticreviewgrants.
