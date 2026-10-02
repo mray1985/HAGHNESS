@@ -176,3 +176,6 @@ October 2 support-review investigation: confirmed queue intentionally never clea
 
 
 October 2 support-review database foundation: separate explicitreview_support permissionvocabulary withnoautomaticgrants; scoped durabledecisiontable, fingerprints/idempotency/appendonlyconstraints. Serializedmigrationcompatibleexistingfixture. ActualPGscope/missingdocument/UPDATEDELETEdenialtests passed; backuptransferactualrestorecompares6tablesincluding1fixturedecision. Reviewnoimportantfinding(codeonlynoDSNrerun). Fullsuite196passed2Linux-onlyskipped198total. Reviewer service/API/UI/currentheadandcorrectioninvalidationstillopen; queue stillcannotclear.
+
+
+October 2 support-review service: sharedtransaction scoped explicitreview/readauthority, serveractor/time, exacteventfingerprint/idempotentretries, currentdocumenthead authenticatedbytes, expensereceiptandcashexplanationacceptancegates; orderedscopedhistory. ActualPGtestcoversacceptance/forgedactor/conflictingretry/corruptmissingstalereceipts/cashmissing/revokedreviewer. Reviewnoimportantissues(codeonly). Fullsuite197passed2Linux-onlyskipped199total. API/UI/correctionawareprojectionstillopen; nofilingortaxapproval implied.

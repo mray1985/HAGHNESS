@@ -111,3 +111,39 @@ class PostgresTests(unittest.TestCase):
                 with self.repo.transaction() as conn:conn.execute(command)
         with PostgresRepository(DSN).transaction() as conn:
             self.assertEqual(conn.execute('SELECT count(*) FROM ha_connected.support_reviews').fetchone()[0],1)
+
+    def test_support_service_requires_reviewer_and_authenticates_receipt(self):
+        from io import BytesIO
+        from ha.connected.documents import Documents, MemoryObjects
+        from ha.connected.support_review import SupportReviews
+        event=dict(id='expense-review',date='2026-10-02',kind='expense',amount_minor=1000)
+        self.ledger.post_event(self.owner,self.scope,event)
+        objects=MemoryObjects(); docs=Documents(self.repo,objects,lambda data,mime:True)
+        version=docs.upload(self.owner,self.scope,BytesIO(b'fictional receipt'),'text/plain','review-doc')
+        service=SupportReviews(self.repo,docs)
+        request=dict(event_id=event['id'],decision='accepted',reason='Receipt matches',idempotency_key='review-1',
+                     document_id=version.document_id,version_id=version.version_id)
+        with self.assertRaises(PermissionError):service.submit(self.owner,self.scope,request)
+        with self.repo.transaction() as conn:
+            conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'review_support')")
+        accepted=service.submit(self.owner,self.scope,request)
+        self.assertEqual(service.submit(self.owner,self.scope,request),accepted)
+        self.assertEqual(len(service.history(self.owner,self.scope)),1)
+        self.assertEqual(service.history(self.owner,self.scope)[0]['actor'],self.owner.subject)
+        with self.assertRaises(ValueError):service.submit(self.owner,self.scope,{**request,'reason':'different'})
+        objects.data[version.object_key]=b'corrupted'
+        with self.assertRaises(ValueError):service.submit(self.owner,self.scope,{**request,'idempotency_key':'review-2'})
+        with self.assertRaises(ValueError):service.submit(self.owner,self.scope,{**request,'actor':'forged'})
+        self.assertEqual(len(service.history(self.owner,self.scope)),1)
+        with self.assertRaises(ValueError):
+            service.submit(self.owner,self.scope,dict(event_id=event['id'],decision='accepted',reason='No receipt',idempotency_key='missing-receipt'))
+        objects.data[version.object_key]=b'fictional receipt'
+        docs.correct(self.owner,self.scope,version.document_id,BytesIO(b'corrected receipt'),'text/plain','review-doc-fix','Correction')
+        with self.assertRaises(ValueError):service.submit(self.owner,self.scope,{**request,'idempotency_key':'stale-doc'})
+        self.ledger.post_event(self.owner,self.scope,dict(id='cash-review',date='2026-10-02',kind='income',method='cash',amount_minor=1000))
+        with self.assertRaises(ValueError):
+            service.submit(self.owner,self.scope,dict(event_id='cash-review',decision='accepted',reason='Review',idempotency_key='cash-no-explanation'))
+        with self.repo.transaction() as conn:
+            conn.execute("DELETE FROM ha_connected.grants WHERE action='review_support'")
+        with self.assertRaises(PermissionError):service.submit(self.owner,self.scope,request)
+        self.assertFalse(self.ledger.project(self.owner,self.scope,'year')['support_review_complete'])
