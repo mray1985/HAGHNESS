@@ -20,4 +20,16 @@ Verification so far: 66 Python tests pass in .venv (45 legacy + 21 new). Read al
 
 Ruling: perform independent pure-domain work while provider setup is unavailable — avoids blocking ledger work on hosted MFA — cost if wrong: provider integration may require adapting repository interfaces.
 
-Whole-goal status: incomplete. No cloud resources provisioned; provider-backed MFA, PostgreSQL, encrypted storage restore, payments and end-to-end deployment still require verification.
+Whole-goal status: incomplete. No cloud resources provisioned; provider-backed MFA, encrypted storage restore, payments and end-to-end deployment still require verification.
+
+October 2 continuation: user confirmed no AWS account configured. Implemented Cognito PKCE/browser-bound OAuth exchange and verified provider-policy checks against synthetic responses. Added real PostgreSQL persistence, foreign-key scope constraints, serialized retries/corrections and document metadata persistence. A real database timezone mismatch was reproduced and fixed by UTC normalization. Actual local pg_dump/restore recovered the fictional draft and preserved cross-profile denial; cloud/object restores remain unrun.
+
+Verification reached 81 passing tests with PostgreSQL enabled before runtime configuration tests were added. Added a separate connected service entry point and locked preview. Edge/Playwright browser verification: no page errors, workspace hidden when unconfigured, and no horizontal overflow at 390px. This check does not prove hosted authentication or the signed-in journey. Fixed pending entry/upload retry state when switching business scope.
+
+Runtime instructions and explicit remaining release gates are in docs/CONNECTED-RUNBOOK.md. Document uploads intentionally remain unavailable in the runtime pending actual scanning integration.
+
+Fresh review found stale client-response rendering and timestamp-dependent document correction ordering. Fixed request-generation guards and immediate display clearing; correction now follows the unique chain head. Browser regression proved delayed client A cannot overwrite denied client B using fictional intercepted responses. Document regression covers reversed repository ordering. 84 tests passed with real PostgreSQL. Repeated actual local database restore passed in 1.367 seconds after fixing nondeterministic comparison order.
+
+User redirected provider selection: AWS is optional, inspect current setup and compare non-AWS providers before choosing. Saved docs/NON-AWS-STACK-COMPARISON.md. Recommendation is DigitalOcean App Platform plus Supabase Pro; no migration or provider purchase authorized by this recommendation. Current local code remains reusable; Cognito/S3 adapters are unconfigured candidates, not existing infrastructure.
+
+User subsequently selected the independent DigitalOcean direction and authorized GitHub push. Added deploy/digitalocean locked-preview container/app specification and docs/DIGITALOCEAN-IMPLEMENTATION.md. Supabase is excluded from that target. Default runtime authentication is explicitly disabled; Cognito requires explicit selection. Actual account provisioning, replacement MFA/storage integration and hosted recovery remain unfinished. Container build unverified because Docker is unavailable locally.

@@ -29,10 +29,8 @@ class Ledger:
         kind = event.get('kind')
         if kind not in ('income', 'expense', 'correction', 'owner_estimated_tax_payment', 'employee_payroll_obligation'):
             raise ValueError('Event kind unsupported')
-        if kind == 'owner_estimated_tax_payment' and event.get('status') not in ('recorded_unverified', 'government_confirmed'):
-            raise ValueError('Payment confirmation state required')
-        if kind == 'owner_estimated_tax_payment' and event.get('status') == 'government_confirmed' and not event.get('government_confirmation'):
-            raise ValueError('Government confirmation required')
+        if kind == 'owner_estimated_tax_payment' and (event.get('status') != 'recorded_unverified' or event.get('government_confirmation')):
+            raise ValueError('User entry cannot establish government payment confirmation')
         with self.lock:
             events = self.store.setdefault(scope, [])
             existing = next((e for e in events if e['id'] == event['id']), None)

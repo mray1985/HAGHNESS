@@ -43,6 +43,14 @@ class DocumentTests(unittest.TestCase):
             self.documents.upload(self.owner, self.scope, BytesIO(b'not a pdf'), 'application/pdf', 'fakepdf')
         self.assertEqual(len(self.repo.versions), 0)
 
+    def test_correction_uses_chain_head_even_when_repository_order_reverses(self):
+        original = self.documents.upload(self.owner,self.scope,BytesIO(b'first'),'text/plain','first')
+        corrected = self.documents.correct(self.owner,self.scope,original.document_id,BytesIO(b'second'),'text/plain','second','Updated')
+        ordered = self.repo.list_versions
+        self.repo.list_versions = lambda *args: list(reversed(ordered(*args)))
+        latest = self.documents.correct(self.owner,self.scope,original.document_id,BytesIO(b'third'),'text/plain','third','Updated again')
+        self.assertEqual(latest.previous_version_id, corrected.version_id)
+
     def test_integrity_corruption_detected_and_backup_restored(self):
         original = self.documents.upload(self.owner, self.scope, BytesIO(b'fictional receipt'), 'text/plain', 'key')
         backup = self.documents.backup(self.owner, self.scope)

@@ -1,0 +1,22 @@
+# Fictional-data locked preview only. Import after reviewing current pricing.
+name: ha-connected-preview
+region: nyc
+services:
+  - name: connected
+    github:
+      repo: mray1985/HAGHNESS
+      branch: codex/connected-books
+      deploy_on_push: false
+    dockerfile_path: deploy/digitalocean/Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /api/health
+    envs:
+      - key: HA_PUBLIC_ORIGIN
+        scope: RUN_TIME
+        value: ${APP_URL}
+      - key: HA_AUTH_PROVIDER
+        scope: RUN_TIME
+        value: disabled

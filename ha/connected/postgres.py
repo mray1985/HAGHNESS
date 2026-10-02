@@ -1,0 +1,123 @@
+"""Durable repository and serialized ledger transactions for PostgreSQL."""
+from contextlib import contextmanager
+from contextvars import ContextVar
+from datetime import timezone
+from pathlib import Path
+import psycopg
+from psycopg.types.json import Jsonb
+from .domain import Grant, Scope
+from .ledger import Ledger
+from .access import authorize
+from .documents import DocumentVersion
+
+
+class PostgresRepository:
+    def __init__(self, dsn):
+        self.dsn = dsn
+        self.active = ContextVar('connected_connection', default=None)
+
+    @contextmanager
+    def transaction(self):
+        existing = self.active.get()
+        if existing is not None:
+            yield existing
+            return
+        with psycopg.connect(self.dsn, connect_timeout=5) as conn:
+            token = self.active.set(conn)
+            try:
+                yield conn
+            finally:
+                self.active.reset(token)
+
+    def migrate(self):
+        source = Path(__file__).resolve().parents[2]/'migrations/001_connected.sql'
+        with self.transaction() as conn:
+            conn.execute(source.read_text())
+
+    def profile_for_business(self, business):
+        with self.transaction() as conn:
+            row = conn.execute('SELECT profile_id FROM ha_connected.businesses WHERE business_id=%s', (business,)).fetchone()
+            return row[0] if row else None
+
+    def grants_for(self, subject):
+        with self.transaction() as conn:
+            rows = conn.execute('SELECT profile_id,business_id,tax_year,action FROM ha_connected.grants WHERE subject=%s',(subject,)).fetchall()
+            return [Grant(subject,Scope(p,b,y),frozenset({a})) for p,b,y,a in rows]
+
+    @staticmethod
+    def scope_values(scope):
+        return (scope.profile_id,scope.business_id,scope.tax_year)
+
+    def lock_scope(self, conn, scope):
+        conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',
+                     ('|'.join(map(str,self.scope_values(scope))),))
+
+    def events(self, conn, scope):
+        return [row[0] for row in conn.execute('SELECT record FROM ha_connected.ledger_events WHERE profile_id=%s AND business_id=%s AND tax_year=%s ORDER BY seq',self.scope_values(scope)).fetchall()]
+
+    @contextmanager
+    def document_transaction(self, scope):
+        with self.transaction() as conn:
+            self.lock_scope(conn, scope)
+            yield conn
+
+    @staticmethod
+    def _version(row):
+        return DocumentVersion(row[1],row[0],Scope(row[2],row[3],row[4]),row[5],row[6],row[7],row[8],
+                               row[9].astimezone(timezone.utc).isoformat(),row[10],row[11],row[12])
+
+    def retry(self, scope, key):
+        with self.transaction() as conn:
+            row = conn.execute('SELECT * FROM ha_connected.document_versions WHERE profile_id=%s AND business_id=%s AND tax_year=%s AND idempotency_key=%s',(*self.scope_values(scope),key)).fetchone()
+            if row:
+                return tuple(row[14]), self._version(row)
+            return None
+
+    def add_version(self, version, key, fingerprint):
+        with self.transaction() as conn:
+            if version.previous_version_id:
+                self.get_version(version.scope,version.document_id,version.previous_version_id)
+            conn.execute('INSERT INTO ha_connected.document_versions VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                (version.version_id,version.document_id,*self.scope_values(version.scope),version.object_key,version.sha256,
+                 version.mime,version.actor,version.created_at,version.previous_version_id,version.reason,version.storage_version,key,Jsonb(fingerprint)))
+
+    def get_version(self, scope, document, version):
+        with self.transaction() as conn:
+            row = conn.execute('SELECT * FROM ha_connected.document_versions WHERE profile_id=%s AND business_id=%s AND tax_year=%s AND document_id=%s AND version_id=%s',(*self.scope_values(scope),document,version)).fetchone()
+            if row is None:
+                raise PermissionError('Resource unavailable')
+            return self._version(row)
+
+    def list_versions(self, scope, document=None):
+        with self.transaction() as conn:
+            rows = conn.execute('SELECT * FROM ha_connected.document_versions WHERE profile_id=%s AND business_id=%s AND tax_year=%s AND (%s::text IS NULL OR document_id=%s) ORDER BY created_at,version_id',(*self.scope_values(scope),document,document)).fetchall()
+            return [self._version(row) for row in rows]
+
+
+class PostgresLedger:
+    def __init__(self, repository):
+        self.repository = repository
+
+    def post_event(self, principal, scope, event):
+        with self.repository.transaction() as conn:
+            authorize(principal,scope,'post',self.repository)
+            self.repository.lock_scope(conn,scope)
+            old = self.repository.events(conn,scope)
+            ledger = Ledger(self.repository,{scope:old})
+            count = len(old)
+            result = ledger.post_event(principal,scope,event)
+            if len(old) > count:
+                conn.execute('INSERT INTO ha_connected.ledger_events(profile_id,business_id,tax_year,event_id,record) VALUES (%s,%s,%s,%s,%s)',
+                             (*self.repository.scope_values(scope),result['id'],Jsonb(result)))
+            return result
+
+    def history(self, principal, scope):
+        with self.repository.transaction() as conn:
+            authorize(principal,scope,'read',self.repository)
+            return self.repository.events(conn,scope)
+
+    def project(self, principal, scope, period, month=1, reserve_rate='0.25'):
+        with self.repository.transaction() as conn:
+            authorize(principal,scope,'read',self.repository)
+            ledger = Ledger(self.repository,{scope:self.repository.events(conn,scope)})
+            return ledger.project(principal,scope,period,month,reserve_rate)

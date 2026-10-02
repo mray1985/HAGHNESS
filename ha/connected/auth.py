@@ -60,3 +60,8 @@ class Sessions:
     def logout(self, cookie):
         with self.lock:
             self.records.pop(self._digest(cookie), None)
+
+    def csrf(self, cookie):
+        self.require(cookie)
+        with self.lock:
+            return self.records[self._digest(cookie)][1]

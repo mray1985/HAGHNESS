@@ -1,0 +1,17 @@
+{
+  "environment": "local fictional PostgreSQL only",
+  "database_restore": "passed",
+  "tables": {
+    "profiles": 2,
+    "businesses": 2,
+    "grants": 5,
+    "ledger_events": 6,
+    "document_versions": 2
+  },
+  "elapsed_seconds": 1.367,
+  "source_database_preserved": true,
+  "recovered_book_profit_minor": 118000,
+  "recovered_cross_profile_denial": "passed",
+  "aws_backup_restore": "not_run",
+  "document_object_restore": "not_run"
+}

@@ -65,3 +65,8 @@ class LedgerTests(unittest.TestCase):
         result = self.ledger.project(self.owner, self.scope, 'month', 10)
         self.assertEqual(result['expense_minor'], 1200)
         self.assertEqual(result['source_event_ids'], ['fix'])
+
+    def test_client_cannot_assert_government_confirmation(self):
+        with self.assertRaises(ValueError):
+            self.post({'id':'fake-paid','date':'2026-10-01','kind':'owner_estimated_tax_payment',
+                       'amount_minor':1000,'status':'government_confirmed','government_confirmation':'typed-by-user'})

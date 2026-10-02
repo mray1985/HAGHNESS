@@ -59,6 +59,9 @@ class MemoryDocumentRepository:
     def retry(self, scope, key):
         return self.retries.get((scope, key))
 
+    def document_transaction(self, scope):
+        return self.lock
+
     def add_version(self, version, key, fingerprint):
         self.versions[version.version_id] = version
         self.retries[(version.scope, key)] = (fingerprint, version)
@@ -101,7 +104,7 @@ class Documents:
             raise ValueError('Invalid document type')
         digest = hashlib.sha256(data).hexdigest()
         fingerprint = (document, reason, mime, digest)
-        with self.lock:
+        with self.repository.document_transaction(scope):
             retry = self.repository.retry(scope, key)
             if retry:
                 if retry[0] != fingerprint:
@@ -114,7 +117,11 @@ class Documents:
                 versions = self.repository.list_versions(scope, document)
                 if not versions:
                     raise PermissionError('Resource unavailable')
-                previous = versions[-1].version_id
+                predecessors = {v.previous_version_id for v in versions if v.previous_version_id}
+                heads = [v for v in versions if v.version_id not in predecessors]
+                if len(heads) != 1:
+                    raise ValueError('Document version chain needs review')
+                previous = heads[0].version_id
             else:
                 document = str(uuid.uuid4())
             version_id = str(uuid.uuid4())

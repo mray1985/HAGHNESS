@@ -1,0 +1,33 @@
+{
+  "fixture_version": 1,
+  "fictional_only": true,
+  "currency": "USD",
+  "year": 2026,
+  "profiles": ["orchard-demo", "cedar-demo"],
+  "principal_grants": {"orchard-owner": ["orchard-demo"], "cedar-owner": ["cedar-demo"]},
+  "business_id": "orchard-business",
+  "events": [
+    {"id": "sale-card", "date": "2026-10-01", "kind": "income", "amount_minor": 100000, "method": "card", "evidence": "card-statement", "reviewed": false},
+    {"id": "sale-cash", "date": "2026-10-02", "kind": "income", "amount_minor": 50000, "method": "cash", "explanation": "Aggregate fictional market sales", "reviewed": false},
+    {"id": "supplies-v1", "date": "2026-10-02", "kind": "expense", "category": "supplies", "amount_minor": 10000, "evidence": "supplies-original", "reviewed": false},
+    {"id": "advertising", "date": "2026-10-02", "kind": "expense", "category": "advertising", "amount_minor": 20000, "evidence": null, "reviewed": false},
+    {"id": "supplies-correction", "date": "2026-10-03", "kind": "correction", "replaces": "supplies-v1", "amount_minor": 12000, "reason": "Original amount omitted fictional shipping cost", "preserve_evidence": "supplies-original"},
+    {"id": "owner-estimate", "date": "2026-10-03", "kind": "owner_estimated_tax_payment", "amount_minor": 10000, "tax_year": 2026, "status": "recorded_unverified", "government_confirmation": null}
+  ],
+  "reserve_choice": {"rate": "0.25", "basis": "recorded_receipts", "moves_money": false},
+  "expected": {
+    "income_minor": 150000,
+    "expense_before_correction_minor": 30000,
+    "expense_after_correction_minor": 32000,
+    "profit_before_correction_minor": 120000,
+    "monthly_profit_minor": 118000,
+    "quarterly_profit_minor": 118000,
+    "annual_profit_minor": 118000,
+    "reserve_scenario_minor": 37500,
+    "owner_payments_recorded_minor": 10000,
+    "owner_payments_confirmed_minor": 0,
+    "missing_receipts": ["advertising"],
+    "complete_tax_liability": null,
+    "filing_authorized": false
+  }
+}

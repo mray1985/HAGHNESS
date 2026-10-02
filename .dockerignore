@@ -1,0 +1,12 @@
+.git
+.venv
+.connected-local
+daily
+tests
+docs
+scripts
+**/__pycache__
+*.env
+.env*
+**/credentials.json
+**/secrets.json
