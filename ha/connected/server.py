@@ -11,15 +11,21 @@ from .postgres import PostgresRepository, PostgresLedger
 def build_server(address, origin, environment=None):
     env = os.environ if environment is None else environment
     provider = env.get('HA_AUTH_PROVIDER', 'disabled')
-    if provider not in ('disabled', 'cognito'):
+    if provider not in ('disabled', 'cognito', 'keycloak'):
         raise ValueError('Unsupported authentication provider')
     required = ('HA_DATABASE_URL', 'HA_AWS_REGION', 'HA_COGNITO_POOL',
                 'HA_COGNITO_CLIENT', 'HA_COGNITO_DOMAIN')
+    cognito_names=required[1:]
+    keycloak_names=('HA_KEYCLOAK_ISSUER','HA_KEYCLOAK_CLIENT')
     present = [bool(env.get(name)) for name in required]
     login = ledger = None
     if provider == 'cognito' and not all(present):
         raise ValueError('Connected configuration is incomplete')
-    if provider == 'disabled' and any(present):
+    if provider == 'keycloak' and (not all(env.get(name) for name in ('HA_DATABASE_URL',*keycloak_names)) or any(env.get(name) for name in cognito_names)):
+        raise ValueError('Keycloak configuration is incomplete or mixed with Cognito')
+    if provider == 'cognito' and any(env.get(name) for name in keycloak_names):
+        raise ValueError('Authentication providers cannot be mixed')
+    if provider == 'disabled' and (any(present) or any(env.get(name) for name in keycloak_names)):
         raise ValueError('Select an authentication provider explicitly')
     if provider == 'cognito':
         import boto3
@@ -33,6 +39,15 @@ def build_server(address, origin, environment=None):
                             env['HA_COGNITO_CLIENT'], env['HA_COGNITO_DOMAIN'],
                             origin + '/api/auth/callback', verifier)
         ledger = PostgresLedger(PostgresRepository(env['HA_DATABASE_URL']))
+    if provider == 'keycloak':
+        import jwt
+        from .keycloak import KeycloakVerifier,KeycloakLogin,validate_issuer
+        issuer=validate_issuer(env['HA_KEYCLOAK_ISSUER'])
+        keys=jwt.PyJWKClient(issuer+'/protocol/openid-connect/certs')
+        verifier=KeycloakVerifier(issuer,env['HA_KEYCLOAK_CLIENT'],
+                                  lambda token:keys.get_signing_key_from_jwt(token).key)
+        login=KeycloakLogin(issuer,env['HA_KEYCLOAK_CLIENT'],origin+'/api/auth/callback',verifier)
+        ledger=PostgresLedger(PostgresRepository(env['HA_DATABASE_URL']))
     # Private uploads stay unavailable until an actual scanning provider is wired.
     return create_server(address, Sessions(), ledger, None, login, origin)
 

@@ -26,3 +26,7 @@ Run the database-backed test suite using the ignored local PostgreSQL fixture:
 The restore command creates a separate fictional database and preserves the source. Its report is `docs/DATABASE-RESTORE-EVIDENCE.json`. This proves a local database and encrypted-file restore, including original/corrected bytes and cross-profile denial. It does not prove hosted storage or provider backup recovery. The harness creates separate source/recovery databases and leaves existing test data untouched. Fictional encryption keys are kept in the ignored `.connected-local/recovery-keys` directory, separately from object backups. Do not use this fixture key setup for production.
 
 Remaining release gates include a configured DigitalOcean account, independent identity/storage services and least-privilege runtime roles, hosted MFA verification, document scanning, hosted encrypted object restore, shared sessions, complete tax calculations, official PDF mapping, state workflows, payment-provider agreements, and end-to-end security review. No payment or return submission is enabled.
+
+Independent Keycloak mode and required realm configuration are documented in
+`docs/KEYCLOAK-IMPLEMENTATION.md`. Select it explicitly; disabled preview remains
+the default. Signed MFA-claim tests do not prove hosted identity controls.

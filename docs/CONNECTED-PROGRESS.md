@@ -61,3 +61,19 @@ Fresh measured recovery time: 2.020 seconds locally. Key files remain outside
 source control and outside the object backup. ACL management, hosted key recovery,
 rotation, scanning, backup retention enforcement and cloud recovery remain release
 gates. Updated evidence is in docs/DATABASE-RESTORE-EVIDENCE.json.
+
+October 2 independent authentication continuation: added Keycloak authorization
+code/PKCE login and a distinct signed-ID-token verifier. Requires exact issuer,
+audience/authorized client, nonce, ID-token type, recent auth_time, ACR2 and
+execution-derived password+OTP AMR. Browser-bound one-time handshakes reject
+wrong-browser and replay callbacks. Namespaced permission subjects prevent
+identity collisions across providers. Explicit runtime configuration rejects
+partial/mixed providers and retains disabled preview as default.
+
+Verification: 123 tests passed with real PostgreSQL, including six new Keycloak
+/configuration tests. Independent review found no important defect. References
+and required realm controls are in docs/KEYCLOAK-IMPLEMENTATION.md. This is
+synthetic signed-token evidence, not deployed provider-policy or live MFA proof.
+The Day 8 objective remains incomplete: actual hosted identity/storage, retention,
+provider recovery, payment agreements/timings and the full connected journey are
+not yet verified.
