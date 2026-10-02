@@ -72,3 +72,13 @@ The real-runtime probe accepts `--realm-file deploy/digitalocean/keycloak/ha-rea
 Configuration keys were checked against [Keycloak 26.8 authentication flow documentation](https://github.com/keycloak/keycloak/blob/26.8.0/docs/documentation/server_admin/topics/authentication/flows.adoc) and [its execution reference and ACR constants](https://github.com/keycloak/keycloak/blob/26.8.0/server-spi-private/src/main/java/org/keycloak/models/Constants.java).
 
 The missing-PKCE probe deliberately does not follow OAuth redirects to the inactive callback. It requires Keycloak 26.8's exact callback error redirect (`invalid_request` describing `code_challenge`), rather than accepting an arbitrary HTTP 400. No callback code or identity token is written into evidence.
+
+## Real password/OTP protocol probe
+
+The runtime script's optional `--mfa-login` mode injects a newly generated fictional user into the private temporary realm import. Its password and pre-enrolled TOTP secret are temporary fixture data, never deployment credentials. The dedicated helper `scripts/verify_keycloak_mfa.py` uses verified HTTPS, cookies and restricted form destinations to exercise password and OTP challenges. It requires an OTP challenge after password alone and after an incorrect OTP, completes a correct OTP, exchanges the state-bound authorization code with PKCE, and passes the resulting signed ID token to the application's actual KeycloakVerifier. Reusing the authorization code must be rejected. Evidence contains booleans, not tokens or secrets.
+
+Run from the repository on Linux with project JWT dependencies installed, using the same `--distribution`, `--realm-file` and `--report` arguments plus `--mfa-login`. The local Linux dependency cache is ignored; the project pins PyJWT in requirements-connected.txt. No live user is created or updated, and the entire fixture database is removed after the probe.
+
+This is a protocol integration test, not a visual browser test or proof of OTP enrollment. The fixture begins with an enrolled OTP credential. Recovery, enrollment, protected HTTP callback/session creation, reuse across Bookin/HATax/documents and hosted deployment remain required.
+
+OTP fixture encoding was checked against [Keycloak 26.8's credential model](https://github.com/keycloak/keycloak/blob/26.8.0/server-spi/src/main/java/org/keycloak/models/credential/OTPCredentialModel.java). The local TOTP generator also passes the RFC 6238 SHA-1 time-59 reference vector at six digits.

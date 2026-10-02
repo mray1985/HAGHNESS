@@ -30,7 +30,9 @@ def main():
     parser.add_argument('--distribution',required=True)
     parser.add_argument('--report',required=True)
     parser.add_argument('--realm-file')
+    parser.add_argument('--mfa-login',action='store_true')
     args=parser.parse_args()
+    if args.mfa_login and not args.realm_file:raise ValueError('MFA probe requires realm file')
     if os.name!='posix':raise ValueError('Linux runtime probe required')
     distribution=Path(args.distribution).resolve(strict=True)
     with tempfile.TemporaryDirectory(prefix='ha-identity-') as folder:
@@ -56,8 +58,13 @@ def main():
             realm_name='ha'
             realm['clients'][0]['redirectUris']=['https://127.0.0.1:8844/api/auth/callback']
             realm['clients'][0]['webOrigins']=['https://127.0.0.1:8844']
+            if args.mfa_login:
+                from verify_keycloak_mfa import fixture_user,verify_login
+                user,password,otp_secret=fixture_user()
+                realm['users']=[user]
             realm_file=root/'ha-realm.json'
             realm_file.write_text(json.dumps(realm),encoding='utf-8')
+            realm_file.chmod(0o600)
             with (root/'import.log').open('wb') as import_log:
                 subprocess.run(['bash',str(distribution/'bin/kc.sh'),'import','--file='+str(realm_file),
                     '--db-url=jdbc:h2:file:'+str(root/'database')+';NON_KEYWORDS=VALUE'],
@@ -126,10 +133,11 @@ def main():
                         if error.code!=400 or body.get('error')!='unauthorized_client':raise ValueError('Direct grant not explicitly disabled')
                         realm_checks['password_direct_grant_disabled']=True
                     else:raise ValueError('Password direct grant accepted')
+                mfa_checks=verify_login(origin,context,password,otp_secret,keys,NoRedirect) if args.mfa_login else {}
                 report={'environment':'local Ubuntu Keycloak dev runtime only',
                     'https_discovery':'passed','hostname_and_certificate_verification':True,
                     'rsa_keys_available':True,'issuer':discovery['issuer'],
-                    'mfa_login':'not_run','application_realm':'ha_imported_and_discovered' if args.realm_file else 'not_configured_by_this_harness',
+                    'mfa_login':'passed' if args.mfa_login else 'not_run','mfa_checks':mfa_checks,'application_realm':'ha_imported_and_discovered' if args.realm_file else 'not_configured_by_this_harness',
                     'realm_checks':realm_checks,
                     'realm_template_sha256':hashlib.sha256(Path(args.realm_file).read_bytes()).hexdigest() if args.realm_file else None,
                     'hosted_identity':'not_run','runtime_uploads_activated':False}
