@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from ha.connected.backup_receipt import write_receipt, publish_receipt
+from ha.connected.backup_receipt import write_receipt, publish_receipt, retrieve_receipt
 
 
 class ReceiptTests(unittest.TestCase):
@@ -81,3 +81,36 @@ class ReceiptTests(unittest.TestCase):
             getattr(store, method).side_effect = OSError('provider unavailable')
             with self.assertRaises(OSError): publish_receipt(receipt, store)
             self.assertEqual(json.loads(self.target.read_text()), receipt)
+
+    def test_retrieve_locator_without_local_receipt(self):
+        receipt = self.write()
+        payload = self.target.read_bytes(); self.target.unlink()
+        from unittest.mock import Mock
+        store = Mock(); body = BytesIO(payload)
+        store.get_object.return_value = {'Body': body}
+        recovered = retrieve_receipt(store, receipt['bucket'], receipt['prefix'], 'nyc3')
+        self.assertEqual(recovered, receipt)
+        self.assertTrue(body.closed)
+        store.put_object.assert_not_called()
+
+    def test_retrieve_rejects_invalid_remote_data_and_locator_mismatch(self):
+        receipt = self.write()
+        from unittest.mock import Mock
+        wrong_bucket = {**receipt, 'bucket': 'other-backups'}
+        wrong_region = {**receipt, 'region': 'sfo3'}
+        wrong_prefix = {**receipt, 'prefix': 'ha-recovery/' + 'b'*32 + '/'}
+        duplicate = json.dumps(receipt)[:-1] + ',"copy_verified":true}'
+        for payload in (b'x' * 65537, b'bad json', duplicate.encode(),
+                        json.dumps(wrong_bucket).encode(), json.dumps(wrong_prefix).encode(),
+                        json.dumps(wrong_region).encode()):
+            store = Mock(); body = BytesIO(payload)
+            store.get_object.return_value = {'Body': body}
+            with self.assertRaises(ValueError):
+                retrieve_receipt(store, receipt['bucket'], receipt['prefix'], 'nyc3')
+            self.assertTrue(body.closed)
+
+    def test_retrieve_invalid_request_does_not_contact_store(self):
+        from unittest.mock import Mock
+        store = Mock()
+        with self.assertRaises(ValueError): retrieve_receipt(store, 'private-backups', '../', 'nyc3')
+        store.get_object.assert_not_called()

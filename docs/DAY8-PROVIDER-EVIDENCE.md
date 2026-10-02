@@ -41,7 +41,7 @@ Illustrative bank-data-only budget: 100 newly verified accounts, 100 ownership c
 
 The [current DigitalOcean cost scenario](DIGITALOCEAN-COST-PLAN.md) prices application/scanner, identity, a single-node database, Spaces and optional daily VM backups at a $129.05 component subtotal. A complete quote still needs retained backups, key recovery, overages, monitoring, operations and support. Treasury and Schwab integration charges require written provider terms. No complete monthly total has been verified.
 
-The latest saved actual local recovery run took 6.962 seconds, restoring six snapshot tables, six ledger events, two document versions and support-review history, with scope and wrong-key denials. Private backup locator copy/readback also passed through the fictional local store. This single sample is not p50/p95, hosted recovery time or user completion time.
+The latest saved actual local recovery run took 8.015 seconds, restoring six snapshot tables, six ledger events, two document versions and support-review history, with scope and wrong-key denials. Private backup locator copy/readback also passed through the fictional local store. This single sample is not p50/p95, hosted recovery time or user completion time.
 
 For future measurements, record environment, trial ID, start/end UTC, elapsed seconds, success/error, provider confirmation and charges for each phase: login/MFA, original upload, correction, draft calculation, restore, bank linking, payment confirmation and IRA funding. Report task time separately from settlement time and failures separately from successful observations. Provider phases remain unmeasured.
 
@@ -60,4 +60,4 @@ For future measurements, record environment, trial ID, start/end UTC, elapsed se
 | Growth proposal | Day 7 says none was written; new unsent discussion draft now saved |
 | Costs/times | Published bank-data rates and one local recovery measurement; five local API workflow timings saved; full quote/provider timings pending |
 
-Current regression checkpoint: 206 tests, 204 passed with real PostgreSQL, two Linux-only tests skipped. Later dated entries below record the intervening changes; older entries describe their checkpoint rather than current limitations. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.
+Current regression checkpoint: 209 tests, 207 passed with real PostgreSQL, two Linux-only tests skipped. Later dated entries below record the intervening changes; older entries describe their checkpoint rather than current limitations. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.

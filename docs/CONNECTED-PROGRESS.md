@@ -203,3 +203,6 @@ October2 reviewaccess/reopeningpresentation: scopedcan_review hints checkedwithh
 
 
 October 2 offhostlocatorcontinuation: disabledrunner publishes private receipt.json within verifiedbackup prefix and reads exactboundedbytes before successfulreturn. Fixednonsecretfields only; invalidflags/extra fields/providerfailures reject, localreceipt preserved. Sevenreceipttests pass; actualisolatedPGrestore+fictionalSDKlocatorcopy/readback passes, elapsed6.962s singlefixture. Fullsuite204passed2Linux-onlyskipped206total; independentreviewnoimportantfinding. Locatorplaintextprivate andunauthenticated; historicalkeys/authenticatedarchive/reconciliation mandatory. Hostedproviderpermissions/cataloglisting/monitoring/retention/activation remainopen.
+
+
+October2 locatorretrievalcontinuation: read-only retrieve_receipt supports hostlosswithoutlocalreceipt, explicitoperatorbucket/prefix/region, bounded64KiBclosedGET, strictschema/duplicates/mismatchrejection. Locatorremainsunauthenticatedhint; archives/externalkey/reconciliationrequired. Tenreceipttests andactualisolatedPGrestorefictionalstore retrievalpassed. Fullsuite207passed2Linux-onlyskipped209total; independentreviewnoimportantdefect. Automaticlisting/liveDigitalOcean/historicalkeyrecovery/monitoring/retentionactivationopen.

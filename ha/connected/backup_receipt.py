@@ -47,6 +47,27 @@ def publish_receipt(receipt, client):
     prefix belongs to one job; a retry may write identical locator bytes there.
     Provider write/read failures propagate, retaining the local receipt.
     """
+    validate_receipt(receipt)
+    payload = (json.dumps(receipt, sort_keys=True) + '\n').encode('utf-8')
+    object_key = receipt['prefix'] + 'receipt.json'
+    client.put_object(Bucket=receipt['bucket'], Key=object_key, Body=payload,
+                      ACL='private', ContentType='application/json')
+    body = client.get_object(Bucket=receipt['bucket'], Key=object_key)['Body']
+    recovered = bytearray()
+    try:
+        while block := body.read(min(4096, len(payload) - len(recovered) + 1)):
+            recovered.extend(block)
+            if len(recovered) > len(payload):
+                raise ValueError('Receipt copy exceeds expected size')
+    finally:
+        body.close()
+    if recovered != payload:
+        raise ValueError('Receipt copy verification failed')
+    return {'key': object_key, 'verified': True}
+
+
+def validate_receipt(receipt):
+    """Validate a locator schema, without trusting its recovery assertions."""
     fields = {'format', 'snapshot_id', 'completed_at', 'region', 'bucket',
               'prefix', 'recovery_key_id', 'document_versions', 'copy_verified',
               'recovery_verified', 'deletion_authorized'}
@@ -72,19 +93,41 @@ def publish_receipt(receipt, client):
             raise ValueError('UTC completion required')
     except (TypeError, ValueError):
         raise ValueError('UTC completion required') from None
-    payload = (json.dumps(receipt, sort_keys=True) + '\n').encode('utf-8')
-    object_key = receipt['prefix'] + 'receipt.json'
-    client.put_object(Bucket=receipt['bucket'], Key=object_key, Body=payload,
-                      ACL='private', ContentType='application/json')
-    body = client.get_object(Bucket=receipt['bucket'], Key=object_key)['Body']
-    recovered = bytearray()
+
+
+def retrieve_receipt(client, bucket, prefix, region):
+    """Read a known private locator without local state or remote mutation.
+
+    Caller obtains bucket/prefix/region independently from its operator catalog
+    or provider console. The resulting locator remains untrusted until archive
+    authentication and reconciliation with recovered database rows succeed.
+    """
+    for value, pattern in ((bucket, r'[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'),
+                           (prefix, r'ha-recovery/[0-9a-f]{32}/'),
+                           (region, r'[a-z]{2,8}[0-9]{1,2}')):
+        if not isinstance(value, str) or not re.fullmatch(pattern, value):
+            raise ValueError('Explicit recovery locator required')
+    body = client.get_object(Bucket=bucket, Key=prefix + 'receipt.json')['Body']
+    payload = bytearray()
     try:
-        while block := body.read(min(4096, len(payload) - len(recovered) + 1)):
-            recovered.extend(block)
-            if len(recovered) > len(payload):
-                raise ValueError('Receipt copy exceeds expected size')
+        while block := body.read(min(4096, 65536 - len(payload) + 1)):
+            payload.extend(block)
+            if len(payload) > 65536:
+                raise ValueError('Receipt exceeds limit')
     finally:
         body.close()
-    if recovered != payload:
-        raise ValueError('Receipt copy verification failed')
-    return {'key': object_key, 'verified': True}
+    def unique_fields(pairs):
+        value = {}
+        for name, item in pairs:
+            if name in value:
+                raise ValueError('Duplicate receipt field')
+            value[name] = item
+        return value
+    try:
+        receipt = json.loads(payload.decode('utf-8'), object_pairs_hook=unique_fields)
+        validate_receipt(receipt)
+    except (UnicodeError, ValueError, RecursionError):
+        raise ValueError('Invalid recovery receipt') from None
+    if (receipt['bucket'], receipt['prefix'], receipt['region']) != (bucket, prefix, region):
+        raise ValueError('Receipt differs from requested locator')
+    return receipt

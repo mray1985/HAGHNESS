@@ -21,7 +21,7 @@ from ha.connected.postgres import PostgresRepository,PostgresLedger
 from ha.connected.domain import Principal,Scope
 from ha.connected.documents import Documents
 from ha.connected.backup_transfer import copy_bundle, recover_bundle
-from ha.connected.backup_receipt import write_receipt, publish_receipt
+from ha.connected.backup_receipt import write_receipt, publish_receipt, retrieve_receipt
 from ha.connected.backup_job import capture_backup
 from ha.connected.backup_bundle import create_bundle,inspect_bundle,digest
 from ha.connected.backup_inventory import build_inventory,verify_inventory
@@ -272,6 +272,8 @@ def main():
     if not job['completed'] or job['document_versions']!=3 or not job['offhost']['completed']:raise ValueError('Backup job did not capture current versions')
     receipt=write_receipt(job,run_id+'-database','nyc3','fictional-job-backups',recovery_root/'job.receipt.json')
     remote_receipt=publish_receipt(receipt,transfer_store)
+    retrieved_receipt=retrieve_receipt(transfer_store,'fictional-job-backups',job['offhost']['prefix'],'nyc3')
+    if retrieved_receipt != receipt:raise ValueError('Retrieved locator differs')
     if not remote_receipt['verified']:raise ValueError('Offhost locator failed')
     if receipt['recovery_verified'] or not receipt['copy_verified']:raise ValueError('Receipt overstates evidence')
     elapsed = time.perf_counter()-started
@@ -284,7 +286,7 @@ def main():
               'key_storage':'separate ignored local recovery-key directory; not copied with object backup',
               'consistent_exported_snapshot':'passed', 'post_snapshot_upload_excluded':True, 'source_document_versions_after_snapshot':source_version_count, 'encrypted_version_inventory_restore':'passed', 'database_archive_inventory_binding':'passed',
               'completed_bundle_inspection':'passed','bundled_document_recovery':'passed','bundle_database_dump_matches_restore':'passed',
-              'consistent_backup_job':'passed','backup_job_verified_remote_copy':'passed_local_fictional_store','durable_backup_receipt':'passed_local_fixture','offhost_backup_locator':'passed_private_copy_and_readback_fictional_store','backup_job_current_document_versions':job['document_versions'],
+              'consistent_backup_job':'passed','backup_job_verified_remote_copy':'passed_local_fictional_store','durable_backup_receipt':'passed_local_fixture','offhost_backup_locator':'passed_private_copy_readback_and_retrieval_fictional_store','backup_job_current_document_versions':job['document_versions'],
               'read_only_backup_role_capture':'passed','backup_role_write_denials':denials,'temporary_backup_role_removed':True,
               'transferred_bundle_database_restore':'passed_actual_pg_restore',
               'transfer_store':'local SDK-shaped fictional adapter; not DigitalOcean',
