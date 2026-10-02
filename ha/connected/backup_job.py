@@ -11,9 +11,10 @@ import uuid
 import psycopg
 from psycopg.conninfo import conninfo_to_dict,make_conninfo
 from .backup_bundle import create_bundle
+from .backup_transfer import copy_bundle
 from .postgres import PostgresRepository
 
-def capture_backup(dsn,objects,backup_key,destination,pg_dump):
+def capture_backup(dsn,objects,backup_key,destination,pg_dump,*,offhost=None):
     if not isinstance(backup_key,bytes) or len(backup_key)!=32:
         raise ValueError('Separate recovery key required')
     executable=Path(pg_dump)
@@ -44,5 +45,10 @@ def capture_backup(dsn,objects,backup_key,destination,pg_dump):
             if result.returncode:raise RuntimeError('Database backup capture failed')
         # Source objects must remain immutable/available after the pinned DB snapshot.
         manifest=create_bundle(uuid.uuid4().hex,dump,versions,objects,backup_key,destination)
+        remote = None
+        if offhost is not None:
+            client, bucket = offhost
+            remote = copy_bundle(destination, backup_key, versions, client, bucket)
         return {'snapshot_id':manifest['inventory']['snapshot_id'],
-            'document_versions':len(versions),'completed':True,'deletion_authorized':False}
+            'document_versions':len(versions),'completed':True,'deletion_authorized':False,
+            'offhost':remote}

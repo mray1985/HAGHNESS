@@ -11,7 +11,8 @@ from .spaces_storage import SpacesObjects
 
 REQUIRED=('HA_BACKUP_DATABASE_URL','HA_BACKUP_DIRECTORY','HA_BACKUP_KEY_DIRECTORY',
     'HA_BACKUP_KEY_ID','HA_BACKUP_PG_DUMP','HA_SPACES_REGION','HA_SPACES_BUCKET',
-    'HA_SPACES_ACCESS_KEY','HA_SPACES_SECRET_KEY','HA_DOCUMENT_KEY_DIRECTORY','HA_DOCUMENT_ACTIVE_KEY_ID')
+    'HA_SPACES_ACCESS_KEY','HA_SPACES_SECRET_KEY','HA_DOCUMENT_KEY_DIRECTORY','HA_DOCUMENT_ACTIVE_KEY_ID',
+    'HA_BACKUP_SPACES_BUCKET','HA_BACKUP_SPACES_ACCESS_KEY','HA_BACKUP_SPACES_SECRET_KEY')
 
 class ReadObjects:
     def __init__(self,objects):self.objects=objects
@@ -21,6 +22,8 @@ def run(env):
     if env.get('HA_BACKUP_ENABLED')!='true':raise ValueError('Backup activation required')
     if os.name!='posix' or not all(env.get(name) for name in REQUIRED):
         raise ValueError('Complete Linux backup configuration required')
+    if env['HA_BACKUP_SPACES_BUCKET']==env['HA_SPACES_BUCKET']:
+        raise ValueError('Separate backup bucket required')
     root=Path(env['HA_BACKUP_DIRECTORY']).resolve(strict=True)
     application=Path(__file__).resolve().parents[2]
     info=root.stat()
@@ -38,8 +41,14 @@ def run(env):
         aws_access_key_id=env['HA_SPACES_ACCESS_KEY'],aws_secret_access_key=env['HA_SPACES_SECRET_KEY'],
         config=Config(signature_version='s3v4',connect_timeout=5,read_timeout=15,retries={'total_max_attempts':2}))
     objects=ReadObjects(SpacesObjects(client,env['HA_SPACES_BUCKET'],env['HA_DOCUMENT_ACTIVE_KEY_ID'],document_keys))
+    backup_client=boto3.client('s3',region_name=region,endpoint_url=f'https://{region}.digitaloceanspaces.com',
+        aws_access_key_id=env['HA_BACKUP_SPACES_ACCESS_KEY'],aws_secret_access_key=env['HA_BACKUP_SPACES_SECRET_KEY'],
+        config=Config(signature_version='s3v4',connect_timeout=5,read_timeout=15,retries={'total_max_attempts':2}))
     name=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+env['HA_BACKUP_KEY_ID']+'-'+uuid.uuid4().hex
-    return capture_backup(env['HA_BACKUP_DATABASE_URL'],objects,backup_key,root/name,env['HA_BACKUP_PG_DUMP'])
+    result=capture_backup(env['HA_BACKUP_DATABASE_URL'],objects,backup_key,root/name,env['HA_BACKUP_PG_DUMP'],
+        offhost=(backup_client,env['HA_BACKUP_SPACES_BUCKET']))
+    result['recovery_key_id']=env['HA_BACKUP_KEY_ID']
+    return result
 
 def main():
     try:
@@ -48,6 +57,7 @@ def main():
         print('HA backup failed; no completion confirmed')
         return 1
     print('HA backup completed; document versions: '+str(result['document_versions']))
+    print('HA verified backup prefix: '+result['offhost']['prefix']+'; recovery key ID: '+result['recovery_key_id'])
     return 0
 
 if __name__=='__main__':raise SystemExit(main())

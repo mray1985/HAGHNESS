@@ -10,7 +10,7 @@
     "ledger_events": 6,
     "document_versions": 2
   },
-  "elapsed_seconds": 7.026,
+  "elapsed_seconds": 6.467,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,
@@ -31,6 +31,7 @@
   "bundled_document_recovery": "passed",
   "bundle_database_dump_matches_restore": "passed",
   "consistent_backup_job": "passed",
+  "backup_job_verified_remote_copy": "passed_local_fictional_store",
   "backup_job_current_document_versions": 3,
   "read_only_backup_role_capture": "passed",
   "backup_role_write_denials": [

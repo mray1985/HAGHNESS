@@ -164,3 +164,6 @@ October 2 recovery-download continuation: operator-only bounded off-host downloa
 
 
 October 2 transferred-bundle recovery proof: actual PostgreSQL restore now runs from a downloaded encrypted bundle through the copy/download helpers and a local fictional SDK adapter. All five snapshot tables match; profit118000minor, distinct original/correction bytes and foreign-profile denial pass. Actualread-onlycaptureproofstillpasses. Savedreport elapsed7.026seconds singlelocalfixture, hostedstore explicitlynotrun. Productioncodeunchanged; no paid/providerresourceoperation.
+
+
+October 2 integrated scheduler-copy checkpoint: optional backup-job offhost copy uses exact snapshot versions; failure prevents successful return. Disabled runner now requires separate backup bucket/credentials, rejects source-bucket reuse and records verified prefix/non-secret key ID. Actualread-onlyPGjobplusfictionalSDKcopypassed; recoveryproofstillpasses. Independent review found no important issue. Fullsuite192passed2Linux-onlyskipped194total. Hostedpermissions/account/manualcapture/keyrecovery/monitoring/retention/scheduleractivationremainopen; templateusesoneregionanddoesnotprove regionalredundancy.

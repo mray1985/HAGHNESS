@@ -2,7 +2,7 @@ import contextlib
 from io import StringIO
 import unittest
 from unittest.mock import patch
-from ha.connected.backup_runner import run,main,ReadObjects
+from ha.connected.backup_runner import run,main,ReadObjects,REQUIRED
 
 class RunnerTests(unittest.TestCase):
     def test_backup_cannot_run_without_explicit_activation(self):
@@ -25,3 +25,8 @@ class RunnerTests(unittest.TestCase):
         reader=ReadObjects(Objects())
         self.assertEqual(reader.get('key','version'),b'fixture')
         self.assertFalse(hasattr(reader,'put'))
+
+    def test_source_bucket_cannot_double_as_backup_destination(self):
+        env={name:'fixture' for name in REQUIRED}; env['HA_BACKUP_ENABLED']='true'
+        with patch('ha.connected.backup_runner.os.name','posix'),self.assertRaises(ValueError):
+            run(env)

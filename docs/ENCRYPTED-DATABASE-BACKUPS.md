@@ -74,3 +74,12 @@ Fictional-store recovery tests verify distinct original/correction bytes, databa
 ## Actual database restoration through transferred ciphertext
 
 The fictional PostgreSQL harness now exercises copy_bundle and recover_bundle through a file-backed SDK-shaped adapter. It decrypts the downloaded database archive and runs actual pg_restore into a second new isolated database. All five restored tables match the exported snapshot; original/corrected documents are read from the downloaded bundle through Documents against that database, book profit remains $1,180 and unrelated-profile access is denied. The saved evidence explicitly identifies the store as local and fictional, with hosted restoration not run. The measured 7.026 seconds is one local fixture execution, not a hosted timing or service promise. Existing test data and source databases are preserved; synthetic diagnostic dumps/keys remain under ignored .connected-local as documented above.
+
+
+## Scheduler-to-copy integration
+
+The backup job optionally copies its completed local bundle using the exact version rows captured in its exported snapshot. It returns successful remote status only after copy/readback verification. A copy failure propagates without a successful job result; the valid local bundle and partial remote prefix remain for operator diagnosis. Local-only callers retain explicit offhost=null status.
+
+The disabled Linux runner now requires a separate backup bucket and separate credential configuration, invokes this copy path, and emits the verified non-secret prefix and validated recovery-key ID on success. Source and destination bucket names cannot match. Actual provider policies must independently restrict source reads and destination upload/read rights; separate configuration alone does not establish those policies. The template currently uses the source Spaces region for both clients, so it is protection against loss of the application host, not proven regional disaster redundancy. Preserve success logs/catalog and historical key references separately. No timer is enabled.
+
+The actual isolated PostgreSQL harness exercises the integrated read-only capture plus copy path using its explicitly fictional local SDK-shaped store. Remote-copy failure and source/destination equality rejection have regression coverage. Live provider credentials, permissions, monitoring, scheduled execution, key recovery and retention remain unverified.

@@ -27,3 +27,21 @@ class BackupJobTests(unittest.TestCase):
             for dsn in ('dbname=fixture','host=localhost dbname=fixture user=fixture sslpassword=fictional-only'):
                 with self.subTest(dsn=dsn),self.assertRaises(ValueError):
                     capture_backup(dsn,None,bytes(32),root/'bundle',executable)
+
+    def test_remote_failure_prevents_success_and_uses_snapshot_versions(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder); executable=root/'pg_dump'; executable.write_bytes(b'fixture')
+            conn=MagicMock(); snapshot=MagicMock(); snapshot.fetchone.return_value=('fixed-snapshot',)
+            rows=MagicMock(); rows.fetchall.return_value=[]
+            conn.execute.side_effect=[None,snapshot,rows]
+            connection=MagicMock(); connection.__enter__.return_value=conn
+            client=object()
+            with patch('ha.connected.backup_job.psycopg.connect',return_value=connection), \
+                 patch('ha.connected.backup_job.subprocess.run',return_value=subprocess.CompletedProcess([],0)), \
+                 patch('ha.connected.backup_job.create_bundle',return_value={'inventory':{'snapshot_id':'fixture'}}), \
+                 patch('ha.connected.backup_job.copy_bundle',side_effect=ValueError('remote mismatch')) as copied:
+                with self.assertRaises(ValueError):
+                    capture_backup('host=localhost dbname=fixture user=fixture',None,bytes(32),
+                                   root/'bundle',executable,offhost=(client,'private-backups'))
+            copied.assert_called_once_with(root/'bundle',bytes(32),[],client,'private-backups')
+            self.assertEqual(list(root.iterdir()),[executable])
