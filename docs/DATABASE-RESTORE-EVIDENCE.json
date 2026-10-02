@@ -9,9 +9,10 @@
     "grants": 5,
     "ledger_events": 6,
     "document_versions": 2,
-    "support_reviews": 1
+    "support_reviews": 1,
+    "tax_input_versions": 1
   },
-  "elapsed_seconds": 8.015,
+  "elapsed_seconds": 7.661,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,
@@ -48,6 +49,7 @@
   "transfer_store": "local SDK-shaped fictional adapter; not DigitalOcean",
   "transferred_support_review_queue_matches": true,
   "transferred_tables_match_snapshot": true,
+  "tax_input_reference_restore": "passed_metadata_fixture_only_not_saved_input",
   "transferred_original_and_correction": "passed",
   "transferred_book_profit_minor": 118000,
   "transferred_cross_profile_denial": "passed",

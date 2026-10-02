@@ -266,3 +266,62 @@ class PostgresTests(unittest.TestCase):
         self.assertIn('document_changed',draft['support_review_queue'][0]['reasons'])
         self.assertEqual(draft['expense_minor'],1000)
         self.assertEqual(len(service.history(self.owner,self.scope)),1)
+
+    def test_tax_input_versions_are_scoped_append_only_and_do_not_grant_editing(self):
+        import psycopg
+        from io import BytesIO
+        from ha.connected.documents import Documents, MemoryObjects
+        docs = Documents(self.repo, MemoryObjects(), lambda data,mime: True)
+        version = docs.upload(self.owner, self.scope, BytesIO(b'fictional input'), 'text/plain', 'tax-original')
+        statement = """INSERT INTO ha_connected.tax_input_versions
+            (snapshot_id,profile_id,business_id,tax_year,document_id,version_id,
+             previous_snapshot_id,actor,reason,idempotency_key,request_fingerprint)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+        snapshot = '00000000-0000-4000-8000-000000000001'
+        args = (snapshot,'orchard','business',2026,version.document_id,version.version_id,
+                None,'orchard-owner','','tax-key','a'*64)
+        with self.repo.transaction() as conn:
+            conn.execute(statement,args)
+            self.assertEqual(conn.execute("SELECT count(*) FROM ha_connected.grants WHERE action='save_tax'").fetchone()[0],0)
+        for foreign in (('cedar','cedar-business',2026), ('orchard','business',2025)):
+            with self.assertRaises(psycopg.errors.ForeignKeyViolation),self.repo.transaction() as conn:
+                conn.execute(statement,('00000000-0000-4000-8000-000000000002',*foreign,
+                    version.document_id,version.version_id,None,'actor','','other','b'*64))
+        for command in ("UPDATE ha_connected.tax_input_versions SET actor='other'", 'DELETE FROM ha_connected.tax_input_versions'):
+            with self.assertRaises(psycopg.errors.CheckViolation),self.repo.transaction() as conn:
+                conn.execute(command)
+        corrected = docs.correct(self.owner,self.scope,version.document_id,BytesIO(b'fictional corrected input'),
+                                 'text/plain','tax-correction','Correction')
+        correction_args=('00000000-0000-4000-8000-000000000003','orchard','business',2026,
+                         version.document_id,corrected.version_id,snapshot,'orchard-owner','Updated inputs','tax-key-2','c'*64)
+        with self.repo.transaction() as conn: conn.execute(statement,correction_args)
+        third = docs.correct(self.owner,self.scope,version.document_id,BytesIO(b'fictional third input'),
+                             'text/plain','tax-third','Another correction')
+        fork_args=('00000000-0000-4000-8000-000000000004','orchard','business',2026,
+                   version.document_id,third.version_id,snapshot,'orchard-owner','Fork attempt','fork-key','d'*64)
+        with self.assertRaises(psycopg.errors.UniqueViolation) as error,self.repo.transaction() as conn:
+            conn.execute(statement,fork_args)
+        self.assertEqual(error.exception.diag.constraint_name,'tax_input_one_successor')
+        with self.assertRaises(psycopg.errors.CheckViolation),self.repo.transaction() as conn:
+            conn.execute(statement,(*fork_args[:8],'',*fork_args[9:]))
+        with self.assertRaises(psycopg.errors.UniqueViolation) as error,self.repo.transaction() as conn:
+            conn.execute(statement,(*fork_args[:6],None,*fork_args[7:]))
+        self.assertEqual(error.exception.diag.constraint_name,'tax_input_one_original')
+        fourth = docs.correct(self.owner,self.scope,version.document_id,BytesIO(b'fictional fourth input'),
+                              'text/plain','tax-fourth','Another correction')
+        cycle_a='00000000-0000-4000-8000-000000000005'
+        cycle_b='00000000-0000-4000-8000-000000000006'
+        with self.assertRaises(psycopg.errors.CheckViolation),self.repo.transaction() as conn:
+            conn.execute("""INSERT INTO ha_connected.tax_input_versions
+                (snapshot_id,profile_id,business_id,tax_year,document_id,version_id,
+                 previous_snapshot_id,actor,reason,idempotency_key,request_fingerprint)
+                VALUES (%s,'orchard','business',2026,%s,%s,%s,'actor','cycle','cycle-a',%s),
+                       (%s,'orchard','business',2026,%s,%s,%s,'actor','cycle','cycle-b',%s)""",
+                (cycle_a,version.document_id,third.version_id,cycle_b,'e'*64,
+                 cycle_b,version.document_id,fourth.version_id,cycle_a,'f'*64))
+        self.repo.migrate()
+        with self.repo.transaction() as conn:
+            self.assertEqual(conn.execute('SELECT count(*) FROM ha_connected.tax_input_versions').fetchone()[0],2)
+            conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'save_tax')")
+        self.repo.migrate()
+        self.assertTrue(any('save_tax' in grant.actions for grant in self.repo.grants_for(self.owner.subject)))

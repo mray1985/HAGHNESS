@@ -82,6 +82,13 @@ def main():
             VALUES (%s,'orchard','business',2026,%s,%s,%s,%s,'needs_information',
                     'Fictional review fixture','fixture-reviewer','review-fixture',%s)""",
             (uuid.uuid4(),event_id,'a'*64,original.document_id,original.version_id,'b'*64))
+    # Reference-table fixture only; bytes are a receipt, not a saved tax input.
+    with repository.transaction() as conn:
+        conn.execute("""INSERT INTO ha_connected.tax_input_versions
+            (snapshot_id,profile_id,business_id,tax_year,document_id,version_id,
+             actor,reason,idempotency_key,request_fingerprint)
+            VALUES (%s,'orchard','business',2026,%s,%s,'fixture-owner','',%s,%s)""",
+            (uuid.uuid4(),original.document_id,original.version_id,'tax-reference-fixture','c'*64))
     shutil.copytree(source_objects,object_backup)
     env = dict(os.environ,PGPASSWORD=params['password'])
     args = ['-h','127.0.0.1','-p','55432','-U','ha_test_admin']
@@ -91,7 +98,7 @@ def main():
         snapshot_db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         snapshot=snapshot_db.execute('SELECT pg_export_snapshot()').fetchone()[0]
         snapshot_rows={}
-        for table in ('profiles','businesses','grants','ledger_events','document_versions','support_reviews'):
+        for table in ('profiles','businesses','grants','ledger_events','document_versions','support_reviews','tax_input_versions'):
             query=psycopg.sql.SQL('SELECT * FROM ha_connected.{}').format(psycopg.sql.Identifier(table))
             snapshot_rows[table]=snapshot_db.execute(query).fetchall()
         versions=[repository._version(row) for row in snapshot_rows['document_versions']]
@@ -127,7 +134,7 @@ def main():
     recovered_dsn = make_conninfo(**{**params,'dbname':restored_name})
     with psycopg.connect(source_dsn) as original_db, psycopg.connect(recovered_dsn) as recovered_db:
         counts = {}
-        for table in ('profiles','businesses','grants','ledger_events','document_versions','support_reviews'):
+        for table in ('profiles','businesses','grants','ledger_events','document_versions','support_reviews','tax_input_versions'):
             query = psycopg.sql.SQL('SELECT * FROM ha_connected.{}').format(psycopg.sql.Identifier(table))
             before = snapshot_rows[table]
             after = recovered_db.execute(query).fetchall()
@@ -290,7 +297,7 @@ def main():
               'read_only_backup_role_capture':'passed','backup_role_write_denials':denials,'temporary_backup_role_removed':True,
               'transferred_bundle_database_restore':'passed_actual_pg_restore',
               'transfer_store':'local SDK-shaped fictional adapter; not DigitalOcean',
-              'transferred_support_review_queue_matches':True,'transferred_tables_match_snapshot':True,'transferred_original_and_correction':'passed',
+              'transferred_support_review_queue_matches':True,'transferred_tables_match_snapshot':True,'tax_input_reference_restore':'passed_metadata_fixture_only_not_saved_input','transferred_original_and_correction':'passed',
               'transferred_book_profit_minor':118000,'transferred_cross_profile_denial':'passed',
               'hosted_storage_restore':'not_run','scanner':'synthetic fixture bypass only'}
     (ROOT/'docs/DATABASE-RESTORE-EVIDENCE.json').write_text(json.dumps(report,indent=2)+'\n')

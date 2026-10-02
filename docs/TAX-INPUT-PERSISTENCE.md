@@ -1,6 +1,6 @@
 # Protected HATax input persistence
 
-Status: input codec implemented and tested; encrypted persistence, routes and user controls are not implemented. HATax still loses entries on refresh. This is the next core workflow feature, not completed saving.
+Status: input codec and database reference foundation implemented and tested; encrypted saving service, routes and user controls are not implemented. HATax still loses entries on refresh. This is the next core workflow feature, not completed saving.
 
 ## Current evidence
 
@@ -23,3 +23,10 @@ Calculated estimate, profileReady, navigation step and transient request revisio
 7. Verify refresh/reopen and another authorized session through actual MFA/PostgreSQL/encrypted objects; prove unrelated profile denial and immutable correction history. Run rendered desktop/mobile UI checks, then an actual downloaded backup restore containing a saved input and compare reopened inputs. Report hosted status separately.
 
 One return may eventually include several businesses or Form 1041. The current connected scope is profile/business/year; label this feature as a business-linked draft until a return-level authorization model exists. Do not silently duplicate household inputs across businesses or sum saved drafts. No filing, payment or final-review authorization is implied by saving.
+
+
+## Database foundation checkpoint
+
+Migration 003 adds explicit `save_tax` vocabulary without granting it, plus append-only `tax_input_versions` metadata. Exact scoped document-version foreign keys prevent links across profile/business/year. A scoped predecessor foreign key also requires the same document chain. One original per case/year and one successor per snapshot prevent duplicate roots/forks. A BEFORE INSERT guard requires an existing lower-sequence predecessor; a reproduced multirow disconnected-cycle insertion is now rejected. Server-generated actor/time/version and optimistic expected-version enforcement remain service work; SQL constraints alone do not authorize saves or verify document bytes.
+
+Actual PostgreSQL tests cover scope/year denial, explicit permission preservation through repeated migration, update/delete rejection, corrections, exact root/fork constraints, blank correction reason and cyclic multirow inserts. Latest full suite: 214 total, 212 passed, two Linux-only skipped. Independent review identified the cycle gap; it was reproduced, fixed and reviewed again with no remaining important findings. The actual encrypted backup/download/pg_restore harness now compares all seven tables, including a deliberately labeled metadata fixture referencing receipt bytes. That fixture proves reference-row recovery; it does not prove a saved tax input can be reopened.

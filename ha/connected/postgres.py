@@ -33,7 +33,7 @@ class PostgresRepository:
         folder = Path(__file__).resolve().parents[2]/'migrations'
         with self.transaction() as conn:
             conn.execute("SELECT pg_advisory_xact_lock(hashtextextended('ha-schema-migrations',0))")
-            for name in ('001_connected.sql','002_support_reviews.sql'):
+            for name in ('001_connected.sql','002_support_reviews.sql','003_tax_input_versions.sql'):
                 conn.execute((folder/name).read_text(encoding='utf-8'))
 
     def profile_for_business(self, business):
