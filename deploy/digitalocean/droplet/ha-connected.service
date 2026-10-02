@@ -1,0 +1,33 @@
+[Unit]
+Description=HA Bookin and HATax connected service
+Wants=network-online.target
+After=network-online.target clamav-daemon.service
+Requires=clamav-daemon.service
+
+[Service]
+Type=simple
+User=ha
+Group=ha
+SupplementaryGroups=clamav
+WorkingDirectory=/opt/ha/current
+EnvironmentFile=/etc/ha/connected.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/ha/venv/bin/python -m ha.connected.server --host 127.0.0.1 --port 8080 --behind-https-proxy --origin ${HA_PUBLIC_ORIGIN}
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+ReadOnlyPaths=/etc/ha/keys
+
+[Install]
+WantedBy=multi-user.target

@@ -39,3 +39,5 @@ Official references: https://docs.digitalocean.com/products/app-platform/ and ht
 
 
 HATax is included in the connected service at `/tax`. The protected handoff reads authorized Bookin projections and holds the refund estimate when business records need tax review. Personal form drafts remain in page memory; protected durable form saving and filing are unfinished. See BOOKIN-HATAX-HANDOFF.md.
+
+Linux native-service, nginx and ClamD settings templates are now in deploy/digitalocean/droplet/. See its README for explicit activation gates and current validation limits.

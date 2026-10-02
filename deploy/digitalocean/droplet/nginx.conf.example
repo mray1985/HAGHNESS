@@ -1,0 +1,35 @@
+# Replace domain and certificate paths. Install within nginx's http context.
+server {
+    listen 80;
+    server_name tax.example.invalid;
+    return 308 https://tax.example.invalid$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name tax.example.invalid;
+    ssl_certificate /etc/ha/tls/fullchain.pem;
+    ssl_certificate_key /etc/ha/tls/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    # Avoid logging OAuth query codes and client identifiers.
+    access_log off;
+    # Standard nginx error logs may include the full request URI too.
+    error_log /dev/null crit;
+    client_max_body_size 30m;
+    # JSON/base64 upload can exceed nginx's default buffering threshold.
+    # Buffer requests only in memory; do not write tax documents to proxy disk.
+    client_body_buffer_size 30m;
+    client_body_in_file_only off;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host tax.example.invalid;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header Connection "";
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+    }
+}

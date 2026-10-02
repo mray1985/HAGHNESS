@@ -1,0 +1,14 @@
+# Merge into the installed /etc/clamav/clamd.conf; not a full replacement.
+# Remove duplicate directives and any TCPSocket/TCPAddr configuration.
+LocalSocket /run/clamav/clamd.ctl
+LocalSocketGroup clamav
+LocalSocketMode 660
+StreamMaxLength 25M
+MaxFileSize 25M
+MaxScanSize 100M
+ScanPDF yes
+ScanArchive yes
+HeuristicAlerts yes
+AlertExceedsMax yes
+AlertEncrypted yes
+LeaveTemporaryFiles no
