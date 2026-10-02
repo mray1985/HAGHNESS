@@ -167,3 +167,6 @@ October 2 transferred-bundle recovery proof: actual PostgreSQL restore now runs 
 
 
 October 2 integrated scheduler-copy checkpoint: optional backup-job offhost copy uses exact snapshot versions; failure prevents successful return. Disabled runner now requires separate backup bucket/credentials, rejects source-bucket reuse and records verified prefix/non-secret key ID. Actualread-onlyPGjobplusfictionalSDKcopypassed; recoveryproofstillpasses. Independent review found no important issue. Fullsuite192passed2Linux-onlyskipped194total. Hostedpermissions/account/manualcapture/keyrecovery/monitoring/retention/scheduleractivationremainopen; templateusesoneregionanddoesnotprove regionalredundancy.
+
+
+October 2 durable receipt continuation: disabled runner now writes exclusive private verified-copy locator with region/bucket/prefix/time/snapshot/non-secretkeyID/count. Explicitcopyverified doesnotclaimrestoreordeleteauthorization. Atomicpublication/syncfailcleanup/existingreceiptpreservationtested. ActualPGfictionalSDKjobreceiptpassed. Independentreviewnoimportantfindings; fullsuite195passed2Linux-onlyskipped197total. Offhostreceipt/catalogpreservation, liveproviderpermissions/keyrecovery/monitoring/retention/activationstillopen.

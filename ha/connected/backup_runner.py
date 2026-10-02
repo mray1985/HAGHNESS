@@ -8,6 +8,7 @@ import uuid
 from .backup_job import capture_backup
 from .document_configuration import MountedKeys
 from .spaces_storage import SpacesObjects
+from .backup_receipt import write_receipt
 
 REQUIRED=('HA_BACKUP_DATABASE_URL','HA_BACKUP_DIRECTORY','HA_BACKUP_KEY_DIRECTORY',
     'HA_BACKUP_KEY_ID','HA_BACKUP_PG_DUMP','HA_SPACES_REGION','HA_SPACES_BUCKET',
@@ -48,6 +49,7 @@ def run(env):
     result=capture_backup(env['HA_BACKUP_DATABASE_URL'],objects,backup_key,root/name,env['HA_BACKUP_PG_DUMP'],
         offhost=(backup_client,env['HA_BACKUP_SPACES_BUCKET']))
     result['recovery_key_id']=env['HA_BACKUP_KEY_ID']
+    write_receipt(result,env['HA_BACKUP_KEY_ID'],region,env['HA_BACKUP_SPACES_BUCKET'],root/(name+'.receipt.json'))
     return result
 
 def main():
