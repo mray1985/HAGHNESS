@@ -129,3 +129,8 @@ October 2 live document-service continuation: fourteen actual Linux checks now i
 
 
 October 2 real identity-runtime preparation: official Keycloak 26.8.0 archive checksum verified; Java 25 runtime installed locally. Actual HTTPS discovery/JWKS probe uses explicit certificate verification and loopback binding, with an isolated temporary database. Password/OTP flow and actual application login remain unverified. Review-driven staged setup prevents interrupted artifacts being mistaken for complete installation. See KEYCLOAK-IMPLEMENTATION.md and saved runtime/distribution evidence.
+
+
+October 2 application-realm continuation: credential-free Keycloak 26.8 realm template now requires password plus OTP, LoA2, execution-derived AMR, exact HTTPS callbacks and S256 PKCE. Actual isolated realm import and HTTPS discovery passed. Five existing sign-in tests and the complete real-PostgreSQL suite passed (160 tests). Independent review found no actionable defect. Live boundary results are recorded separately in KEYCLOAK-REALM-EVIDENCE.json; OTP completion/signed claims, recovery, connected session use and hosted deployment remain open.
+
+Real realm boundary rerun passed all four checks. Review tightened missing-PKCE handling to the observed specific 302 OAuth error; generic HTTP400 cannot pass. Full OTP completion is still not verified.

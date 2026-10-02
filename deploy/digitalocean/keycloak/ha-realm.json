@@ -1,0 +1,128 @@
+{
+  "realm": "ha",
+  "enabled": true,
+  "displayName": "HA Connected",
+  "sslRequired": "all",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 600,
+  "ssoSessionMaxLifespan": 3600,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "attributes": {
+    "acr.loa.map": "{\"2\": 2}"
+  },
+  "browserFlow": "ha-password-otp",
+  "authenticationFlows": [
+    {
+      "alias": "ha-password-otp",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "flowAlias": "ha-level-2",
+          "authenticatorFlow": true,
+          "requirement": "CONDITIONAL",
+          "priority": 10
+        }
+      ]
+    },
+    {
+      "alias": "ha-level-2",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-level-of-authentication",
+          "authenticatorConfig": "ha-loa-2",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10
+        },
+        {
+          "authenticator": "auth-username-password-form",
+          "authenticatorConfig": "ha-password-reference",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "authenticatorConfig": "ha-otp-reference",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 30,
+          "userSetupAllowed": true
+        }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "ha-loa-2",
+      "config": {
+        "loa-condition-level": "2",
+        "loa-max-age": "0"
+      }
+    },
+    {
+      "alias": "ha-password-reference",
+      "config": {
+        "default.reference.value": "pwd",
+        "default.reference.maxAge": "600"
+      }
+    },
+    {
+      "alias": "ha-otp-reference",
+      "config": {
+        "default.reference.value": "otp",
+        "default.reference.maxAge": "600"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "ha-connected",
+      "name": "HA Connected",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://ha.example/api/auth/callback"
+      ],
+      "webOrigins": [
+        "https://ha.example"
+      ],
+      "fullScopeAllowed": false,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "minimum.acr.value": "2",
+        "default.acr.values": "2"
+      },
+      "protocolMappers": [
+        {
+          "name": "completed-authentication-methods",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-amr-mapper",
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ]
+}

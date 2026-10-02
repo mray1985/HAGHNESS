@@ -1,0 +1,18 @@
+{
+  "environment": "local Ubuntu Keycloak dev runtime only",
+  "https_discovery": "passed",
+  "hostname_and_certificate_verification": true,
+  "rsa_keys_available": true,
+  "issuer": "https://127.0.0.1:8843/realms/ha",
+  "mfa_login": "not_run",
+  "application_realm": "ha_imported_and_discovered",
+  "realm_checks": {
+    "missing_pkce_rejected": true,
+    "password_challenge_available": true,
+    "unregistered_callback_rejected": true,
+    "password_direct_grant_disabled": true
+  },
+  "hosted_identity": "not_run",
+  "runtime_uploads_activated": false,
+  "realm_template_sha256": "3d831b9c4f264e2659394d7dc9fb594c12a179943fb58bb8be7127e05d460c75"
+}

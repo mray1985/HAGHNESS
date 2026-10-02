@@ -60,3 +60,15 @@ scripts/verify_keycloak_runtime.py starts its own HTTPS-only loopback dev runtim
 Development H2 and a locally trusted test certificate are fixture choices, not hosted configuration. Next: build the required application realm/client/OTP flow, prove signed ACR/AMR from actual completed authentication, then connect HA's session and document access. The independent hosted MFA requirement remains incomplete.
 
 Official setup source: [Keycloak OpenJDK guide](https://www.keycloak.org/getting-started/getting-started-zip).
+
+## Importable application realm
+
+`deploy/digitalocean/keycloak/ha-realm.json` targets the installed Keycloak 26.8.0 release. It contains no users, passwords, OTP secrets or administrative credentials. Replace the reserved `https://ha.example` callback and origin with the exact application HTTPS origin before a hosted import. Import into a new dedicated realm; do not overwrite a live realm without reviewing its existing clients and users.
+
+The browser flow has one conditional LoA2 subflow requiring username/password and OTP. LoA lifetime is zero, so that level must be completed on each new authentication. Completed-execution references `pwd` and `otp` have a 600-second AMR reporting window. The AMR ID-token mapper uses actual completed executions; the default Keycloak ACR scope supplies ACR. Client minimum ACR is 2, and S256 PKCE is required. Public registration, automatic password reset, implicit grants and password direct grants are disabled. Recovery and controlled onboarding still require implementation and verification.
+
+The real-runtime probe accepts `--realm-file deploy/digitalocean/keycloak/ha-realm.json`. It changes only the fixture callback/origin to loopback, imports into its temporary H2 database and probes HTTPS discovery for `/realms/ha`. It also checks missing-PKCE rejection, exact redirect restriction, password challenge availability and explicit direct-grant rejection. Evidence is saved separately in `KEYCLOAK-REALM-EVIDENCE.json`. These checks do not complete OTP enrollment/login or prove signed AMR/ACR. Application sessions and hosted recovery remain outstanding.
+
+Configuration keys were checked against [Keycloak 26.8 authentication flow documentation](https://github.com/keycloak/keycloak/blob/26.8.0/docs/documentation/server_admin/topics/authentication/flows.adoc) and [its execution reference and ACR constants](https://github.com/keycloak/keycloak/blob/26.8.0/server-spi-private/src/main/java/org/keycloak/models/Constants.java).
+
+The missing-PKCE probe deliberately does not follow OAuth redirects to the inactive callback. It requires Keycloak 26.8's exact callback error redirect (`invalid_request` describing `code_challenge`), rather than accepting an arbitrary HTTP 400. No callback code or identity token is written into evidence.
