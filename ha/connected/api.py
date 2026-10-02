@@ -10,6 +10,7 @@ from urllib.parse import urlparse, parse_qs
 from ha.returns import estimate_w2
 from .domain import Scope
 from .access import authorize
+from .return_draft import estimate_connected_return
 
 WEB = Path(__file__).resolve().parents[2] / 'web'
 MAX_REQUEST = 30 * 1024 * 1024
@@ -145,6 +146,9 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin):
                 if path == '/api/connected/events' and mutate:
                     body = self.payload()
                     return self.respond(201,ledger.post_event(principal,self.scope(body['scope']),body['event']))
+                if path == '/api/connected/return/estimate' and mutate:
+                    body=self.payload()
+                    return self.respond(200,estimate_connected_return(ledger,principal,self.scope(body['scope']),body['scenario']))
                 if path == '/api/connected/documents':
                     if documents is None:
                         return self.respond(503,{'error':'Private document storage is not configured'})

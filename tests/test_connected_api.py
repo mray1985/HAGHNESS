@@ -55,6 +55,19 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(result['book_profit_minor'],150000)
         self.assertFalse(result['may_prepare_return'])
 
+    def test_connected_tax_handoff_requires_same_session_scope_and_csrf(self):
+        scope={'profile':'orchard','business':'business','year':2026}
+        self.request('POST','/api/connected/events',{'scope':scope,'event':{'id':'sale','date':'2026-10-02','kind':'income','amount_minor':150000}})
+        payload={'scope':scope,'scenario':{'tax_year':'2026','w2s':[{'box1':45000,'box2':5200}]}}
+        path='/api/connected/return/estimate'
+        self.assertEqual(self.request('POST',path,payload,signed=False)[0],401)
+        self.assertEqual(self.request('POST',path,payload,csrf=False)[0],403)
+        status,result=self.request('POST',path,payload)
+        self.assertEqual(status,200)
+        self.assertEqual(result['business_draft']['book_profit_minor'],150000)
+        self.assertIsNone(result['refund'])
+        self.assertEqual(self.request('POST',path,{**payload,'scope':{'profile':'cedar','business':'cedar-business','year':2026}})[0],404)
+
     def test_unconfigured_documents_cannot_return_fake_success(self):
         self.assertEqual(self.request('POST','/api/connected/documents',{'scope':{'profile':'orchard','business':'business','year':2026}})[0],503)
         self.assertEqual(self.request('POST','/api/connected/document/corrections',{})[0],503)

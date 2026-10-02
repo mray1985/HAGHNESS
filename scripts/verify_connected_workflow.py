@@ -133,6 +133,14 @@ def main():
                 if draft['ledger_revision']!=6:raise ValueError('Retry duplicated an entry')
             if request('GET','/api/connected/draft?'+query+'&period=month&month=11')['book_profit_minor']!=0:
                 raise ValueError('Monthly rollup leaked entries from another month')
+            handoff={'scope':scope,'scenario':{'tax_year':'2026','w2s':[{'box1':45000,'box2':5200}]}}
+            request('POST','/api/connected/return/estimate',handoff,expected=403,verified=False)
+            linked=request('POST','/api/connected/return/estimate',handoff)
+            check_draft(linked['business_draft'])
+            if not linked['needs_review'] or linked['refund'] is not None or linked['balance_due'] is not None:
+                raise ValueError('Connected business was omitted from return review')
+            request('POST','/api/connected/return/estimate',
+                    {**handoff,'scenario':{'tax_year':'2025'}},expected=400)
             corrected=request('POST','/api/connected/document/corrections',
                 {**payload,'document':original['document_id'],'reason':'Fictional correction','idempotency_key':'corrected',
                  'data':base64.b64encode(b'fictional corrected receipt').decode()},expected=201)
@@ -162,6 +170,7 @@ def main():
         'book_profit_minor':118000,'reserve_scenario_minor':37500,
         'owner_payment_recorded_minor':10000,'owner_payment_confirmed_minor':0,
         'documents':'original and correction retrieved separately; cross-profile denial passed',
+        'connected_return':'saved books carried forward; partial combined balance withheld; CSRF/year denials passed',
         'existing_databases_modified':False,'money_moved':False,'filing_authorized':False,
         'hosted_workflow':'not_run','complete_tax_calculation':'not_implemented'}
     (ROOT/'docs/CONNECTED-WORKFLOW-EVIDENCE.json').write_text(json.dumps(report,indent=2)+'\n')
