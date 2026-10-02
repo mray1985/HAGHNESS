@@ -4,6 +4,7 @@ Requires dev_postgres.py setup. Creates new source and recovery databases,
 leaving existing test data untouched; never drops a database. This is local evidence, not AWS Backup.
 """
 import json
+import secrets
 import hashlib
 import shutil
 import os
@@ -173,7 +174,36 @@ def main():
         if bundled_documents.read(owner,scope,version.document_id,version.version_id)!=expected:
             raise ValueError('Bundled object recovery differs')
     job_bundle=recovery_root/'job-bundle'
-    job=capture_backup(source_dsn,objects,backup_key_path.read_bytes(),job_bundle,(BIN/'pg_dump.exe').resolve())
+    role='ha_backup_'+uuid.uuid4().hex
+    role_password=secrets.token_urlsafe(32)
+    with psycopg.connect(config['dsn'],autocommit=True) as conn:
+        conn.execute(psycopg.sql.SQL('CREATE ROLE {} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {}').format(
+            psycopg.sql.Identifier(role),psycopg.sql.Literal(role_password)))
+    try:
+        with psycopg.connect(source_dsn,autocommit=True) as conn:
+            conn.execute(psycopg.sql.SQL('GRANT CONNECT ON DATABASE {} TO {}').format(psycopg.sql.Identifier(source_name),psycopg.sql.Identifier(role)))
+            conn.execute(psycopg.sql.SQL('GRANT USAGE ON SCHEMA ha_connected TO {}').format(psycopg.sql.Identifier(role)))
+            conn.execute(psycopg.sql.SQL('GRANT SELECT ON ALL TABLES IN SCHEMA ha_connected TO {}').format(psycopg.sql.Identifier(role)))
+            conn.execute(psycopg.sql.SQL('GRANT SELECT ON ALL SEQUENCES IN SCHEMA ha_connected TO {}').format(psycopg.sql.Identifier(role)))
+        reader_dsn=make_conninfo(**{**params,'dbname':source_name,'user':role,'password':role_password})
+        denials=[]
+        with psycopg.connect(reader_dsn,autocommit=True) as conn:
+            # Test real ACLs rather than relying on a read-only transaction setting.
+            conn.execute('SET default_transaction_read_only=off')
+            for label,command in (
+                ('insert',"INSERT INTO ha_connected.profiles VALUES ('backup-write-denied')"),
+                ('update','UPDATE ha_connected.ledger_events SET record=record WHERE false'),
+                ('delete','DELETE FROM ha_connected.document_versions WHERE false'),
+                ('create_table','CREATE TABLE ha_connected.backup_write_probe(id integer)')):
+                try:conn.execute(command)
+                except psycopg.errors.InsufficientPrivilege:denials.append(label)
+                else:raise ValueError('Backup reader unexpectedly permitted '+label)
+        job=capture_backup(reader_dsn,objects,backup_key_path.read_bytes(),job_bundle,(BIN/'pg_dump.exe').resolve())
+    finally:
+        with psycopg.connect(source_dsn,autocommit=True) as conn:
+            conn.execute(psycopg.sql.SQL('DROP OWNED BY {}').format(psycopg.sql.Identifier(role)))
+        with psycopg.connect(config['dsn'],autocommit=True) as conn:
+            conn.execute(psycopg.sql.SQL('DROP ROLE {}').format(psycopg.sql.Identifier(role)))
     with psycopg.connect(source_dsn) as conn:
         current_versions=[repository._version(row) for row in conn.execute('SELECT * FROM ha_connected.document_versions').fetchall()]
     inspect_bundle(job_bundle,backup_key_path.read_bytes(),current_versions)
@@ -189,6 +219,7 @@ def main():
               'consistent_exported_snapshot':'passed', 'post_snapshot_upload_excluded':True, 'source_document_versions_after_snapshot':source_version_count, 'encrypted_version_inventory_restore':'passed', 'database_archive_inventory_binding':'passed',
               'completed_bundle_inspection':'passed','bundled_document_recovery':'passed','bundle_database_dump_matches_restore':'passed',
               'consistent_backup_job':'passed','backup_job_current_document_versions':job['document_versions'],
+              'read_only_backup_role_capture':'passed','backup_role_write_denials':denials,'temporary_backup_role_removed':True,
               'hosted_storage_restore':'not_run','scanner':'synthetic fixture bypass only'}
     (ROOT/'docs/DATABASE-RESTORE-EVIDENCE.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))

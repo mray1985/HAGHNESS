@@ -149,3 +149,6 @@ October 2 completed-bundle continuation: exclusive private bundles capture encry
 
 
 October 2 backup-job continuation: operator-only capture_backup now performs pinned PG snapshot/dump, immutable object capture and completed encrypted bundle verification as one callable operation. Actual current source job captured3versions and passed inspection. Credentials remain outsidechildargv; explicit connection settings prevent inherited PG defaults. Inline TLS passphrases rejected. Failure tests confirm no bundle success and staging cleanup afterfaileddump. Independentreviewfixconfirmed. Finalfullsuite177passed2Linux-onlyskipped. No scheduler/offhost storage/retention activation; DigitalOcean accountstatuspending.
+
+
+October 2 least-privilege backup continuation: actual backup capture succeeded through a temporary read-only PostgreSQL login with no administrative attributes. INSERT/UPDATE/DELETE/CREATE denied byACL withreadonlysessionsettingoff. Capture3versions inspectionpassed; temporaryrole/grantsremoved. Savedcredential-freeNOLOGINgroup-role template fordeploymentoperator; hostedrole/TLS/objectpermissions remainunverified. ProductionPythonunchanged; actualrecoveryprobeandharnesssyntaxverified.
