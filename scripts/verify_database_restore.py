@@ -19,6 +19,7 @@ from psycopg.types.json import Jsonb
 from ha.connected.postgres import PostgresRepository,PostgresLedger
 from ha.connected.domain import Principal,Scope
 from ha.connected.documents import Documents
+from ha.connected.backup_bundle import create_bundle,inspect_bundle,digest
 from ha.connected.backup_inventory import build_inventory,verify_inventory
 from ha.connected.backup_archive import encrypt_backup, decrypt_backup
 from ha.connected.encrypted_objects import EncryptedLocalObjects
@@ -160,6 +161,16 @@ def main():
     with psycopg.connect(recovered_dsn) as conn:
         restored_versions=[repository._version(row) for row in conn.execute('SELECT * FROM ha_connected.document_versions').fetchall()]
     verify_inventory(inventory,restored_versions,EncryptedLocalObjects(restored_objects,key_path.read_bytes),archive_hash)
+    bundle=recovery_root/'complete-bundle'
+    create_bundle(run_id,archive,versions,objects,backup_key_path.read_bytes(),bundle)
+    bundle_metadata,bundle_objects=inspect_bundle(bundle,backup_key_path.read_bytes(),restored_versions)
+    bundle_dump=recovery_root/'bundle-restore.dump'
+    decrypt_backup(bundle/'database.habackup',bundle_dump,backup_key_path.read_bytes())
+    if digest(bundle_dump)!=digest(archive):raise ValueError('Bundled database dump differs')
+    bundled_documents=Documents(PostgresRepository(recovered_dsn),bundle_objects,lambda data,mime:False)
+    for version,expected in ((original,b'fictional original receipt'),(corrected,b'fictional corrected receipt')):
+        if bundled_documents.read(owner,scope,version.document_id,version.version_id)!=expected:
+            raise ValueError('Bundled object recovery differs')
     elapsed = time.perf_counter()-started
     report = {'environment':'local fictional PostgreSQL only','database_restore':'passed','database_backup_encryption':'passed_authenticated_stream', 'database_recovery_key':'separate ignored recovery-key file; excluded from archive','tables':counts,
               'elapsed_seconds':round(elapsed,3),'source_database_preserved':True,'fixture_source':'new isolated database; existing test data untouched',
@@ -169,6 +180,7 @@ def main():
               'wrong_key_denial':'passed','encrypted_backup_plaintext_check':'passed',
               'key_storage':'separate ignored local recovery-key directory; not copied with object backup',
               'consistent_exported_snapshot':'passed', 'post_snapshot_upload_excluded':True, 'source_document_versions_after_snapshot':source_version_count, 'encrypted_version_inventory_restore':'passed', 'database_archive_inventory_binding':'passed',
+              'completed_bundle_inspection':'passed','bundled_document_recovery':'passed','bundle_database_dump_matches_restore':'passed',
               'hosted_storage_restore':'not_run','scanner':'synthetic fixture bypass only'}
     (ROOT/'docs/DATABASE-RESTORE-EVIDENCE.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))

@@ -10,7 +10,7 @@
     "ledger_events": 6,
     "document_versions": 2
   },
-  "elapsed_seconds": 3.741,
+  "elapsed_seconds": 5.212,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,
@@ -27,6 +27,9 @@
   "source_document_versions_after_snapshot": 3,
   "encrypted_version_inventory_restore": "passed",
   "database_archive_inventory_binding": "passed",
+  "completed_bundle_inspection": "passed",
+  "bundled_document_recovery": "passed",
+  "bundle_database_dump_matches_restore": "passed",
   "hosted_storage_restore": "not_run",
   "scanner": "synthetic fixture bypass only"
 }
