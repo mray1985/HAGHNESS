@@ -200,3 +200,6 @@ October2 actualMFAreviewintegration: isolatedrealKeycloakpasswordOTP->HAHTTPScal
 
 
 October2 reviewaccess/reopeningpresentation: scopedcan_review hints checkedwithhistory; UIdefaultdisabled until true, viewerexplanation, explicitreasontext, case/finallyguards. ServerPOSTauthorityunchanged. ActualPGHTTPcapabilityfalsebeforegrant/afterrevocationtruewithgrant passes. Fullsuite200passed2Linux-onlyskipped202total; actualEdgePlaywrightfictionalUIreason/disable/download/reset/mobile/noerrorspass. Reviewnoimportantfindings. Hostedcombinedbrowserjourneyremainopen.
+
+
+October 2 offhostlocatorcontinuation: disabledrunner publishes private receipt.json within verifiedbackup prefix and reads exactboundedbytes before successfulreturn. Fixednonsecretfields only; invalidflags/extra fields/providerfailures reject, localreceipt preserved. Sevenreceipttests pass; actualisolatedPGrestore+fictionalSDKlocatorcopy/readback passes, elapsed6.962s singlefixture. Fullsuite204passed2Linux-onlyskipped206total; independentreviewnoimportantfinding. Locatorplaintextprivate andunauthenticated; historicalkeys/authenticatedarchive/reconciliation mandatory. Hostedproviderpermissions/cataloglisting/monitoring/retention/activation remainopen.

@@ -41,7 +41,7 @@ Illustrative bank-data-only budget: 100 newly verified accounts, 100 ownership c
 
 The [current DigitalOcean cost scenario](DIGITALOCEAN-COST-PLAN.md) prices application/scanner, identity, a single-node database, Spaces and optional daily VM backups at a $129.05 component subtotal. A complete quote still needs retained backups, key recovery, overages, monitoring, operations and support. Treasury and Schwab integration charges require written provider terms. No complete monthly total has been verified.
 
-Actual local recovery took 2.02 seconds in the saved fictional PostgreSQL/encrypted-file run, recovering six ledger events and two document versions with scope and wrong-key denials. This single sample is not p50/p95, hosted recovery time or user completion time.
+The latest saved actual local recovery run took 6.962 seconds, restoring six snapshot tables, six ledger events, two document versions and support-review history, with scope and wrong-key denials. Private backup locator copy/readback also passed through the fictional local store. This single sample is not p50/p95, hosted recovery time or user completion time.
 
 For future measurements, record environment, trial ID, start/end UTC, elapsed seconds, success/error, provider confirmation and charges for each phase: login/MFA, original upload, correction, draft calculation, restore, bank linking, payment confirmation and IRA funding. Report task time separately from settlement time and failures separately from successful observations. Provider phases remain unmeasured.
 
@@ -51,13 +51,13 @@ For future measurements, record environment, trial ID, start/end UTC, elapsed se
 |---|---|
 | Platform identified | Local Python application and PostgreSQL; no preexisting hosted MFA |
 | Per-profile permissions | Local domain/API/PostgreSQL cross-profile denials pass |
-| One protected MFA session | Keycloak verifier/PKCE implemented; live realm and signed-in browser unverified |
+| One protected MFA session | Actual local Keycloak password/OTP through HA HTTPS callback verified across books, tax, documents and support reviews; hosted enrollment/recovery and combined rendered browser journey pending |
 | Preserve originals and corrections | API/UI and immutable metadata implemented; permission regression fixed |
 | Recovery | Actual isolated database and encrypted local object restore passed; hosted recovery pending |
-| Retention/backups | 35-day/12-month planner and hold protection implemented; hosted schedule and expiry controls not configured |
+| Retention/backups | Encrypted snapshot capture, private copy/readback, off-host locator, downloaded actual database restore and nondestructive retention planner verified locally with fictional storage; hosted schedule/permissions/expiry controls pending |
 | Fictional business flow | Ledger fixtures verified locally; combined local HTTPS API workflow now verified; hosted browser journey pending |
 | Tax drafts/payments | Book/reserve projections exist; comprehensive tax engine and confirmed money movement incomplete |
 | Growth proposal | Day 7 says none was written; new unsent discussion draft now saved |
 | Costs/times | Published bank-data rates and one local recovery measurement; five local API workflow timings saved; full quote/provider timings pending |
 
-Latest code verification before this documentation update: 156 tests passed with real PostgreSQL. No application code changed in this update. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.
+Current regression checkpoint: 206 tests, 204 passed with real PostgreSQL, two Linux-only tests skipped. Later dated entries below record the intervening changes; older entries describe their checkpoint rather than current limitations. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.
