@@ -33,3 +33,16 @@ Fresh review found stale client-response rendering and timestamp-dependent docum
 User redirected provider selection: AWS is optional, inspect current setup and compare non-AWS providers before choosing. Saved docs/NON-AWS-STACK-COMPARISON.md. Recommendation is DigitalOcean App Platform plus Supabase Pro; no migration or provider purchase authorized by this recommendation. Current local code remains reusable; Cognito/S3 adapters are unconfigured candidates, not existing infrastructure.
 
 User subsequently selected the independent DigitalOcean direction and authorized GitHub push. Added deploy/digitalocean locked-preview container/app specification and docs/DIGITALOCEAN-IMPLEMENTATION.md. Supabase is excluded from that target. Default runtime authentication is explicitly disabled; Cognito requires explicit selection. Actual account provisioning, replacement MFA/storage integration and hosted recovery remain unfinished. Container build unverified because Docker is unavailable locally.
+
+October 2 integration increment: connected service now serves the HATax preview at
+/tax and its explicit asset allowlist. HA Bookin links to it, and HATax links back
+on the connected deployment. Stateless scenario math is available without login;
+protected records still require an authenticated session. No identity fields are
+sent by the tax client and no tax draft is saved. Public arithmetic has a 256 KiB
+request limit. Auth/storage integration and actual DigitalOcean deployment remain
+unverified. API regressions cover routing, computation and locked record access.
+
+Integration verification: 113 tests passed with real PostgreSQL. Browser verified
+HA Bookin -> HATax -> W-2 layout -> live $1,928.50 limited refund scenario from
+$45,000 wages and $5,200 withholding. No browser errors captured. Independent
+review found no material defect. Screenshot uses fictional identity only.

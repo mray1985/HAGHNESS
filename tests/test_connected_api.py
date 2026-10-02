@@ -64,3 +64,25 @@ class ApiTests(unittest.TestCase):
 
     def test_malformed_event_returns_validation_error(self):
         self.assertEqual(self.request('POST','/api/connected/events',{'scope':{'profile':'orchard','business':'business','year':2026}})[0],400)
+
+    def test_tax_preview_runs_on_connected_service_without_unlocking_records(self):
+        status,result=self.request('POST','/api/return/estimate',
+            {'tax_year':'2025','w2s':[{'box1':45000,'box2':5200}]},signed=False,csrf=False)
+        self.assertEqual(status,200)
+        self.assertEqual(result['refund'],1928.5)
+        self.assertFalse(result['may_prepare_return'])
+        self.assertEqual(self.request('GET','/api/connected/draft?profile=orchard&business=business&year=2026',signed=False)[0],401)
+
+    def test_tax_page_assets_are_available_and_unlisted_files_are_denied(self):
+        for path,mime in (('/tax','text/html'),('/return.js','text/javascript'),('/return.css','text/css')):
+            conn=HTTPConnection(*self.server.server_address,timeout=3)
+            conn.request('GET',path)
+            response=conn.getresponse();body=response.read()
+            self.assertEqual(response.status,200)
+            self.assertIn(mime,response.getheader('Content-Type'))
+            self.assertIn('no-store',response.getheader('Cache-Control'))
+            if path=='/tax':
+                self.assertIn(b'HATax',body)
+                self.assertIn(b'href="/connected.html"',body)
+            conn.close()
+        self.assertEqual(self.request('GET','/../ha/rules/federal.json',signed=False)[0],401)

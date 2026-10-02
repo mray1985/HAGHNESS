@@ -129,7 +129,7 @@ class Handler(BaseHTTPRequestHandler):
         route = parsed.path
         query = parse_qs(parsed.query)
 
-        if route in ("/", "/index.html"):
+        if route in ("/", "/index.html", "/tax"):
             return self._static("index.html")
         if route.startswith("/api/"):
             return self._api_get(route, query)

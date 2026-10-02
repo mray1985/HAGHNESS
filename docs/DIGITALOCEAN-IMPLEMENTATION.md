@@ -36,3 +36,9 @@ The previously quoted $30 DigitalOcean-plus-Supabase baseline does **not** price
 Read this file, `docs/CONNECTED-PROGRESS.md`, `docs/DATABASE-RESTORE-EVIDENCE.json`, the approved plans under `docs/superpowers/plans/`, `ha/connected/`, migrations and connected tests. Current local tests establish domain/API/database behavior, not live tax correctness or hosted MFA. Daily source PDFs are retained locally and intentionally excluded from this push.
 
 Official references: https://docs.digitalocean.com/products/app-platform/ and https://docs.digitalocean.com/products/app-platform/reference/app-spec/ .
+
+
+HATax is now included in the same connected-service container at `/tax`. The
+HA Bookin header links to the form-first preview. This is stateless arithmetic
+with page-memory drafts, not protected persistence or filing. Local integration
+preview: `http://127.0.0.1:8768/`; hosted deployment remains unprovisioned.
