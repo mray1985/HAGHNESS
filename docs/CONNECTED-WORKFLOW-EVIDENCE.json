@@ -1,0 +1,29 @@
+{
+  "environment": "local fictional HTTPS + real PostgreSQL + encrypted files",
+  "trials": 5,
+  "elapsed_seconds_per_trial": [
+    3.2507,
+    2.2,
+    2.4927,
+    2.2277,
+    2.6166
+  ],
+  "p50_seconds": 2.4927,
+  "p95_seconds": 3.2507,
+  "timing_scope": "automated API workflow only; excludes user entry, hosted login and settlement",
+  "identity": "locally signed MFA-claim fixture; no hosted realm or OAuth policy proof",
+  "scanner": "explicit synthetic bypass; no malware-detection proof",
+  "tls": "verified local certificate and hostname; no disabled certificate checks",
+  "session": "same opaque session for books/documents; CSRF, unrelated scope and logout denials passed",
+  "ledger": "card/cash, missing receipt, correction, retry, monthly/quarterly/annual projections passed",
+  "book_profit_minor": 118000,
+  "reserve_scenario_minor": 37500,
+  "owner_payment_recorded_minor": 10000,
+  "owner_payment_confirmed_minor": 0,
+  "documents": "original and correction retrieved separately; cross-profile denial passed",
+  "existing_databases_modified": false,
+  "money_moved": false,
+  "filing_authorized": false,
+  "hosted_workflow": "not_run",
+  "complete_tax_calculation": "not_implemented"
+}

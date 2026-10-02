@@ -55,9 +55,9 @@ For future measurements, record environment, trial ID, start/end UTC, elapsed se
 | Preserve originals and corrections | API/UI and immutable metadata implemented; permission regression fixed |
 | Recovery | Actual isolated database and encrypted local object restore passed; hosted recovery pending |
 | Retention/backups | 35-day/12-month planner and hold protection implemented; hosted schedule and expiry controls not configured |
-| Fictional business flow | Ledger fixtures verified locally; protected complete browser journey pending |
+| Fictional business flow | Ledger fixtures verified locally; combined local HTTPS API workflow now verified; hosted browser journey pending |
 | Tax drafts/payments | Book/reserve projections exist; comprehensive tax engine and confirmed money movement incomplete |
 | Growth proposal | Day 7 says none was written; new unsent discussion draft now saved |
-| Costs/times | Published bank-data rates and one local recovery measurement; full quote/provider timings pending |
+| Costs/times | Published bank-data rates and one local recovery measurement; five local API workflow timings saved; full quote/provider timings pending |
 
 Latest code verification before this documentation update: 126 tests passed with real PostgreSQL. No application code changed in this update. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.
