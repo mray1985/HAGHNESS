@@ -43,3 +43,12 @@ October 2: installed ClamAV 1.5.4 in the existing local Ubuntu test environment 
 Clean text was accepted; EICAR and an encrypted fictional PDF were rejected. The adapter rejected input over 20 MiB and an unavailable socket. The actual socket had mode 0660. However, an expanding ZIP fixture was returned clean despite configured MaxFileSize 25M, MaxScanSize 100M and AlertExceedsMax. Both 26 MiB and 101 MiB zero-filled expansions were probed. The saved latest report explicitly marks verification_passed false; this gate must be investigated rather than treated as passing. ZIP uploads are not an allowed document type, but that fact does not prove embedded-content limit behavior is safe.
 
 See LIVE-SCANNER-EVIDENCE.json. Official project discussion also records scan-limit edge cases: [AlertExceedsMax issue](https://github.com/Cisco-Talos/clamav/issues/633). That discussion is context, not proof of the cause in this run. Expanded-content behavior, malformed samples, production signature freshness monitoring and hosted verification remain open. The local daemon test is stronger evidence than protocol mocks, but does not establish the full document protection policy.
+
+
+## Additional container metadata control
+
+A project-maintained ha-container-policy.cdb now complements AlertExceedsMax, using ClamAV's [official container metadata signature format](https://docs.clamav.net/manual/Signatures/ContainerMetadata.html). It flags declared expanded member sizes above 25 MiB. It uses a full unsigned 64-bit upper range; no assertion is made that forged metadata or ZIP64 behavior is comprehensively verified.
+
+An isolated database overlay retained official signatures and added only this policy. The nine saved checks in LIVE-SCANNER-POLICY-EVIDENCE.json passed: clean text, EICAR, encrypted PDF, 101 MiB expanded member, exact 25 MiB boundary, 26 MiB member, nested 26 MiB member, adapter input limit and missing socket. The report records the policy hash. LIVE-SCANNER-EVIDENCE.json preserves the failing baseline rather than overwriting it. Independent review found the initial 4 GiB range cap; it was removed and the real-engine run passed again.
+
+This closes the reproduced local member-size case with the additional policy. It does not make a clean verdict a safety guarantee or finish malformed/embedded-format testing, freshness monitoring, hosted integration or runtime activation. Deployment must install and preserve the policy alongside official signatures, verify its hash, and rerun all activation gates.

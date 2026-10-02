@@ -23,3 +23,6 @@ Official implementation references:
 - [nginx proxy directives](https://nginx.org/en/docs/http/ngx_http_proxy_module.html)
 - [ClamAV configuration](https://docs.clamav.net/manual/Usage/Configuration.html)
 - [ClamAV sample settings](https://github.com/Cisco-Talos/clamav/blob/main/etc/clamd.conf.sample)
+
+
+Additional container policy: install ha-container-policy.cdb into ClamD's configured database directory as an administrator-owned readable file, alongside official signatures. This uses the documented container-metadata format to flag declared member sizes above 25 MiB, with a 64-bit maximum range. Keep it through updates and verify its exact SHA-256 against the release. Restart/reload and repeat the live harness after any engine/config/policy change. Nine actual local probes pass with this policy; the baseline without it failed oversized-member rejection. These probes do not prove forged metadata, ZIP64 or every embedded document format. Hosted verification remains required before activating uploads.

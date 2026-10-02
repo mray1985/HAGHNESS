@@ -120,3 +120,6 @@ October 2 encrypted database backup continuation: streaming authenticated archiv
 
 
 October 2 actual Linux scanner verification: installed local ClamAV and official signatures, verified clean/EICAR/encrypted-PDF/unavailable-socket behavior through the real adapter. Expanded ZIP limit probes returned clean unexpectedly; saved evidence marks the overall policy gate failed. Runtime uploads remain unactivated. Four encrypted-backup tests also passed on actual Linux. See DOCUMENT-SCANNING.md and LIVE-SCANNER-EVIDENCE.json.
+
+
+October 2 scanner policy continuation: researched official ClamAV container metadata signatures, added an explicit >25 MiB member policy, and verified nine real Linux probes including boundary/nested rejection. Baseline failure remains saved. Full 64-bit policy range accepted by the actual engine; forged metadata/ZIP64 and hosted verification still open. Independent review found no remaining important defect in this change.

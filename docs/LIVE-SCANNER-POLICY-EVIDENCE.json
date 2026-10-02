@@ -1,0 +1,22 @@
+{
+  "environment": "local Ubuntu ClamD; fictional samples only",
+  "engine": "ClamAV 1.5.4/28141/Fri Oct  2 01:26:12 2026",
+  "checks": {
+    "clean_text_accepted": true,
+    "eicar_rejected": true,
+    "encrypted_pdf_rejected": true,
+    "engine_expanded_file_limit_rejected": true,
+    "member_at_25m_accepted": true,
+    "member_at_26m_rejected": true,
+    "nested_26m_member_rejected": true,
+    "oversized_input_rejected": true,
+    "unavailable_socket_rejected": true
+  },
+  "verification_passed": true,
+  "elapsed_seconds": 5.343,
+  "socket_mode": "0o660",
+  "container_policy_enabled": true,
+  "container_policy_sha256": "ec6ea940a6658352c237996364141c8ec4a11692e64331db43d87c5c318421b3",
+  "hosted_verification": "not_run",
+  "runtime_uploads_activated": false
+}
