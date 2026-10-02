@@ -8,6 +8,34 @@ from ha.connected.ledger import Ledger
 
 
 class LedgerTests(unittest.TestCase):
+    def test_source_review_claims_cannot_clear_support_queue(self):
+        self.setUp()
+        self.post({'id':'cash','date':'2026-10-01','kind':'income','amount_minor':1000,'method':'cash','explanation':'   ','reviewed':True})
+        self.post({'id':'card','date':'2026-10-01','kind':'expense','amount_minor':200,'method':'card','evidence':'typed reference','reviewed':True})
+        self.post({'id':'cash-fixed','date':'2026-10-02','kind':'correction','amount_minor':1200,'replaces':'cash','reason':'Correct amount','method':'card','explanation':'invented override'})
+        draft=self.ledger.project(self.owner,self.scope,'year')
+        self.assertEqual(draft['cash_explanations_missing'],['cash-fixed'])
+        self.assertEqual(draft['support_review_required'],['card','cash-fixed'])
+        self.assertFalse(draft['support_review_complete'])
+        self.assertEqual(draft['book_profit_minor'],1000)
+
+    def test_evidence_and_cash_explanation_must_be_text(self):
+        self.setUp()
+        for field in ('evidence','explanation'):
+            with self.assertRaises(ValueError):self.post({'id':field,'date':'2026-10-01','kind':'income','amount_minor':100,field:{'reviewed':True}})
+
+    def test_legacy_nontext_support_remains_projectable_and_needs_review(self):
+        self.post({'id':'legacy','date':'2026-10-01','kind':'expense','amount_minor':100,'method':'cash'})
+        legacy=self.ledger.store[self.scope][0]
+        legacy['evidence']={'old':'unverified reference'}
+        legacy['explanation']=['old explanation']
+        draft=self.ledger.project(self.owner,self.scope,'year')
+        self.assertEqual(draft['book_profit_minor'],-100)
+        self.assertEqual(draft['missing_receipts'],['legacy'])
+        self.assertEqual(draft['cash_explanations_missing'],['legacy'])
+        self.post({'id':'fixed','date':'2026-10-02','kind':'correction','amount_minor':120,'replaces':'legacy','reason':'Amount correction'})
+        self.assertEqual(self.ledger.project(self.owner,self.scope,'year')['support_review_required'],['fixed'])
+
     def setUp(self):
         self.repo = Repository()
         self.repo.grants[0] = self.repo.grants[0].__class__('orchard-owner', Scope('orchard', 'business', 2026), frozenset({'read', 'post', 'correct'}))

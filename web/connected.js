@@ -21,6 +21,8 @@ async function refresh(){
   byId('payments').textContent='Owner payments recorded: '+money(draft.owner_payments_recorded_minor)+' · government-confirmed: '+money(draft.owner_payments_confirmed_minor);
   const list=byId('review-list');list.replaceChildren();
   for(const id of draft.missing_receipts){const item=document.createElement('li');item.textContent='Missing receipt: '+id;list.append(item);}
+  for(const id of draft.cash_explanations_missing){const item=document.createElement('li');item.textContent='Explain the cash entry: '+id;list.append(item);}
+  if(draft.support_review_required.length){const item=document.createElement('li');item.textContent=draft.support_review_required.length+' entries still need their supporting information reviewed. A typed record ID does not establish reviewed support.';list.append(item);}
   const item=document.createElement('li');item.textContent='Confirm income, expense eligibility and support before final return preparation.';list.append(item);
   status('Draft updated from recorded entries. Final tax calculations remain unavailable.');
 }

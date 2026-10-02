@@ -44,6 +44,9 @@ def check_draft(draft):
     expected={'income_minor':150000,'expense_minor':32000,'book_profit_minor':118000,
               'reserve_scenario_minor':37500,'owner_payments_recorded_minor':10000,
               'owner_payments_confirmed_minor':0,'missing_receipts':['advertising'],
+              'cash_explanations_missing':[],
+              'support_review_required':['sale-card','sale-cash','advertising','supplies-correction'],
+              'support_review_complete':False,
               'tax_liability_minor':None,'may_prepare_return':False,'filing_authorized':False}
     for name,value in expected.items():
         if draft.get(name)!=value:raise ValueError('Connected draft mismatch: '+name)

@@ -9,6 +9,9 @@ from threading import RLock
 from decimal import Decimal, ROUND_HALF_UP
 from .access import authorize
 
+def has_text(value):
+    return isinstance(value,str) and bool(value.strip())
+
 
 class Ledger:
     def __init__(self, repository, event_store=None):
@@ -27,6 +30,10 @@ class Ledger:
         if day.year != scope.tax_year or event.get('currency', 'USD') != 'USD':
             raise ValueError('Year or currency unsupported')
         kind = event.get('kind')
+        for field in ('evidence','explanation'):
+            value=event.get(field)
+            if value is not None and (not isinstance(value,str) or len(value)>2000):
+                raise ValueError('Supporting information must be bounded text')
         if kind not in ('income', 'expense', 'correction', 'owner_estimated_tax_payment', 'employee_payroll_obligation'):
             raise ValueError('Event kind unsupported')
         if kind == 'owner_estimated_tax_payment' and (event.get('status') != 'recorded_unverified' or event.get('government_confirmation')):
@@ -47,8 +54,10 @@ class Ledger:
                 effective_kind = old['effective_kind']
                 evidence = old.get('evidence')
                 posting_date = old['posting_date']
+                method,explanation=old.get('method'),old.get('explanation')
             else:
                 effective_kind, evidence, posting_date = kind, event.get('evidence'), event['date']
+                method,explanation=event.get('method'),event.get('explanation')
             accounts = {
                 'income': ('cash_or_bank', 'business_income'),
                 'expense': ('business_expense', 'cash_or_bank'),
@@ -62,6 +71,7 @@ class Ledger:
                 postings = [{'account': p['account'], 'amount_minor': -p['amount_minor']} for p in old['replacement_postings']] + postings
             record = {**event, 'source': event, 'actor': principal.subject, 'effective_kind': effective_kind,
                       'evidence': evidence, 'posting_date': posting_date, 'postings': postings,
+                      'method':method,'explanation':explanation,
                       'replacement_postings': [{'account': debit, 'amount_minor': amount}, {'account': credit, 'amount_minor': -amount}]}
             events.append(record)
             return deepcopy(record)
@@ -90,12 +100,17 @@ class Ledger:
         income = sum(e['amount_minor'] for e in effective if e['effective_kind'] == 'income')
         expense = sum(e['amount_minor'] for e in effective if e['effective_kind'] in ('expense', 'employee_payroll_obligation'))
         payments = [e for e in effective if e['effective_kind'] == 'owner_estimated_tax_payment']
+        operating=[e for e in effective if e['effective_kind'] in ('income','expense','employee_payroll_obligation')]
         return {'ledger_revision': len(history), 'income_minor': income, 'expense_minor': expense,
                 'book_profit_minor': income - expense,
                 'reserve_scenario_minor': int((income * rate).quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
                 'reserve_basis': 'recorded_receipts', 'reserve_moves_money': False,
                 'owner_payments_recorded_minor': sum(e['amount_minor'] for e in payments),
                 'owner_payments_confirmed_minor': sum(e['amount_minor'] for e in payments if e.get('status') == 'government_confirmed'),
-                'missing_receipts': [e['id'] for e in effective if e['effective_kind'] == 'expense' and not e.get('evidence')],
+                'missing_receipts': [e['id'] for e in effective if e['effective_kind'] == 'expense' and not has_text(e.get('evidence'))],
+                'cash_explanations_missing':[e['id'] for e in operating if e.get('method')=='cash' and not has_text(e.get('explanation'))],
+                # Source-supplied `reviewed` is not an authorized review action.
+                'support_review_required':[e['id'] for e in operating],
+                'support_review_complete':False,
                 'source_event_ids': [e['id'] for e in effective], 'tax_liability_minor': None,
                 'may_prepare_return': False, 'filing_authorized': False}

@@ -14,7 +14,7 @@ An original document and its corrected version were separately retrieved, with t
 
 ## Measured times
 
-The five automated API journeys took 3.2507, 2.2000, 2.4927, 2.2277 and 2.6166 seconds in this run. The observed median was 2.4927 seconds; nearest-rank p95 was 3.2507 seconds. Five local samples are limited evidence, not a capacity study or public performance promise. Database/certificate/fixture setup, human entry, hosted login and financial settlement are outside this measurement.
+The five automated API journeys took 2.6658, 2.5608, 2.6777, 2.1954 and 2.4504 seconds in this run. The observed median was 2.5608 seconds; nearest-rank p95 was 2.6777 seconds. Five local samples are limited evidence, not a capacity study or public performance promise. Database/certificate/fixture setup, human entry, hosted login and financial settlement are outside this measurement.
 
 ## What this does not prove
 

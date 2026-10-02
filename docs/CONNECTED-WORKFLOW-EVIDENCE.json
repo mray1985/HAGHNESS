@@ -2,14 +2,14 @@
   "environment": "local fictional HTTPS + real PostgreSQL + encrypted files",
   "trials": 5,
   "elapsed_seconds_per_trial": [
-    3.2507,
-    2.2,
-    2.4927,
-    2.2277,
-    2.6166
+    2.6658,
+    2.5608,
+    2.6777,
+    2.1954,
+    2.4504
   ],
-  "p50_seconds": 2.4927,
-  "p95_seconds": 3.2507,
+  "p50_seconds": 2.5608,
+  "p95_seconds": 2.6777,
   "timing_scope": "automated API workflow only; excludes user entry, hosted login and settlement",
   "identity": "locally signed MFA-claim fixture; no hosted realm or OAuth policy proof",
   "scanner": "explicit synthetic bypass; no malware-detection proof",
