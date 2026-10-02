@@ -39,7 +39,7 @@ Implementation details: [DigitalOcean plan](DIGITALOCEAN-IMPLEMENTATION.md), [Ke
 
 Illustrative bank-data-only budget: 100 newly verified accounts, 100 ownership calls, 400 balance calls and 100 institution/account-holder subscriptions cost $370 for that month at these rates. This arithmetic scenario is not a provider quote or a full HA operating budget. Payment, hosting, identity, storage, backups, support and taxes are separate. Custom pricing may differ.
 
-DigitalOcean quote still needs region, application/identity compute, database capacity, storage, retained backups, key management, egress, monitoring and support. Treasury and Schwab integration charges require written provider terms. No complete monthly total has been verified.
+The [current DigitalOcean cost scenario](DIGITALOCEAN-COST-PLAN.md) prices application/scanner, identity, a single-node database, Spaces and optional daily VM backups at a $129.05 component subtotal. A complete quote still needs retained backups, key recovery, overages, monitoring, operations and support. Treasury and Schwab integration charges require written provider terms. No complete monthly total has been verified.
 
 Actual local recovery took 2.02 seconds in the saved fictional PostgreSQL/encrypted-file run, recovering six ledger events and two document versions with scope and wrong-key denials. This single sample is not p50/p95, hosted recovery time or user completion time.
 
@@ -60,4 +60,4 @@ For future measurements, record environment, trial ID, start/end UTC, elapsed se
 | Growth proposal | Day 7 says none was written; new unsent discussion draft now saved |
 | Costs/times | Published bank-data rates and one local recovery measurement; five local API workflow timings saved; full quote/provider timings pending |
 
-Latest code verification before this documentation update: 126 tests passed with real PostgreSQL. No application code changed in this update. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.
+Latest code verification before this documentation update: 156 tests passed with real PostgreSQL. No application code changed in this update. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.

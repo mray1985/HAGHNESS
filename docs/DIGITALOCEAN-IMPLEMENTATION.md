@@ -16,20 +16,20 @@ The deployment spec starts only the locked preview. Importing it creates a charg
 
 ## Fully independent target
 
-Use DigitalOcean App Platform for Python, DigitalOcean managed PostgreSQL for the existing database schema, and a separately hosted OIDC identity service with required TOTP MFA, such as Keycloak on DigitalOcean. Use private document storage with immutable version keys and external key management. Select and verify storage encryption/versioning capabilities before adapting the existing S3/KMS-specific adapter; API compatibility alone does not establish those controls. Managed Supabase is excluded from this fully independent target because its hosting uses AWS underneath.
+Use a Linux DigitalOcean Droplet for the document-enabled Python service and ClamD, with HTTPS ingress and a protected Unix scanner socket. Use a separate Keycloak host, managed PostgreSQL and private versioned Spaces. Document encryption keys must be mounted outside the application checkout, with independent protected recovery copies. This matches the implemented Unix-socket scanner and mounted-key runtime; App Platform is currently only a locked preview option.
 
-The independent Keycloak code/PKCE adapter and signed MFA-claim checks are implemented; required realm configuration and hosted verification are in docs/KEYCLOAK-IMPLEMENTATION.md. Identity deployment, live policy verification, scanning and hosted encrypted storage/recovery remain unfinished. Local encrypted document recovery is verified separately. The present server does not silently accept an arbitrary OIDC provider or ordinary non-MFA tokens. One application origin and opaque session should serve both Bookin’ and HATax. Session storage currently limits operation to one application process; a shared transactional session store is required before scaling.
+The Keycloak PKCE adapter, signed MFA-claim checks, client-encrypted Spaces adapter and fail-closed ClamD integration are implemented. Live identity policy, scanner/signature operation, bucket controls and hosted recovery remain unverified. One origin and opaque session serve Bookin and HATax; sessions currently support one application process. See KEYCLOAK-IMPLEMENTATION.md, DOCUMENT-SCANNING.md and SPACES-DOCUMENT-STORAGE.md.
 
 ## Deployment sequence
 
-1. Review this branch and current resource prices. Build the Dockerfile for Linux AMD64 and verify the locked preview.
-2. Connect the user-controlled DigitalOcean account to this GitHub repo. Import the app spec for a fictional-data preview; public ingress must enforce HTTPS.
-3. Provision managed PostgreSQL separately, use TLS and trusted-source restrictions, apply migrations through a migration role, and grant only necessary runtime privileges.
-4. Implement and configure independent MFA identity and document scanning/storage. Store credentials outside GitHub. No credentials should be pasted into chat.
-5. Prove cross-profile denials, session revocation, original/correction preservation and actual recovery of both database and document bytes with fictional fixtures.
-6. Complete tax engine/PDF/state/payment work before claiming a usable filing product.
+1. Review DIGITALOCEAN-COST-PLAN.md and confirm account, region and available database edition before provisioning. No paid resources have been created.
+2. Build and verify the Linux image. Prepare the Droplet service, HTTPS proxy, scanner socket permissions and external key mounts. The existing App Platform spec does not configure these document dependencies.
+3. Provision managed PostgreSQL with TLS, trusted sources and separate migration/runtime roles. Isolate Keycloak database credentials and privileges from the application.
+4. Configure Keycloak password/OTP policy, private Spaces versioning and fresh ClamD signatures. Keep credentials outside GitHub and chat.
+5. Verify real MFA, scanner clean/infected/error cases, cross-profile denials, preserved versions, logout and recovery with fictional documents. Measure hosted timings and actual charges.
+6. Configure and prove 35-day/12-month backup retention, independent key recovery and outage procedures. Complete tax engine/PDF/state/payment work before claiming a filing product.
 
-The previously quoted $30 DigitalOcean-plus-Supabase baseline does **not** price this independent target. Include application, identity host, database, storage, scanning, external keys, backups, egress, email and operations in the final quote.
+The earlier $30 DigitalOcean-plus-Supabase estimate does not price this target. The new component subtotal is a planning scenario, not a complete operating quote or tested capacity commitment.
 
 ## ChatGPT review entry points
 
@@ -38,9 +38,4 @@ Read this file, `docs/CONNECTED-PROGRESS.md`, `docs/DATABASE-RESTORE-EVIDENCE.js
 Official references: https://docs.digitalocean.com/products/app-platform/ and https://docs.digitalocean.com/products/app-platform/reference/app-spec/ .
 
 
-HATax is now included in the same connected-service container at `/tax`. The
-HA Bookin header links to the form-first preview. This is stateless arithmetic
-with page-memory drafts, not protected persistence or filing. Local integration
-preview: `http://127.0.0.1:8768/`; hosted deployment remains unprovisioned.
-
-October 2 storage continuation: selected private versioned DigitalOcean Spaces Standard Storage with client-side AES-GCM and an external historical-key resolver. Adapter implemented and reviewed; no bucket or key service provisioned. See docs/SPACES-DOCUMENT-STORAGE.md. Runtime uploads remain disabled pending scanner/key/policy configuration.
+HATax is included in the connected service at `/tax`. The protected handoff reads authorized Bookin projections and holds the refund estimate when business records need tax review. Personal form drafts remain in page memory; protected durable form saving and filing are unfinished. See BOOKIN-HATAX-HANDOFF.md.
