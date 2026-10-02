@@ -69,16 +69,72 @@
       },
       "eitc": {
         "verified": false,
-        "citation": "IRC 32; Rev. Proc. 2023-34",
-        "max_credit": {"0": 632, "1": 421, "2": 696, "3": 783},
-        "phaseout_start_income": {"single": {"0": 8260, "1": 11960, "2": 16610, "3": 19620},
-                                   "mfj":    {"0": 16550, "1": 22620, "2": 29150, "3": 32920}},
-        "phaseout_end_income":   {"single": {"0": 18591, "1": 52248, "2": 60021, "3": 65730},
-                                   "mfj":    {"0": 29352, "1": 61100, "2": 68725, "3": 76372}},
-        "phaseout_rate": {"0": 0.0765, "1": 0.1595, "2": 0.2196, "3": 0.2706},
-        "investment_income_limit": {"single": 11600, "mfj": 23200},
-        "earned_income_and_agi_ceiling": {"single": {"0": 18591, "1": 52248, "2": 60021, "3": 65730},
-                                          "mfj":    {"0": 29352, "1": 61100, "2": 68725, "3": 76372}}
+        "citation": "https://www.irs.gov/irb/2023-48_IRB section 3.06; IRC 32(b)",
+        "max_credit": {
+          "0": 632,
+          "1": 4213,
+          "2": 6960,
+          "3": 7830
+        },
+        "phaseout_start_income": {
+          "single": {
+            "0": 10330,
+            "1": 22720,
+            "2": 22720,
+            "3": 22720
+          },
+          "mfj": {
+            "0": 17250,
+            "1": 29640,
+            "2": 29640,
+            "3": 29640
+          }
+        },
+        "phaseout_end_income": {
+          "single": {
+            "0": 18591,
+            "1": 49084,
+            "2": 55768,
+            "3": 59899
+          },
+          "mfj": {
+            "0": 25511,
+            "1": 56004,
+            "2": 62688,
+            "3": 66819
+          }
+        },
+        "phaseout_rate": {
+          "0": 0.0765,
+          "1": 0.1598,
+          "2": 0.2106,
+          "3": 0.2106
+        },
+        "investment_income_limit": {
+          "single": 11600,
+          "mfj": 11600
+        },
+        "earned_income_and_agi_ceiling": {
+          "single": {
+            "0": 18591,
+            "1": 49084,
+            "2": 55768,
+            "3": 59899
+          },
+          "mfj": {
+            "0": 25511,
+            "1": 56004,
+            "2": 62688,
+            "3": 66819
+          }
+        },
+        "phasein_rate": {
+          "0": 0.0765,
+          "1": 0.34,
+          "2": 0.4,
+          "3": 0.45
+        },
+        "note": "Parameters transcribed from primary sources. Formula scenario only; official EIC table and full eligibility unimplemented."
       },
       "filing_deadline": "2025-04-15",
       "extensions": "2025-10-15"
@@ -141,16 +197,72 @@
       },
       "eitc": {
         "verified": false,
-        "citation": "IRC 32; Rev. Proc. 2024-40",
-        "max_credit": {"0": 649, "1": 432, "2": 714, "3": 803},
-        "phaseout_start_income": {"single": {"0": 8490, "1": 12390, "2": 17090, "3": 20220},
-                                   "mfj":    {"0": 17020, "1": 23480, "2": 30370, "3": 34380}},
-        "phaseout_end_income":   {"single": {"0": 19400, "1": 54090, "2": 61920, "3": 67900},
-                                   "mfj":    {"0": 30560, "1": 63240, "2": 71030, "3": 78980}},
-        "phaseout_rate": {"0": 0.0765, "1": 0.1595, "2": 0.2196, "3": 0.2706},
-        "investment_income_limit": {"single": 11950, "mfj": 24300},
-        "earned_income_and_agi_ceiling": {"single": {"0": 19400, "1": 54090, "2": 61920, "3": 67900},
-                                          "mfj":    {"0": 30560, "1": 63240, "2": 71030, "3": 78980}}
+        "citation": "https://www.irs.gov/irb/2024-45_IRB section 3.06; IRC 32(b)",
+        "max_credit": {
+          "0": 649,
+          "1": 4328,
+          "2": 7152,
+          "3": 8046
+        },
+        "phaseout_start_income": {
+          "single": {
+            "0": 10620,
+            "1": 23350,
+            "2": 23350,
+            "3": 23350
+          },
+          "mfj": {
+            "0": 17730,
+            "1": 30470,
+            "2": 30470,
+            "3": 30470
+          }
+        },
+        "phaseout_end_income": {
+          "single": {
+            "0": 19104,
+            "1": 50434,
+            "2": 57310,
+            "3": 61555
+          },
+          "mfj": {
+            "0": 26214,
+            "1": 57554,
+            "2": 64430,
+            "3": 68675
+          }
+        },
+        "phaseout_rate": {
+          "0": 0.0765,
+          "1": 0.1598,
+          "2": 0.2106,
+          "3": 0.2106
+        },
+        "investment_income_limit": {
+          "single": 11950,
+          "mfj": 11950
+        },
+        "earned_income_and_agi_ceiling": {
+          "single": {
+            "0": 19104,
+            "1": 50434,
+            "2": 57310,
+            "3": 61555
+          },
+          "mfj": {
+            "0": 26214,
+            "1": 57554,
+            "2": 64430,
+            "3": 68675
+          }
+        },
+        "phasein_rate": {
+          "0": 0.0765,
+          "1": 0.34,
+          "2": 0.4,
+          "3": 0.45
+        },
+        "note": "Parameters transcribed from primary sources. Formula scenario only; official EIC table and full eligibility unimplemented."
       },
       "filing_deadline": "2026-04-15",
       "extensions": "2026-10-15"
@@ -216,16 +328,72 @@
       },
       "eitc": {
         "verified": false,
-        "note": "Projected only. Do not rely on for return preparation.",
-        "max_credit": {"0": 665, "1": 443, "2": 732, "3": 824},
-        "phaseout_start_income": {"single": {"0": 8700, "1": 12700, "2": 17500, "3": 20700},
-                                   "mfj":    {"0": 17450, "1": 24050, "2": 31100, "3": 35200}},
-        "phaseout_end_income":   {"single": {"0": 19900, "1": 55500, "2": 63550, "3": 69650},
-                                   "mfj":    {"0": 31300, "1": 64900, "2": 72950, "3": 81050}},
-        "phaseout_rate": {"0": 0.0765, "1": 0.1595, "2": 0.2196, "3": 0.2706},
-        "investment_income_limit": {"single": 12300, "mfj": 25000},
-        "earned_income_and_agi_ceiling": {"single": {"0": 19900, "1": 55500, "2": 63550, "3": 69650},
-                                          "mfj":    {"0": 31300, "1": 64900, "2": 72950, "3": 81050}}
+        "note": "Parameters transcribed from primary sources. Formula scenario only; official EIC table and full eligibility unimplemented.",
+        "max_credit": {
+          "0": 664,
+          "1": 4427,
+          "2": 7316,
+          "3": 8231
+        },
+        "phaseout_start_income": {
+          "single": {
+            "0": 10860,
+            "1": 23890,
+            "2": 23890,
+            "3": 23890
+          },
+          "mfj": {
+            "0": 18140,
+            "1": 31160,
+            "2": 31160,
+            "3": 31160
+          }
+        },
+        "phaseout_end_income": {
+          "single": {
+            "0": 19540,
+            "1": 51593,
+            "2": 58629,
+            "3": 62974
+          },
+          "mfj": {
+            "0": 26820,
+            "1": 58863,
+            "2": 65899,
+            "3": 70244
+          }
+        },
+        "phaseout_rate": {
+          "0": 0.0765,
+          "1": 0.1598,
+          "2": 0.2106,
+          "3": 0.2106
+        },
+        "investment_income_limit": {
+          "single": 12200,
+          "mfj": 12200
+        },
+        "earned_income_and_agi_ceiling": {
+          "single": {
+            "0": 19540,
+            "1": 51593,
+            "2": 58629,
+            "3": 62974
+          },
+          "mfj": {
+            "0": 26820,
+            "1": 58863,
+            "2": 65899,
+            "3": 70244
+          }
+        },
+        "phasein_rate": {
+          "0": 0.0765,
+          "1": 0.34,
+          "2": 0.4,
+          "3": 0.45
+        },
+        "citation": "https://www.irs.gov/irb/2025-45_IRB section 3.06; IRC 32(b)"
       },
       "filing_deadline": "2027-04-15",
       "extensions": "2027-10-15"

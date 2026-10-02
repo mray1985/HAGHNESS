@@ -148,27 +148,25 @@ class TestChildTaxCredit(unittest.TestCase):
         # must come only from the EITC, never from the unused CTC.
         refund = r["result"]["refund_estimate"]
         self.assertAlmostEqual(refund, r["credits"]["eitc"]["credit"], places=2)
-        self.assertLess(refund, ctc["unused_overpayment"],
-                        "refund may not include the CTC carryforward")
+        # The size of EITC and unused CTC are unrelated; equality above tests attribution.
 
 
 class TestEITC(unittest.TestCase):
     def test_no_phaseout_needed(self):
         r = fed.compute(2025, "single", 10_000)
-        # 649 - (10,000-8,490)*.0765 = 649 - 115.515 = 533.485 -> 533.49
-        self.assertEqual(r["credits"]["eitc"]["credit"], 533.49, "533.49 expected")
+        # IRS Rev Proc 2024-40: single phase-out starts at 10,620, not 8,490.
+        self.assertEqual(r["credits"]["eitc"]["credit"], 649.0)
 
     def test_agi_can_bind_harder_than_earned_income(self):
         """The dual test: AGI above earned income must reduce the credit further.
 
-        earned 10,000 -> 533.49, AGI 15,000 -> 150.99. A naive engine that only
-        tests earned income returns 533.49 and overstates the credit by ~$382.
+        earned 10,000 -> 649; AGI 15,000 -> 313.93 under the statutory formula.
         """
         r = fed.compute(2025, "single", 15_000, earned_income=10_000)
         e = r["credits"]["eitc"]
         self.assertEqual(e["binding_measure"], "agi", "AGI must be the binding measure")
-        # 649 - (15,000-8,490)*.0765 = 649 - 498.015 = 150.985 -> 150.99
-        self.assertEqual(e["credit"], 150.99, "150.99 expected")
+        # 649 - (15,000-10,620)*.0765 = 649 - 335.07 = 313.93.
+        self.assertEqual(e["credit"], 313.93, "313.93 formula scenario expected")
 
     def test_earned_income_defaults_to_agi_when_not_supplied(self):
         a = fed.compute(2025, "single", 10_000)

@@ -260,7 +260,7 @@ function renderResult(r) {
   const credits = `
     <tr class="credit"><td>Child tax credit (${C.child_tax_credit.children} child${C.child_tax_credit.children === 1 ? '' : 'ren'})</td>
         <td class="num">−${usd(C.child_tax_credit.used_against_tax)}</td></tr>
-    <tr class="credit"><td>EITC</td><td class="num">−${usd(C.eitc.credit)}</td></tr>
+    <tr class="credit"><td>EITC formula estimate · eligibility and official table pending</td><td class="num">−${usd(C.eitc.credit)}</td></tr>
     ${C.child_tax_credit.unused_overpayment > 0
       ? `<tr><td><small>CTC carryforward (not a refund)</small></td>
               <td class="num"><small>${usd(C.child_tax_credit.unused_overpayment)}</small></td></tr>` : ''}

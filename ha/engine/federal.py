@@ -218,7 +218,7 @@ def eitc(
     year: dict,
     status: str,
 ) -> dict[str, Any]:
-    """EITC. Both earned income and AGI are phased out and the WORSE result wins.
+    """Formula-only EITC scenario, not the official EIC table or eligibility determination.
 
     IRC 32(a)(2) requires the credit to be recomputed with each of earned
     income and AGI-in-exclusion-of-the-credit, then the smaller credit is used.
@@ -252,19 +252,22 @@ def eitc(
             return max_credit
         return max(Decimal(0), max_credit - (base - start) * phaseout_rate)
 
-    credit_ei = phase(earned_income)
+    phasein_credit = min(max_credit, max(Decimal(0),earned_income) * D(rule['phasein_rate'][key]))
+    credit_ei = min(phasein_credit, phase(earned_income))
     credit_agi = phase(agi_without_eitc)
     credit = min(credit_ei, credit_agi)
-    # IRC 32 requires earned income. Eligibility/phase-in remain incomplete.
+    # IRC 32 requires earned income. Full eligibility remains incomplete.
     if earned_income <= 0:
         credit = credit_ei = Decimal(0)
 
     # Hard ceiling: no credit at all if either measure exceeds the limit.
-    if earned_income > ceiling or agi_without_eitc > ceiling:
+    if earned_income >= ceiling or agi_without_eitc >= ceiling:
         credit = Decimal(0)
 
     return {
         "credit": money(credit),
+        "calculation_method": "formula_scenario_not_official_eic_table",
+        "eligibility_checked": False,
         "credit_from_earned_income": money(credit_ei),
         "credit_from_agi": money(credit_agi),
         "binding_measure": "earned_income" if credit_ei <= credit_agi else "agi",
@@ -351,6 +354,7 @@ def compute(
     human_checked = year.get("verified", False)
 
     blockers: list[str] = []
+    blockers.append('EITC eligibility and official EIC table lookup are not implemented; formula scenarios are not filing amounts.')
     if not year_final:
         blockers.append(
             f"TY{tax_year} rule data is a projection, not final law. "
@@ -405,6 +409,8 @@ def compute(
             },
             "eitc": {
                 "credit": float(eitc_result["credit"]),
+                "calculation_method": "formula_scenario_not_official_eic_table",
+                "eligibility_checked": False,
                 "max_credit": float(eitc_result["max_credit"]),
                 "children": eitc_result["children"],
                 "binding_measure": eitc_result.get("binding_measure"),
