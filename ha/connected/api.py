@@ -97,8 +97,8 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin):
                 if not mutate and path == '/api/health':
                     return self.respond(200,{'ok':True,'connected':True,'login_configured':login is not None,
                         'documents_configured':documents is not None,'may_prepare_return':False})
-                if not mutate and path in ('/','/connected.html','/connected.js','/connected.css'):
-                    name = 'connected.html' if path == '/' else path.lstrip('/')
+                if not mutate and path in ('/','/home','/home.html','/home.js','/home.css','/connected.html','/connected.js','/connected.css'):
+                    name = 'home.html' if path in ('/', '/home') else path.lstrip('/')
                     target = WEB / name
                     if not target.is_file():
                         return self.respond(404,{'error':'Page unavailable'})

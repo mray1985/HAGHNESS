@@ -23,7 +23,7 @@ const assert=require('node:assert/strict');
       }
       await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
     });
-    await page.goto('http://127.0.0.1:8766/');
+    await page.goto('http://127.0.0.1:8766/connected.html');
     await page.locator('#workspace').waitFor({state:'visible'});
     await page.locator('[name=profile]').fill('first');
     await page.locator('[name=business]').fill('business');

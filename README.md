@@ -1,5 +1,44 @@
 # HATax
 
+## Preview the HA website locally
+
+The public website opens at `/`. HATax remains at `/index.html` or `/tax`;
+the protected bookkeeping entrance is `/connected.html` on the connected
+server. Both workspaces link back to the website.
+
+In PowerShell opened inside this repository, run:
+
+```powershell
+py ha/server.py
+```
+
+Open **http://127.0.0.1:8765/** for the home page, services, workflow, educational guides, FAQs
+and preview chooser. This command uses only Python's standard library.
+Select **Open previews → Open HATax** to reach the existing tax workspace.
+
+For the bookkeeping entrance, leave that terminal open and run this in a
+second terminal:
+
+```powershell
+.\.venv\Scripts\python.exe -m ha.connected.server --port 8766
+```
+
+Open **http://127.0.0.1:8766/** or select **Open Bookin’** on the home page.
+If the virtual environment does not exist, create it and install the
+connected dependencies before starting that server:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-connected.txt
+```
+
+Bookkeeping remains locked until protected authentication is configured.
+Use fictional information in these previews. No return filing, banking or
+payment integration is enabled by this website.
+
+See [public website implementation](docs/PUBLIC-WEBSITE.md) for routing and
+verification. Calculator documentation below describes that subsystem.
+
 **Local individual income tax calculation aid.** Uses a local Python service and
 browser workspace. Calculations are deterministic; optional explanations use
 retrieved public IRS passages and a model running on this machine.
