@@ -32,7 +32,9 @@ def main():
     parser.add_argument('--realm-file')
     parser.add_argument('--mfa-login',action='store_true')
     parser.add_argument('--connected-session',action='store_true')
+    parser.add_argument('--otp-enrollment',action='store_true')
     args=parser.parse_args()
+    if args.otp_enrollment and not args.mfa_login:raise ValueError('Enrollment probe requires MFA fixture')
     if args.connected_session and not args.mfa_login:raise ValueError('Connected probe requires MFA fixture')
     if args.mfa_login and not args.realm_file:raise ValueError('MFA probe requires realm file')
     if os.name!='posix':raise ValueError('Linux runtime probe required')
@@ -64,6 +66,10 @@ def main():
                 from verify_keycloak_mfa import fixture_user,verify_login
                 user,password,otp_secret=fixture_user()
                 realm['users']=[user]
+                if args.otp_enrollment:
+                    from verify_keycloak_mfa import fixture_enrollment_user,verify_enrollment
+                    enrollment_user,enrollment_password=fixture_enrollment_user()
+                    realm['users'].append(enrollment_user)
             realm_file=root/'ha-realm.json'
             realm_file.write_text(json.dumps(realm),encoding='utf-8')
             realm_file.chmod(0o600)
@@ -137,6 +143,7 @@ def main():
                         realm_checks['password_direct_grant_disabled']=True
                     else:raise ValueError('Password direct grant accepted')
                 mfa_checks=verify_login(origin,context,password,otp_secret,keys,NoRedirect) if args.mfa_login else {}
+                enrollment_checks=verify_enrollment(origin,context,enrollment_password,keys,NoRedirect) if args.otp_enrollment else {}
                 session_checks={}
                 if args.connected_session:
                     from verify_keycloak_session import verify_session
@@ -145,7 +152,7 @@ def main():
                     'https_discovery':'passed','hostname_and_certificate_verification':True,
                     'rsa_keys_available':True,'issuer':discovery['issuer'],
                     'mfa_login':'passed' if args.mfa_login else 'not_run','mfa_checks':mfa_checks,'application_realm':'ha_imported_and_discovered' if args.realm_file else 'not_configured_by_this_harness',
-                    'realm_checks':realm_checks,'connected_session_checks':session_checks,
+                    'realm_checks':realm_checks,'connected_session_checks':session_checks,'otp_enrollment_checks':enrollment_checks,
                     'realm_template_sha256':hashlib.sha256(Path(args.realm_file).read_bytes()).hexdigest() if args.realm_file else None,
                     'hosted_identity':'not_run','runtime_uploads_activated':False}
                 Path(args.report).write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
