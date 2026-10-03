@@ -49,17 +49,27 @@ def assess_attempts(events,*,now=None,max_age=timedelta(hours=36)):
     return result
 
 
+def parse_events(payload):
+    """Strict bounded JSONL journal parser shared by operator health checks."""
+    if not isinstance(payload,bytes) or len(payload)>1048576:
+        raise ValueError('Journal window too large')
+    def unique(pairs):
+        value={}
+        for key,item in pairs:
+            if key in value:raise ValueError('Duplicate JSON field')
+            value[key]=item
+        return value
+    events=[]
+    for line in payload.decode('utf-8').splitlines():
+        if line.strip():
+            if len(events)>=2048:raise ValueError('Journal window too many records')
+            events.append(json.loads(line,object_pairs_hook=unique))
+    return events
+
+
 def main():
     try:
-        payload=sys.stdin.buffer.read(1048577)
-        if len(payload)>1048576:raise ValueError('Journal window too large')
-        def unique(pairs):
-            value={}
-            for key,item in pairs:
-                if key in value:raise ValueError('Duplicate JSON field')
-                value[key]=item
-            return value
-        events=[json.loads(line,object_pairs_hook=unique) for line in payload.decode('utf-8').splitlines() if line.strip()]
+        events=parse_events(sys.stdin.buffer.read(1048577))
         result=assess_attempts(events)
     except Exception:
         print(json.dumps({'status':'invalid_journal_window','journal_window_only':True,

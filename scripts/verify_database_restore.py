@@ -26,6 +26,7 @@ from ha.connected.backup_transfer import copy_bundle, recover_bundle
 from ha.connected.backup_receipt import write_receipt, publish_receipt, retrieve_receipt
 from ha.connected.backup_job import capture_backup
 from ha.connected.backup_monitor import check as check_backup_locator, discover as discover_backup_locator
+from ha.connected.backup_health import check as check_backup_health
 from ha.connected.backup_bundle import create_bundle,inspect_bundle,digest
 from ha.connected.backup_inventory import build_inventory,verify_inventory
 from ha.connected.backup_archive import encrypt_backup, decrypt_backup
@@ -326,6 +327,7 @@ def main():
         current_versions=[repository._version(row) for row in conn.execute('SELECT * FROM ha_connected.document_versions').fetchall()]
     inspect_bundle(job_bundle,backup_key_path.read_bytes(),current_versions)
     if not job['completed'] or job['document_versions']!=5 or not job['offhost']['completed']:raise ValueError('Backup job did not capture current versions')
+    health_start=datetime.now(timezone.utc)
     receipt=write_receipt(job,run_id+'-database','nyc3','fictional-job-backups',recovery_root/'job.receipt.json')
     remote_receipt=publish_receipt(receipt,transfer_store)
     retrieved_receipt=retrieve_receipt(transfer_store,'fictional-job-backups',job['offhost']['prefix'],'nyc3')
@@ -333,6 +335,16 @@ def main():
     if not remote_receipt['verified']:raise ValueError('Offhost locator failed')
     if receipt['recovery_verified'] or not receipt['copy_verified']:raise ValueError('Receipt overstates evidence')
     monitoring_now=datetime.fromisoformat(receipt['completed_at'])
+    health_end=datetime.now(timezone.utc)
+    attempt_id=uuid.uuid4().hex
+    common={'format':'ha-backup-attempt-v1','attempt_id':attempt_id,'recovery_verified':False,'deletion_authorized':False}
+    observed_events=[{**common,'status':'started','observed_at':health_start.isoformat()},
+        {**common,'status':'completed','observed_at':health_end.isoformat(),'prefix':receipt['prefix'],
+         'document_versions':receipt['document_versions'],'recovery_key_id':receipt['recovery_key_id'],
+         'copy_verified':True,'locator_verified':True}]
+    combined_health=check_backup_health(observed_events,transfer_store,'fictional-job-backups','nyc3',now=health_end)
+    if combined_health['status']!='current_observed_attempt' or combined_health['recovery_verified']:
+        raise ValueError('Combined observed attempt and receipt mismatch')
     older_receipt={**receipt,'prefix':'ha-recovery/'+uuid.uuid4().hex+'/',
                    'completed_at':(monitoring_now-timedelta(days=2)).isoformat()}
     publish_receipt(older_receipt,transfer_store)
@@ -358,7 +370,7 @@ def main():
               'key_storage':'separate ignored local recovery-key directory; not copied with object backup',
               'consistent_exported_snapshot':'passed', 'post_snapshot_upload_excluded':True, 'source_document_versions_after_snapshot':source_version_count, 'encrypted_version_inventory_restore':'passed', 'database_archive_inventory_binding':'passed',
               'completed_bundle_inspection':'passed','bundled_document_recovery':'passed','bundle_database_dump_matches_restore':'passed',
-              'consistent_backup_job':'passed','backup_job_verified_remote_copy':'passed_local_fictional_store','backup_locator_discovery':'passed_paginated_newest_observed_and_incomplete_prefix_fictional_store','backup_locator_monitor':'passed_current_stale_without_recovery_or_deletion_claim_fictional_store','durable_backup_receipt':'passed_local_fixture','offhost_backup_locator':'passed_private_copy_readback_and_retrieval_fictional_store','backup_job_current_document_versions':job['document_versions'],
+              'consistent_backup_job':'passed','backup_job_verified_remote_copy':'passed_local_fictional_store','combined_backup_health':'passed_observed_fixture_journal_matching_actual_backup_receipt','backup_locator_discovery':'passed_paginated_newest_observed_and_incomplete_prefix_fictional_store','backup_locator_monitor':'passed_current_stale_without_recovery_or_deletion_claim_fictional_store','durable_backup_receipt':'passed_local_fixture','offhost_backup_locator':'passed_private_copy_readback_and_retrieval_fictional_store','backup_job_current_document_versions':job['document_versions'],
               'read_only_backup_role_capture':'passed','backup_role_write_denials':denials,'temporary_backup_role_removed':True,
               'transferred_bundle_database_restore':'passed_actual_pg_restore',
               'transfer_store':'local SDK-shaped fictional adapter; not DigitalOcean',

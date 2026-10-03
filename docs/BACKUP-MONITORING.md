@@ -52,3 +52,18 @@ Exit 0 means the newest valid receipt observed during the completed scan is curr
 Implementation references: [Boto3 ListObjectsV2](https://docs.aws.amazon.com/boto3/latest/reference/services/s3/client/list_objects_v2.html) for delimiter and continuation semantics, and [DigitalOcean Spaces S3 compatibility](https://docs.digitalocean.com/products/spaces/reference/s3-compatibility/). Boto3 targets the configured DigitalOcean HTTPS endpoint; this does not introduce AWS hosting.
 
 Verification: 34 targeted discovery/monitor/receipt/runner/attempt tests pass. They cover pagination and time ordering, missing completion receipts, invalid schema/time, bounded scans, repeated continuation tokens, provider denial, sanitized CLI failures and no recovery/deletion authority. Actual isolated PostgreSQL backup/restore probe also exercises a paginated fictional object-store inventory with older and incomplete runs. This is local evidence; no live Spaces listing or hosted permissions were tested.
+
+
+## Combined attempt and receipt check
+
+```sh
+journalctl -u ha-backup.service --output=cat --since "48 hours ago" --no-pager | python -m ha.connected.backup_health --max-age-hours 36
+```
+
+Use a complete ordered journal window as described above. The combined read-only command assesses the latest observed start first. Failed, unfinished, stale or absent attempts exit 1 without reading provider storage; an old available backup cannot conceal those states. A recent completed attempt then requires its exact private off-host receipt to be available now. Receipt prefix, key ID and document count must match the completion record, and the receipt time must fall between that attempt's start and terminal event. Both the attempt completion and receipt must be within the freshness threshold. Mismatch, invalid journal, missing receipt, provider denial or invalid configuration exits 2 with sanitized unavailable output.
+
+Exit 0 reports `current_observed_attempt`; exit 1 reports `attempt_attention` or `locator_attention`; exit 2 reports `unavailable`. All outputs retain journal_window_only=true and archive_integrity_verified/recovery_verified/deletion_authorized=false. Provider credentials are the same explicit read-only operator configuration as locator monitoring, loaded only when a completed observed attempt needs its receipt checked. No network write, scheduled activation, notification delivery or retention deletion occurs.
+
+This matches supplied journal evidence to live locator evidence; it cannot prove journal completeness, exclude newer attempts outside the supplied window, authenticate encrypted archive bytes or demonstrate recoverability. Archive restore and separately held historical keys remain required. Large clock adjustments can make the receipt/time relationship invalid and require investigation rather than bypassing the check.
+
+Verification: 41 targeted tests pass, including recent matching completion, newer failures/unfinished attempts, stale attempt/receipt, key/count/time mismatch, provider failure, duplicate/oversize journal and sanitized CLI output. An actual disabled backup runner piped to this command reports failed and exits 1 without querying storage. The actual isolated PostgreSQL encrypted backup/restore probe also matches generated fixture journal records to its real backup receipt in fictional storage; this does not establish an installed successful systemd run or live Spaces permissions.

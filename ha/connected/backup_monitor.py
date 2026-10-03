@@ -85,6 +85,22 @@ def discover(client, bucket, region, *, now=None, max_age=timedelta(hours=36),
             'discovery_scope':'completed listing observed during this check; not an atomic catalog'}
 
 
+def configured_store():
+    """Explicit read-only operator credentials; never a default AWS endpoint."""
+    from boto3 import client
+    from botocore.config import Config
+    region=os.environ['HA_SPACES_REGION']
+    # Reuse the locator validator before constructing a provider endpoint.
+    if not re.fullmatch(r'[a-z]{2,8}[0-9]{1,2}',region):
+        raise ValueError('Invalid region')
+    store=client('s3',region_name=region,endpoint_url=f'https://{region}.digitaloceanspaces.com',
+        aws_access_key_id=os.environ['HA_BACKUP_SPACES_ACCESS_KEY'],
+        aws_secret_access_key=os.environ['HA_BACKUP_SPACES_SECRET_KEY'],
+        config=Config(signature_version='s3v4',connect_timeout=5,read_timeout=15,
+                      retries={'total_max_attempts':2}))
+    return store,os.environ['HA_BACKUP_SPACES_BUCKET'],region
+
+
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Read private backup locator freshness; does not verify recovery.')
     selection=parser.add_mutually_exclusive_group(required=True)
@@ -93,21 +109,11 @@ def main(argv=None):
     parser.add_argument('--max-age-hours',type=int,default=36)
     args=parser.parse_args(argv)
     try:
-        from boto3 import client
-        from botocore.config import Config
-        region=os.environ['HA_SPACES_REGION']
-        # Reuse the locator validator before constructing a provider endpoint.
-        if not re.fullmatch(r'[a-z]{2,8}[0-9]{1,2}',region):
-            raise ValueError('Invalid region')
-        store=client('s3',region_name=region,endpoint_url=f'https://{region}.digitaloceanspaces.com',
-            aws_access_key_id=os.environ['HA_BACKUP_SPACES_ACCESS_KEY'],
-            aws_secret_access_key=os.environ['HA_BACKUP_SPACES_SECRET_KEY'],
-            config=Config(signature_version='s3v4',connect_timeout=5,read_timeout=15,
-                          retries={'total_max_attempts':2}))
+        store,bucket,region=configured_store()
         if args.discover:
-            result=discover(store,os.environ['HA_BACKUP_SPACES_BUCKET'],region,max_age=timedelta(hours=args.max_age_hours))
+            result=discover(store,bucket,region,max_age=timedelta(hours=args.max_age_hours))
         else:
-            result=check(store,os.environ['HA_BACKUP_SPACES_BUCKET'],args.prefix,region,
+            result=check(store,bucket,args.prefix,region,
                          max_age=timedelta(hours=args.max_age_hours))
     except Exception:
         print(json.dumps({'status':'unavailable','locator_available':False,
