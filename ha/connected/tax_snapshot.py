@@ -56,7 +56,7 @@ def validate_snapshot(value, year):
 def encode_snapshot(value, year):
     validate_snapshot(value, year)
     data = json.dumps({'format': 'ha-tax-input-v1', 'input': value},
-                      ensure_ascii=False, allow_nan=False, separators=(',', ':')).encode('utf-8')
+                      ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(',', ':')).encode('utf-8')
     if len(data) > MAX_SNAPSHOT:
         raise ValueError('Tax input exceeds limit')
     return data

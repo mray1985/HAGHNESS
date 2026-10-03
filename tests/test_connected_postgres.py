@@ -325,3 +325,84 @@ class PostgresTests(unittest.TestCase):
             conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'save_tax')")
         self.repo.migrate()
         self.assertTrue(any('save_tax' in grant.actions for grant in self.repo.grants_for(self.owner.subject)))
+
+    def test_tax_input_service_saves_reopens_and_rejects_stale_or_unauthorized_edits(self):
+        from ha.connected.tax_inputs import TaxInputs
+        from ha.connected.documents import Documents, MemoryObjects
+        objects = MemoryObjects()
+        documents = Documents(self.repo,objects,lambda data,mime: True)
+        service = TaxInputs(self.repo,documents)
+        value = {'year':'2026','profile':{'firstName':'Fictional'},'forms':[], 'active':0,'stateAnswers':{}}
+        request={'input':value,'expected_snapshot_id':None,'reason':'','idempotency_key':'tax-save-1'}
+        with self.assertRaises(PermissionError): service.save(self.owner,self.scope,request)
+        self.assertEqual(objects.data,{})
+        with self.repo.transaction() as conn:
+            conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'save_tax')")
+        original=service.save(self.owner,self.scope,request)
+        self.assertEqual(service.save(self.owner,self.scope,request),original)
+        self.assertEqual(service.save(self.owner,self.scope,{**request,'input':dict(reversed(list(value.items())))}),original)
+        fresh=TaxInputs(self.repo,documents)
+        self.assertEqual(fresh.open(self.owner,self.scope)['input'],value)
+        changed={**value,'profile':{'firstName':'Fictional correction'}}
+        correction={'input':changed,'expected_snapshot_id':original['snapshot_id'],
+                    'reason':'Corrected fictional name','idempotency_key':'tax-save-2'}
+        current=service.save(self.owner,self.scope,correction)
+        self.assertEqual(fresh.open(self.owner,self.scope)['input'],changed)
+        self.assertEqual(fresh.open(self.owner,self.scope,original['snapshot_id'])['input'],value)
+        self.assertEqual(len(service.history(self.owner,self.scope)),2)
+        with self.assertRaises(ValueError): service.save(self.owner,self.scope,{**correction,'idempotency_key':'stale-tab'})
+        with self.assertRaises(ValueError): service.save(self.owner,self.scope,{**request,'input':changed})
+        with self.assertRaises(ValueError): service.save(self.owner,self.scope,{**correction,'actor':'forged'})
+        with self.assertRaises(PermissionError): service.open(self.owner,Scope('cedar','cedar-business',2026))
+        with self.repo.transaction() as conn:
+            conn.execute("DELETE FROM ha_connected.grants WHERE action='save_tax'")
+        with self.assertRaises(PermissionError): service.save(self.owner,self.scope,correction)
+        self.assertEqual(service.open(self.owner,self.scope)['snapshot']['snapshot_id'],current['snapshot_id'])
+        version=self.repo.get_version(self.scope,current['document_id'],current['version_id'])
+        objects.data[version.object_key]=b'corrupt'
+        with self.assertRaises(ValueError): service.open(self.owner,self.scope)
+
+    def test_tax_inputs_encrypted_concurrent_and_failed_saves_preserve_active_version(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+        from ha.connected.tax_inputs import TaxInputs
+        from ha.connected.documents import Documents
+        from ha.connected.encrypted_objects import EncryptedLocalObjects
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        folder=TemporaryDirectory(); self.addCleanup(folder.cleanup)
+        objects=EncryptedLocalObjects(folder.name,lambda: key)
+        key=AESGCM.generate_key(bit_length=256)
+        docs=Documents(self.repo,objects,lambda data,mime: False)
+        service=TaxInputs(self.repo,docs)
+        with self.repo.transaction() as conn:
+            conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'save_tax')")
+        value={'year':'2026','profile':{'firstName':'SecretFictionalInput'},'forms':[],'active':0,'stateAnswers':{}}
+        request={'input':value,'expected_snapshot_id':None,'reason':'','idempotency_key':'encrypted-tax-1'}
+        with self.assertRaises(ValueError): service.save(self.owner,self.scope,request)
+        self.assertEqual(list(Path(folder.name).iterdir()),[])
+        self.assertEqual(service.history(self.owner,self.scope),[])
+        docs.scanner=lambda data,mime: True
+        original=service.save(self.owner,self.scope,request)
+        self.assertTrue(all(b'SecretFictionalInput' not in p.read_bytes() for p in Path(folder.name).iterdir()))
+        correction={'input':value,'expected_snapshot_id':original['snapshot_id'],'reason':'Correction','idempotency_key':'failure-tax'}
+        with patch.object(objects,'put',side_effect=OSError('storage unavailable')):
+            with self.assertRaises(OSError): service.save(self.owner,self.scope,correction)
+        self.assertEqual(service.open(self.owner,self.scope)['snapshot'],original)
+        with self.repo.transaction() as conn:
+            self.assertEqual(conn.execute('SELECT count(*) FROM ha_connected.document_versions').fetchone()[0],1)
+        with patch.object(self.repo,'add_version',side_effect=RuntimeError('metadata failure')):
+            with self.assertRaises(RuntimeError): service.save(self.owner,self.scope,{**correction,'idempotency_key':'metadata-failure'})
+        self.assertEqual(service.open(self.owner,self.scope)['snapshot'],original)
+        with self.repo.transaction() as conn:
+            self.assertEqual(conn.execute('SELECT count(*) FROM ha_connected.document_versions').fetchone()[0],1)
+        # A private encrypted orphan may remain; it has no active metadata reference.
+        def save(index):
+            try:
+                return service.save(self.owner,self.scope,{**correction,'idempotency_key':'parallel-'+str(index)})
+            except ValueError:
+                return None
+        with ThreadPoolExecutor(max_workers=2) as pool: results=list(pool.map(save,range(2)))
+        self.assertEqual(sum(r is not None for r in results),1)
+        self.assertEqual(len(service.history(self.owner,self.scope)),2)
+        self.assertEqual(service.open(self.owner,self.scope,original['snapshot_id'])['input'],value)

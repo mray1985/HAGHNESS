@@ -34,3 +34,9 @@ class TaxSnapshotTests(unittest.TestCase):
         self.assertEqual(decode_snapshot(encode_snapshot(value, 2025), 2025), value)
         value['active'] = 1
         with self.assertRaises(ValueError): encode_snapshot(value, 2025)
+
+    def test_equivalent_key_order_has_identical_snapshot_bytes(self):
+        value = self.snapshot()
+        reordered = dict(reversed(list(value.items())))
+        reordered['profile'] = dict(reversed(list(value['profile'].items())))
+        self.assertEqual(encode_snapshot(value, 2025), encode_snapshot(reordered, 2025))

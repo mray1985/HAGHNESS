@@ -1,6 +1,6 @@
 # Protected HATax input persistence
 
-Status: input codec and database reference foundation implemented and tested; encrypted saving service, routes and user controls are not implemented. HATax still loses entries on refresh. This is the next core workflow feature, not completed saving.
+Status: input codec, database reference foundation and saving/opening service implemented and tested; HTTP routes and user controls are not implemented. HATax still loses entries on refresh. This is the next core workflow feature, not completed saving.
 
 ## Current evidence
 
@@ -30,3 +30,12 @@ One return may eventually include several businesses or Form 1041. The current c
 Migration 003 adds explicit `save_tax` vocabulary without granting it, plus append-only `tax_input_versions` metadata. Exact scoped document-version foreign keys prevent links across profile/business/year. A scoped predecessor foreign key also requires the same document chain. One original per case/year and one successor per snapshot prevent duplicate roots/forks. A BEFORE INSERT guard requires an existing lower-sequence predecessor; a reproduced multirow disconnected-cycle insertion is now rejected. Server-generated actor/time/version and optimistic expected-version enforcement remain service work; SQL constraints alone do not authorize saves or verify document bytes.
 
 Actual PostgreSQL tests cover scope/year denial, explicit permission preservation through repeated migration, update/delete rejection, corrections, exact root/fork constraints, blank correction reason and cyclic multirow inserts. Latest full suite: 214 total, 212 passed, two Linux-only skipped. Independent review identified the cycle gap; it was reproduced, fixed and reviewed again with no remaining important findings. The actual encrypted backup/download/pg_restore harness now compares all seven tables, including a deliberately labeled metadata fixture referencing receipt bytes. That fixture proves reference-row recovery; it does not prove a saved tax input can be reopened.
+
+
+## Transactional service checkpoint
+
+`TaxInputs` uses the same PostgreSQL repository as Documents. Save checks current read/save_tax authority inside the shared transaction, takes the existing scope lock, validates the explicit request and scoped input, compares expected snapshot and enforces scoped idempotency. Canonical sorted-key snapshot bytes make equivalent JSON object order retry consistently. Initial writes and corrections pass through existing Documents upload/correct permissions, scan gates and configured encryption. Prior bytes are authenticated before correction; a separately changed document head prevents extending stale input references. Server actor/time and exact document-version references are appended in the same database transaction.
+
+Open/history check current read permission; open authenticates document bytes and validates the saved format/year. Current and earlier snapshots are available. This is saving entered facts, not computing or approving tax results. An unauthorized editor receives no publication. A failed scanner/storage/metadata operation leaves active input/document metadata unchanged; a metadata failure after object publication may retain an encrypted unreferenced object for operator cleanup, never an active saved draft. No automatic deletion is added.
+
+Actual isolated PostgreSQL tests cover permissions, restart of the service instance, originals/corrections, identical/conflicting retries, stale edits, forged fields, cross-profile denial, revoked editing and corrupt bytes. A separate actual AES-GCM local fixture verifies ciphertext, scanner/storage/metadata failure preservation and competing-save behavior. Tests use a synthetic scanner, not actual ClamD, and domain principals, not live MFA browser login. Final suite: 217 total, 215 passed, two Linux-only skipped. Independent code review found no important defect. HTTP routes, rendered save/reopen, actual MFA integration and restored saved-input reopening remain open. HATax still loses screen inputs on refresh until those controls are connected.
