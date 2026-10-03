@@ -24,6 +24,9 @@ def permitted_cases(principal,repository):
     if (principal is None or not principal.subject or principal.mfa_verified is not True
             or principal.expires_at.tzinfo is None or principal.expires_at<=datetime.now(timezone.utc)):
         raise PermissionError('Resource unavailable')
+    read_cases = getattr(repository, 'read_cases_for', None)
+    if callable(read_cases):
+        return read_cases(principal.subject)
     scopes=set();profiles={}
     for grant in repository.grants_for(principal.subject):
         scope=grant.scope

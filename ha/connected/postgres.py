@@ -46,6 +46,21 @@ class PostgresRepository:
             rows = conn.execute('SELECT profile_id,business_id,tax_year,action FROM ha_connected.grants WHERE subject=%s',(subject,)).fetchall()
             return [Grant(subject,Scope(p,b,y),frozenset({a})) for p,b,y,a in rows]
 
+    def read_cases_for(self, subject):
+        """Read-granted cases whose business still belongs to the granted profile."""
+        with self.transaction() as conn:
+            rows = conn.execute(
+                'SELECT g.profile_id,g.business_id,g.tax_year '
+                'FROM ha_connected.grants g '
+                'JOIN ha_connected.businesses b ON b.business_id=g.business_id '
+                'AND b.profile_id=g.profile_id '
+                "WHERE g.subject=%s AND g.action='read' "
+                'AND g.tax_year BETWEEN 2023 AND 2026 '
+                'AND g.profile_id<>\'\' AND g.business_id<>\'\' '
+                'ORDER BY g.profile_id COLLATE "C",g.business_id COLLATE "C",g.tax_year',
+                (subject,)).fetchall()
+            return [{'profile':p,'business':b,'year':y} for p,b,y in rows]
+
     @staticmethod
     def scope_values(scope):
         return (scope.profile_id,scope.business_id,scope.tax_year)

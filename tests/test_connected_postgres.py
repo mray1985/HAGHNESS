@@ -460,3 +460,26 @@ class PostgresTests(unittest.TestCase):
         self.assertEqual(request('POST',path,body)[0],404)
         sessions.logout(cookie)
         self.assertEqual(request('GET',path+query)[0],401)
+
+    def test_case_discovery_is_one_joined_read_query_and_revocation_is_fresh(self):
+        from unittest.mock import patch
+        from ha.connected.access import permitted_cases
+        with self.repo.transaction() as conn:
+            conn.execute("INSERT INTO ha_connected.businesses VALUES ('second-business','orchard')")
+            for subject,profile,business,year,action in [('orchard-owner','orchard','business',2025,'read'),
+                ('orchard-owner','orchard','second-business',2026,'read'),
+                ('orchard-owner','cedar','cedar-business',2026,'upload'),
+                ('cedar-owner','cedar','cedar-business',2026,'read')]:
+                conn.execute('INSERT INTO ha_connected.grants VALUES (%s,%s,%s,%s,%s)',(subject,profile,business,year,action))
+        with patch.object(self.repo,'transaction',wraps=self.repo.transaction) as transactions,patch.object(self.repo,'profile_for_business',side_effect=AssertionError('N+1 lookup')),patch.object(self.repo,'grants_for',side_effect=AssertionError('Unfiltered grants')):
+            cases=permitted_cases(self.owner,self.repo)
+        self.assertEqual(transactions.call_count,1)
+        self.assertEqual(cases,[{'profile':'orchard','business':'business','year':2025},
+            {'profile':'orchard','business':'business','year':2026},
+            {'profile':'orchard','business':'second-business','year':2026}])
+        with self.repo.transaction() as conn:
+            conn.execute("DELETE FROM ha_connected.grants WHERE subject='orchard-owner' AND action='read'")
+        self.assertEqual(permitted_cases(self.owner,self.repo),[])
+        expired=Principal('orchard-owner',datetime.now(timezone.utc)-timedelta(seconds=1),True)
+        with patch.object(self.repo,'transaction',side_effect=AssertionError('No expired query')),self.assertRaises(PermissionError):
+            permitted_cases(expired,self.repo)
