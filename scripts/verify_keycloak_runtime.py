@@ -76,7 +76,8 @@ def main():
                 '--db-url=jdbc:h2:file:'+str(root/'database')+';NON_KEYWORDS=VALUE',
                 '--http-host=127.0.0.1','--http-enabled=false','--https-port=8843',
                 '--hostname='+origin,'--https-certificate-file='+str(root/'cert.pem'),
-                '--https-certificate-key-file='+str(root/'key.pem')],stdout=log,stderr=log,start_new_session=True)
+                '--https-certificate-key-file='+str(root/'key.pem')],stdout=log,stderr=log,start_new_session=True,
+                env={**os.environ,'JAVA_OPTS_APPEND':os.environ.get('JAVA_OPTS_APPEND','')+' -Djava.net.preferIPv4Stack=true'})
             try:
                 deadline=time.monotonic()+120
                 while True:

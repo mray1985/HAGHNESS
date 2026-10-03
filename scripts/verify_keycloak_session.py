@@ -7,6 +7,7 @@ from contextlib import contextmanager
 import http.cookiejar
 import json
 import os
+import re
 from pathlib import Path
 import pwd
 import ssl
@@ -264,18 +265,19 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
                 with repository.transaction() as conn:
                     conn.execute('INSERT INTO ha_connected.grants VALUES (%s,%s,%s,%s,%s)',
                         (subject,'orchard','business',2026,'save_tax'))
-                session_cookie=next(cookie.value for cookie in jar if cookie.name=='__Host-ha_session')
+                # Give the browser its own unused TOTP period.
+                time.sleep(31-time.time()%30)
                 script=Path(__file__).with_name('verify_mfa_tax_browser.cjs').resolve()
                 script_path=subprocess.check_output(['wslpath','-w',str(script)],text=True).strip()
                 browser_run=subprocess.run([browser_node,script_path],
-                    input=json.dumps({'origin':app_origin,'cookie':session_cookie,
+                    input=json.dumps({'origin':app_origin,'password':password,'secret':secret,
                         'document':corrected['document_id'],'version':corrected['version_id']}),text=True,
                     capture_output=True,timeout=90)
                 if browser_run.returncode:
                     diagnostic=browser_run.stderr.strip()
-                    allowed={'startup','books-open','book-totals','period-totals','document-download','foreign-scope','tax-handoff','tax-reopen','tax-save','tax-reload'}
-                    stage=diagnostic.removeprefix('Rendered local MFA tax verification failed at ')
-                    raise ValueError('Rendered local MFA tax verification failed at '+(stage if stage in allowed else 'unknown'))
+                    allowed={'password-wait','password-action','username-fill','password-fill','password-submit','browser-password','browser-otp','browser-logout','startup','books-open','book-totals','period-totals','document-download','foreign-scope','tax-handoff','tax-reopen','tax-save','tax-reload'}
+                    stage,_,kind=diagnostic.removeprefix('Rendered local MFA tax verification failed at ').partition(' ')
+                    raise ValueError('Rendered local MFA tax verification failed at '+(stage if stage in allowed else 'unknown')+' '+(kind if kind in {'timeout','assertion','operation'} or re.fullmatch(r'net::ERR_[A-Z_]{1,80}',kind) else 'unknown'))
                 browser_checks=json.loads(browser_run.stdout)
             with repository.transaction() as conn:
                 conn.execute('DELETE FROM ha_connected.grants WHERE subject=%s',(subject,))

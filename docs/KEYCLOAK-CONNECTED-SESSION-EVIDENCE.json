@@ -26,13 +26,14 @@
       "rendered_tax_save_reload_reopen": "passed",
       "rendered_books_periods_documents_handoff": "passed",
       "rendered_foreign_scope_clears_data": true,
+      "rendered_logout_denies_tax": true,
       "api_mocking": false,
-      "authentication": "reused actual MFA-created opaque cookie",
+      "authentication": "actual browser password and OTP through HTTPS callback",
       "browser_certificate_trust": "not verified; disposable self-signed fixture",
       "browser_storage_empty": true,
       "mobile_overflow": false,
-      "elapsed_seconds": 3.7,
-      "timing_scope": "single local fictional browser run, excludes MFA/runtime startup"
+      "elapsed_seconds": 6.3,
+      "timing_scope": "single local fictional browser run, includes browser password/OTP; excludes fixture wait and runtime startup"
     },
     "same_real_mfa_session_tax_save_reopen": "passed",
     "tax_original_correction_exact_input_and_metadata": true,

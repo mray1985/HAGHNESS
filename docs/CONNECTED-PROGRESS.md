@@ -261,3 +261,14 @@ October 2 backup attempt journal: runner emits bounded structured started/comple
 
 
 October 2 backup attempt assessment: bounded ordered JSONL journal reader assesses latest observed start, newer failure/unfinished overrides old success including overlapping old finish. Exactschema/duplicatefields/order/future/transition checks fail closed. 28 targetedtests and actual disabledrunner-to-reader pipeline passed; independentreview no important gaps. Read-only supplied-window evidence only; separate locator check needed. Hosted journal retention/scheduler/external alerts remain open. See BACKUP-MONITORING.md.
+
+
+## Actual rendered password and OTP login
+
+October 2: the latest composed Edge probe now performs password and OTP entry on the real local Keycloak screens and receives its own HA session through the HTTPS callback. It no longer injects the protocol fixture's opaque cookie. Disposable credentials travel through subprocess stdin only; credential form destinations are checked before filling. Secure/HttpOnly/SameSite/Path session cookie properties pass. The same browser session then passes Bookin totals and period views, corrected receipt download, denied-profile clearing, HATax handoff and saved correction/reload/reopen. Clicking Sign out denies subsequent protected tax access. No API routes are mocked.
+
+The browser journey measured 6.3 seconds in one automated fictional run, including browser password/OTP but excluding runtime startup and the fixture's unused-TOTP-period wait. Actual PostgreSQL16, ClamD and AES-GCM local objects participate. The successful probe left no owned services running. Four targeted fixture parser/OTP tests passed on Windows, with two Linux cleanup tests skipped there. Independent review found no important defects in credential/session handling.
+
+Windows could not reach the local Java IPv6-mapped loopback listener during initial rendered-login attempts. The local fixture now uses -Djava.net.preferIPv4Stack=true; socket inspection confirmed 127.0.0.1:8843, and the full rendered journey passed. This follows Oracle's networking property documentation: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/doc-files/net-properties.html. This fixture-specific choice does not alter hosted configuration. Failure diagnostics contain fixed step/error-type or network-code labels only.
+
+Browser trust of the disposable self-signed certificate remains bypassed explicitly for this fixture, while separate protocol checks verify hostname/certificate trust. Real-user OTP enrollment/recovery, hosted DigitalOcean/Spaces, external key recovery, operational retention/alerts and filing remain unverified. The latest KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json supersedes earlier cookie-reuse-only checkpoints.
