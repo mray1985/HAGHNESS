@@ -1,6 +1,7 @@
 """Disabled-by-default scheduled backup entry point; sanitized status only."""
 from datetime import datetime,timezone
 import os
+import json
 from pathlib import Path
 import re
 import stat
@@ -54,13 +55,27 @@ def run(env):
     return result
 
 def main():
+    attempt_id=uuid.uuid4().hex
+    def emit(status, **fields):
+        print(json.dumps({'format':'ha-backup-attempt-v1','attempt_id':attempt_id,
+            'status':status,'observed_at':datetime.now(timezone.utc).isoformat(),
+            'recovery_verified':False,'deletion_authorized':False,**fields},sort_keys=True),flush=True)
+    emit('started')
     try:
         result=run(os.environ)
+        remote=result.get('offhost') or {}
+        locator=result.get('offhost_receipt') or {}
+        if (result.get('completed') is not True or remote.get('completed') is not True
+                or locator.get('verified') is not True
+                or not re.fullmatch(r'ha-recovery/[0-9a-f]{32}/',remote.get('prefix',''))
+                or type(result.get('document_versions')) is not int or result['document_versions']<0
+                or not re.fullmatch(r'[a-zA-Z0-9_-]{1,100}',result.get('recovery_key_id',''))):
+            raise ValueError('Verified completion fields required')
     except Exception:
-        print('HA backup failed; no completion confirmed')
+        emit('failed',message='HA backup failed; no completion confirmed')
         return 1
-    print('HA backup completed; document versions: '+str(result['document_versions']))
-    print('HA verified backup prefix: '+result['offhost']['prefix']+'; recovery key ID: '+result['recovery_key_id'])
+    emit('completed',document_versions=result['document_versions'],prefix=remote['prefix'],
+         recovery_key_id=result['recovery_key_id'],copy_verified=True,locator_verified=True)
     return 0
 
 if __name__=='__main__':raise SystemExit(main())

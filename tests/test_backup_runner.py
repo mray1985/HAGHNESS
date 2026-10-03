@@ -30,3 +30,26 @@ class RunnerTests(unittest.TestCase):
         env={name:'fixture' for name in REQUIRED}; env['HA_BACKUP_ENABLED']='true'
         with patch('ha.connected.backup_runner.os.name','posix'),self.assertRaises(ValueError):
             run(env)
+
+    def test_attempt_journal_links_start_to_failure_without_old_success(self):
+        import json
+        output=StringIO()
+        with patch('ha.connected.backup_runner.run',side_effect=RuntimeError('secret')),contextlib.redirect_stdout(output):
+            self.assertEqual(main(),1)
+        events=[json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual([e['status'] for e in events],['started','failed'])
+        self.assertEqual(events[0]['attempt_id'],events[1]['attempt_id'])
+        self.assertFalse(events[1]['recovery_verified'])
+        self.assertNotIn('secret',output.getvalue())
+    def test_completion_requires_copy_and_remote_locator_verification(self):
+        import json
+        result={'completed':True,'offhost':{'completed':True,'prefix':'ha-recovery/'+'a'*32+'/'},
+                'offhost_receipt':{'verified':True},'document_versions':4,'recovery_key_id':'fixture'}
+        for verified in (True,False):
+            output=StringIO();candidate={**result,'offhost_receipt':{'verified':verified}}
+            with patch('ha.connected.backup_runner.run',return_value=candidate),contextlib.redirect_stdout(output):
+                self.assertEqual(main(),0 if verified else 1)
+            events=[json.loads(line) for line in output.getvalue().splitlines()]
+            self.assertEqual(events[-1]['status'],'completed' if verified else 'failed')
+            self.assertFalse(events[-1]['recovery_verified'])
+            self.assertFalse(events[-1]['deletion_authorized'])

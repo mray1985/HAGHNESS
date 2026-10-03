@@ -89,3 +89,6 @@ The final probe passed; no owned Keycloak, PostgreSQL or ClamD processes remaine
 
 
 October 2 backup monitor: read-only known private off-host locator CLI distinguishes current/stale/unavailable with sanitized JSON and explicit no integrity/recovery/deletion authority. 21 targeted tests and actual isolated PostgreSQL/encrypted restore probe passed; provider transfer remains fictional. Independent review no important defects. Details: BACKUP-MONITORING.md. Hosted scheduling/catalog/alerts/retention and external key recovery remain open.
+
+
+October 2 backup attempt journal: runner emits bounded structured started/completed/failed records with matching attempt ID and UTC times. Completion gates verified copy and off-host locator; failure hides exception details. Service template explicitly journals output. 23 targeted tests plus actual disabled failure invocation passed; independent review no important defects. Output format changed to JSON. Hosted scheduler/journal retention/external alerts remain unconfigured. See BACKUP-MONITORING.md.

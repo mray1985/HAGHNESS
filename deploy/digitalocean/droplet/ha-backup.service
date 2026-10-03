@@ -5,6 +5,9 @@ After=network-online.target
 
 [Service]
 Type=oneshot
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ha-backup
 User=ha-backup
 Group=ha-backup
 WorkingDirectory=/opt/ha/current
