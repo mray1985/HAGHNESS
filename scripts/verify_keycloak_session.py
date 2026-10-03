@@ -268,9 +268,14 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
                 script=Path(__file__).with_name('verify_mfa_tax_browser.cjs').resolve()
                 script_path=subprocess.check_output(['wslpath','-w',str(script)],text=True).strip()
                 browser_run=subprocess.run([browser_node,script_path],
-                    input=json.dumps({'origin':app_origin,'cookie':session_cookie}),text=True,
+                    input=json.dumps({'origin':app_origin,'cookie':session_cookie,
+                        'document':corrected['document_id'],'version':corrected['version_id']}),text=True,
                     capture_output=True,timeout=90)
-                if browser_run.returncode:raise ValueError('Rendered local MFA tax verification failed')
+                if browser_run.returncode:
+                    diagnostic=browser_run.stderr.strip()
+                    allowed={'startup','books-open','book-totals','period-totals','document-download','foreign-scope','tax-handoff','tax-reopen','tax-save','tax-reload'}
+                    stage=diagnostic.removeprefix('Rendered local MFA tax verification failed at ')
+                    raise ValueError('Rendered local MFA tax verification failed at '+(stage if stage in allowed else 'unknown'))
                 browser_checks=json.loads(browser_run.stdout)
             with repository.transaction() as conn:
                 conn.execute('DELETE FROM ha_connected.grants WHERE subject=%s',(subject,))

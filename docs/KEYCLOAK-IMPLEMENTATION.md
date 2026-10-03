@@ -117,3 +117,10 @@ October 2: optional HA_MFA_BROWSER_NODE extension passed in actual headless Edge
 This verifies rendered tax save/reload/reopen with actual PostgreSQL, ClamD and encrypted local objects under an actual MFA-created session. It reuses that session rather than entering password/OTP in the browser. The browser accepts the disposable self-signed fixture certificate; browser certificate trust is not proven. Separate protocol checks still verify hostname and certificate trust. Hosted DigitalOcean/Spaces, real-user enrollment/recovery, external key recovery, retention execution and filing remain pending.
 
 The extension requires the Windows Node executable via HA_MFA_BROWSER_NODE and the installed Playwright/Edge runtime. HA_PLAYWRIGHT_MODULE can override the module location. It is an optional local verifier, never a production authentication bypass. Authentication reuse follows the Playwright BrowserContext cookie API: https://playwright.dev/docs/api/class-browsercontext.
+
+
+## Connected rendered journey checkpoint
+
+October 2: the actual-session Edge verifier now opens HA Bookin, checks recorded income $1,500, corrected expenses $320 and book profit $1,180, then verifies October monthly, quarterly and annual API and rendered totals without double counting. It checks owner payments recorded $100 versus government-confirmed $0 and the reopened advertising support question. Downloading the corrected receipt through the screen returns exact fictional bytes. Opening an unauthorized profile clears prior totals/documents; returning to the permitted scope and following Open HATax preserves the case. Tax correction/save/reload/reopen still passes. No API routes are mocked.
+
+The final probe passed; no owned Keycloak, PostgreSQL or ClamD processes remained afterward. The browser portion measured 3.7 seconds for one automated local fictional run, excluding MFA/runtime startup. This is not a customer completion-time claim. Browser certificate trust, hosted DigitalOcean/Spaces, real-user enrollment/recovery, external key recovery, retention execution and filing remain unverified. Detailed evidence is KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json.
