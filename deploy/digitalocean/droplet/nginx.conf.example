@@ -1,6 +1,9 @@
 # Replace domain and certificate paths. Install within nginx's http context.
 server {
     listen 80;
+    # Redirect requests can contain client IDs or callback query values too.
+    access_log off;
+    error_log /dev/null crit;
     server_name tax.example.invalid;
     return 308 https://tax.example.invalid$request_uri;
 }

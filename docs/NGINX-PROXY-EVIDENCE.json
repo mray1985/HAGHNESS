@@ -1,0 +1,18 @@
+{
+  "environment": "actual local nginx with fictional loopback upstream",
+  "template_validated": true,
+  "certificate_and_hostname_verified": true,
+  "http_redirect_preserved": true,
+  "callback_location_and_cookie_preserved": true,
+  "content_length_and_chunked_27mib_exact": true,
+  "large_response_27mib_exact": true,
+  "inherited_request_logs_empty": true,
+  "oversized_body_rejected_before_upstream": true,
+  "forwarded_origin_headers_checked": true,
+  "upstream_failure_502_without_marker": true,
+  "temporary_body_create_write_events": false,
+  "unexpected_output_files": false,
+  "application_mfa_or_storage": "not exercised",
+  "hosted_deployment": "not_run",
+  "template_sha256": "e84d60c250bc5c43a022da20a0725b5df7ed736d515af5c891e76538c25d8e15"
+}

@@ -38,9 +38,11 @@ Read this file, `docs/CONNECTED-PROGRESS.md`, `docs/DATABASE-RESTORE-EVIDENCE.js
 Official references: https://docs.digitalocean.com/products/app-platform/ and https://docs.digitalocean.com/products/app-platform/reference/app-spec/ .
 
 
-HATax is included in the connected service at `/tax`. The protected handoff reads authorized Bookin projections and holds the refund estimate when business records need tax review. Personal form drafts remain in page memory; protected durable form saving and filing are unfinished. See BOOKIN-HATAX-HANDOFF.md.
+HATax is included in the connected service at `/tax`. The protected handoff reads authorized Bookin projections and holds the refund estimate when business records need tax review. Protected encrypted form draft saving and reopening are now exercised in the local composed MFA journey; hosted saving and filing remain unverified. See BOOKIN-HATAX-HANDOFF.md and KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json.
 
 Linux native-service, nginx and ClamD settings templates are now in deploy/digitalocean/droplet/. See its README for explicit activation gates and current validation limits.
+
+October 3: actual isolated local nginx now validates the proxy template and fictional redirect/callback, large upload/download, oversized-body rejection and upstream failure paths. An inherited HTTP redirect request-log leak was reproduced and fixed. No temporary-body create/write events or inherited request logs were observed in the covered paths. See NGINX-PROXY-VERIFICATION.md and NGINX-PROXY-EVIDENCE.json. This does not establish hosted ingress or application MFA/storage through nginx; account setup, activation and operational recovery remain pending.
 
 
 ## Read-only account prerequisite check
