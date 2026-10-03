@@ -1,6 +1,6 @@
 # Protected HATax input persistence
 
-Status: input codec, database reference foundation and saving/opening service implemented and tested; HTTP routes and user controls are not implemented. HATax still loses entries on refresh. This is the next core workflow feature, not completed saving.
+Status: input codec, database reference foundation and saving/opening service implemented and tested; HTTP routes implemented; user controls are not implemented. HATax still loses entries on refresh. This is the next core workflow feature, not completed saving.
 
 ## Current evidence
 
@@ -39,3 +39,12 @@ Actual PostgreSQL tests cover scope/year denial, explicit permission preservatio
 Open/history check current read permission; open authenticates document bytes and validates the saved format/year. Current and earlier snapshots are available. This is saving entered facts, not computing or approving tax results. An unauthorized editor receives no publication. A failed scanner/storage/metadata operation leaves active input/document metadata unchanged; a metadata failure after object publication may retain an encrypted unreferenced object for operator cleanup, never an active saved draft. No automatic deletion is added.
 
 Actual isolated PostgreSQL tests cover permissions, restart of the service instance, originals/corrections, identical/conflicting retries, stale edits, forged fields, cross-profile denial, revoked editing and corrupt bytes. A separate actual AES-GCM local fixture verifies ciphertext, scanner/storage/metadata failure preservation and competing-save behavior. Tests use a synthetic scanner, not actual ClamD, and domain principals, not live MFA browser login. Final suite: 217 total, 215 passed, two Linux-only skipped. Independent code review found no important defect. HTTP routes, rendered save/reopen, actual MFA integration and restored saved-input reopening remain open. HATax still loses screen inputs on refresh until those controls are connected.
+
+
+## Protected HTTP checkpoint
+
+GET `/api/connected/tax/inputs?profile=...&business=...&year=...` returns scoped history references and a can_save hint. The hint checks read, save_tax and the necessary existing upload/correct permission; POST always rechecks actual authority. POST to the same path accepts `{scope, save}` using the service's explicit input/expected_snapshot_id/reason/idempotency_key contract. Requests above 512 KiB reject before reading the body; serialized input itself remains limited to 256 KiB. GET `/api/connected/tax/input` opens current input, or an exact `snapshot` query reference, with authenticated document read and saved-format/year validation. Responses inherit no-store behavior.
+
+Routes use existing MFA-derived session and Origin/CSRF verification, with no public saving fallback. Unconfigured service returns unavailable; unrelated/missing references do not disclose input. Automatic service wiring requires a shared PostgreSQL repository and configured Documents. Operators must apply migration 003 and explicitly provision editing plus document-write grants; routes do not grant access.
+
+Actual local HTTP plus PostgreSQL tests pass unsigned, missing-CSRF, absent edit permission, explicit grant, identical retry, history/current reopen, unknown snapshot, foreign profile, wrong year, invalid/oversized input, revoked permission and logout boundaries. The HTTP fixture uses an injected synthetic MFA session and volatile unencrypted object test double, not a live provider identity/storage journey. Encryption/concurrency were tested separately in the service fixture. Final regression: 219 total, 217 passed, two Linux-only skipped. Independent review found no important issues. Rendered Save/Reopen controls, actual MFA composition, hosted proof and recovery of saved input remain unfinished; current screen still clears on refresh.

@@ -20,7 +20,7 @@ class RequestVerificationError(Exception):
     pass
 
 
-def create_server(address, sessions, ledger, documents, login, allowed_origin, *, reviews=None):
+def create_server(address, sessions, ledger, documents, login, allowed_origin, *, reviews=None, tax_inputs=None):
     if not allowed_origin.startswith('https://'):
         raise ValueError('HTTPS browser origin required')
     if reviews is None and ledger is not None and documents is not None:
@@ -28,6 +28,12 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
         if isinstance(ledger.repository, PostgresRepository) and documents.repository is ledger.repository:
             from .support_review import SupportReviews
             reviews = SupportReviews(ledger.repository, documents)
+
+    if tax_inputs is None and ledger is not None and documents is not None:
+        from .postgres import PostgresRepository
+        if isinstance(ledger.repository, PostgresRepository) and documents.repository is ledger.repository:
+            from .tax_inputs import TaxInputs
+            tax_inputs = TaxInputs(ledger.repository,documents)
 
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
@@ -160,6 +166,19 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
                         body=self.payload()
                         return self.respond(201,reviews.submit(principal,self.scope(body['scope']),body['review']))
                     return self.respond(200,reviews.view(principal,self.scope(query)))
+                if path in ('/api/connected/tax/inputs','/api/connected/tax/input'):
+                    if tax_inputs is None:
+                        return self.respond(503,{'error':'Protected tax saving is not configured'})
+                    if path == '/api/connected/tax/inputs':
+                        if mutate:
+                            if int(self.headers.get('Content-Length','0')) > 512 * 1024:
+                                raise ValueError('Tax save request too large')
+                            body=self.payload()
+                            return self.respond(201,tax_inputs.save(principal,self.scope(body['scope']),body['save']))
+                        return self.respond(200,tax_inputs.view(principal,self.scope(query)))
+                    if not mutate:
+                        return self.respond(200,tax_inputs.open(principal,self.scope(query),query.get('snapshot')))
+                    return self.respond(404,{'error':'Resource unavailable'})
                 if path == '/api/connected/return/estimate' and mutate:
                     body=self.payload()
                     return self.respond(200,estimate_connected_return(ledger,principal,self.scope(body['scope']),body['scenario']))

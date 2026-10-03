@@ -406,3 +406,57 @@ class PostgresTests(unittest.TestCase):
         self.assertEqual(sum(r is not None for r in results),1)
         self.assertEqual(len(service.history(self.owner,self.scope)),2)
         self.assertEqual(service.open(self.owner,self.scope,original['snapshot_id'])['input'],value)
+
+    def test_tax_input_http_uses_session_csrf_scope_and_explicit_edit_permission(self):
+        import threading
+        import http.client
+        from ha.connected.api import create_server
+        from ha.connected.auth import Sessions
+        from ha.connected.documents import Documents,MemoryObjects
+        sessions=Sessions(); cookie,csrf=sessions.open(self.owner)
+        server=create_server(('127.0.0.1',0),sessions,self.ledger,
+                             Documents(self.repo,MemoryObjects(),lambda data,mime:True),None,'https://ha.example')
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        def cleanup():
+            server.shutdown();server.server_close();thread.join(5)
+        self.addCleanup(cleanup)
+        def request(method,path,body=None,signed=True,verified=True):
+            headers={'Content-Type':'application/json','Origin':'https://ha.example'}
+            if signed:headers['Cookie']='__Host-ha_session='+cookie
+            if verified:headers['X-HA-CSRF']=csrf
+            client=http.client.HTTPConnection(*server.server_address,timeout=5)
+            try:
+                client.request(method,path,json.dumps(body) if body is not None else None,headers)
+                response=client.getresponse();return response.status,json.loads(response.read())
+            finally:client.close()
+        path='/api/connected/tax/inputs'; query='?profile=orchard&business=business&year=2026'
+        value={'year':'2026','profile':{'firstName':'Fictional'},'forms':[],'active':0,'stateAnswers':{}}
+        body={'scope':{'profile':'orchard','business':'business','year':2026},
+              'save':{'input':value,'expected_snapshot_id':None,'reason':'','idempotency_key':'http-tax-1'}}
+        self.assertEqual(request('POST',path,body,signed=False)[0],401)
+        self.assertEqual(request('POST',path,body,verified=False)[0],403)
+        self.assertEqual(request('POST',path,body)[0],404)
+        self.assertFalse(request('GET',path+query)[1]['can_save'])
+        with self.repo.transaction() as conn:
+            conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'save_tax')")
+        saved=request('POST',path,body)
+        self.assertEqual(saved[0],201)
+        self.assertEqual(request('POST',path,body),saved)
+        self.assertTrue(request('GET',path+query)[1]['can_save'])
+        opened=request('GET','/api/connected/tax/input'+query)
+        self.assertEqual(opened[0],200);self.assertEqual(opened[1]['input'],value)
+        self.assertEqual(len(request('GET',path+query)[1]['history']),1)
+        self.assertEqual(request('GET','/api/connected/tax/input?profile=cedar&business=cedar-business&year=2026')[0],404)
+        self.assertEqual(request('GET','/api/connected/tax/input'+query+'&snapshot=00000000-0000-4000-8000-000000000000')[0],404)
+        wrongyear={**body,'scope':{**body['scope'],'year':2025}}
+        self.assertEqual(request('POST',path,wrongyear)[0],404)
+        bad={**body,'save':{**body['save'],'input':{**value,'year':'2025'}}}
+        self.assertEqual(request('POST',path,bad)[0],400)
+        oversized={**body,'save':{**body['save'],'input':{'huge':'x'*524288}}}
+        self.assertEqual(request('POST',path,oversized)[0],400)
+        with self.repo.transaction() as conn:
+            conn.execute("DELETE FROM ha_connected.grants WHERE action='save_tax'")
+        self.assertFalse(request('GET',path+query)[1]['can_save'])
+        self.assertEqual(request('POST',path,body)[0],404)
+        sessions.logout(cookie)
+        self.assertEqual(request('GET',path+query)[0],401)

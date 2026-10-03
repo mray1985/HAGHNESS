@@ -31,6 +31,17 @@ class TaxInputs:
                 repo.scope_values(scope)).fetchall()
             return [self.reference(row) for row in rows]
 
+    def view(self, principal, scope):
+        with self.repository.transaction():
+            history = self.history(principal,scope)
+            try:
+                authorize(principal,scope,'save_tax',self.repository)
+                authorize(principal,scope,'correct' if history else 'upload',self.repository)
+                can_save = True
+            except PermissionError:
+                can_save = False
+            return {'history':history,'can_save':can_save}
+
     def open(self, principal, scope, snapshot_id=None):
         with self.repository.transaction():
             history = self.history(principal,scope)

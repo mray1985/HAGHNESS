@@ -215,3 +215,6 @@ October2 taxsavingDBfoundation: explicitsave_tax noimplicitgrants; appendonlysco
 
 
 October2 taxinputservicecontinuation: sharedPGtransaction read/save_tax/scope lock, canonicalinputhash/idempotency, expectedversionstaleguard, original/correctionthroughDocumentsscan/encryption, servermetadata/history/openwithbyteintegrity. ActualPGservice+AESlocalfixture coversretry/stale/foreign/revoked/corruption/concurrentsaves/scanner/storage/metadatarollback; encryptedorphanpossiblewithoutactivepointer. Fullsuite215passed2Linux-onlyskipped217total; independentreviewnoimportantissues. Syntheticprincipal/scannerexplicit; HTTP/UI/liveMFA/actualsavedinputrestorereopen stillopen. Screenstillmemory-only.
+
+
+October2 taxinputHTTPcontinuation: scopedhistory/can_save, boundedCSRFprotectedPOST, current/selectedauthenticatedinputGET. No publicfallback; unconfigured503, unsigned401, CSRF403, foreign/noedit404, invalidoversize400. ActualPGHTTPtests grant/retry/open/history/year/revocation/logout pass syntheticMFAsession+volatileobjects; encryptiontestedseparately. Fullsuite217passed2Linux-onlyskipped219total; independentreviewnoimportantfindings. HTTPwiredonlysamePG/docrepo; migration003+explicitoperatorgrantsrequired. UI/liveMFA/recoveredsavedinput notyet; screenstillclearsrefresh.

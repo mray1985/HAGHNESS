@@ -100,3 +100,7 @@ class ApiTests(unittest.TestCase):
                 self.assertIn(b'href="/connected.html"',body)
             conn.close()
         self.assertEqual(self.request('GET','/../ha/rules/federal.json',signed=False)[0],401)
+
+    def test_tax_saving_unconfigured_does_not_offer_public_fallback(self):
+        for path in ('/api/connected/tax/inputs','/api/connected/tax/input'):
+            self.assertEqual(self.request('GET',path+'?profile=orchard&business=business&year=2026')[0],503)
