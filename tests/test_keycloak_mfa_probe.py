@@ -76,3 +76,10 @@ class MFAProbeTests(unittest.TestCase):
         self.assertNotIn('fictional-secret',result)
         self.assertEqual(rendered_failure('x'*65537),'unknown (Error)')
         self.assertEqual(rendered_failure(json.dumps({**value,'stage':'fictional-secret'})),'unknown (Error)')
+
+    def test_automatic_enrollment_fixture_has_no_assigned_setup_action(self):
+        from scripts.verify_keycloak_mfa import fixture_enrollment_user
+        user,password=fixture_enrollment_user(setup_required=False)
+        self.assertEqual(user['requiredActions'],[])
+        self.assertEqual([c['type'] for c in user['credentials']],['password'])
+        self.assertEqual(user['credentials'][0]['value'],password)

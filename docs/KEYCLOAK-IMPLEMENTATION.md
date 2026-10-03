@@ -1,4 +1,4 @@
-# Independent MFA implementation Â· Keycloak
+# Independent MFA implementation Ã‚Â· Keycloak
 
 The runtime supports `HA_AUTH_PROVIDER=keycloak` alongside disabled preview
 and optional Cognito. This is code and synthetic-token verification, not a
@@ -159,3 +159,15 @@ Identity screens and routes are real. Only the HA callback is intercepted to ver
 Initial rendered attempts rejected a fresh code despite matching setup secret and submitted code. Windows and WSL clocks differed by about five seconds. The verifier now receives the Linux fixture timestamp privately through stdin, uses that clock for both codes, waits to the next period midpoint, and asserts an advanced counter and different code. The run passed after consistent timing. Earlier failures did not record server counters, so their precise cause is not conclusively proven. This changes only disposable test timing, not MFA policy or host clocks. TOTP time-step requirements and test vectors: [RFC6238](https://www.rfc-editor.org/rfc/rfc6238.html).
 
 Successful evidence: KEYCLOAK-ENROLLMENT-EVIDENCE.json. The owned identity runtime stopped after the run. Browser acceptance of the self-signed fixture certificate remains explicit; separate protocol checks verify certificate/hostname trust. Scanning with a physical authenticator, hosted default onboarding, lost-device recovery, DigitalOcean/Spaces and filing remain unverified. This entry supersedes the earlier rendered-enrollment-not-run limitation, not those other gates.
+
+
+## Automatic required enrollment - October 3
+
+The `--automatic-enrollment` verification mode removes the explicitly assigned CONFIGURE_TOTP action from both disposable enrollment accounts. Each account starts with only a fresh password and an empty requiredActions list. The unchanged credential-free HA realm still requires setup during password login: actual protocol and Edge checks passed visible instructions/QR, incorrect setup-code rejection, completed setup, and a fresh password/OTP login. Signed-token acceptance and authorization-code replay rejection pass separately in the same run. No page errors occurred. Nine targeted tests passed; independent review found no actionable issues. The owned identity runtime stopped afterward.
+
+Evidence is KEYCLOAK-AUTOMATIC-ENROLLMENT-EVIDENCE.json, including account_setup_action_preassigned=false and the unchanged realm template hash. The configured REQUIRED OTP execution with userSetupAllowed explains the observed behavior; that mechanism attribution is an inference from configuration and [Keycloak's OTP authenticator source](https://github.com/keycloak/keycloak/blob/26.8.0/services/src/main/java/org/keycloak/authentication/authenticators/browser/OTPFormAuthenticator.java), whose setRequiredActions schedules Configure OTP in the authentication session. The observed required setup itself is actual runtime evidence.
+
+This supersedes the earlier recommendation that an administrator must manually assign Configure OTP for every new account using this imported realm. It does not prove an eventual hosted realm has this configuration, approve account identity or recovery, or exercise a physical authenticator scan. Public self-registration remains disabled; authorized private account provisioning and hosted onboarding must still be checked before invitations. The rendered fixture intercepts only the HA callback and explicitly bypasses trust for its self-signed certificate; actual HA-session evidence remains the separately recorded connected-session workflow. Passwords, secrets and tokens remain absent from reports and saved browser state.
+
+Reproduce locally with the existing Linux fixture dependencies, explicit HA_MFA_BROWSER_NODE and:
+`python3 scripts/verify_keycloak_runtime.py --distribution .connected-local/keycloak/keycloak-26.8.0 --realm-file deploy/digitalocean/keycloak/ha-realm.json --mfa-login --otp-enrollment --automatic-enrollment --rendered-enrollment --report docs/KEYCLOAK-AUTOMATIC-ENROLLMENT-EVIDENCE.json`.

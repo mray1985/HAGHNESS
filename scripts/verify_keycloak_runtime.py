@@ -54,7 +54,9 @@ def main():
     parser.add_argument('--connected-session',action='store_true')
     parser.add_argument('--otp-enrollment',action='store_true')
     parser.add_argument('--rendered-enrollment',action='store_true')
+    parser.add_argument('--automatic-enrollment',action='store_true')
     args=parser.parse_args()
+    if args.automatic_enrollment and not args.otp_enrollment:raise ValueError('Automatic enrollment requires enrollment fixture')
     if args.rendered_enrollment and not args.otp_enrollment:raise ValueError('Rendered enrollment requires protocol enrollment fixture')
     if args.otp_enrollment and not args.mfa_login:raise ValueError('Enrollment probe requires MFA fixture')
     if args.connected_session and not args.mfa_login:raise ValueError('Connected probe requires MFA fixture')
@@ -90,10 +92,10 @@ def main():
                 realm['users']=[user]
                 if args.otp_enrollment:
                     from verify_keycloak_mfa import fixture_enrollment_user,verify_enrollment
-                    enrollment_user,enrollment_password=fixture_enrollment_user()
+                    enrollment_user,enrollment_password=fixture_enrollment_user(setup_required=not args.automatic_enrollment)
                     realm['users'].append(enrollment_user)
                     if args.rendered_enrollment:
-                        rendered_user,rendered_password=fixture_enrollment_user('ha-fictional-rendered-enrollment')
+                        rendered_user,rendered_password=fixture_enrollment_user('ha-fictional-rendered-enrollment',setup_required=not args.automatic_enrollment)
                         realm['users'].append(rendered_user)
             realm_file=root/'ha-realm.json'
             realm_file.write_text(json.dumps(realm),encoding='utf-8')
@@ -169,6 +171,9 @@ def main():
                     else:raise ValueError('Password direct grant accepted')
                 mfa_checks=verify_login(origin,context,password,otp_secret,keys,NoRedirect) if args.mfa_login else {}
                 enrollment_checks=verify_enrollment(origin,context,enrollment_password,keys,NoRedirect) if args.otp_enrollment else {}
+                if args.otp_enrollment:
+                    enrollment_checks['account_setup_action_preassigned']=bool(enrollment_user['requiredActions'])
+                    enrollment_checks['setup_policy']='required browser OTP flow' if args.automatic_enrollment else 'explicit Configure OTP fixture action'
                 if args.rendered_enrollment:
                     node=os.environ.get('HA_MFA_BROWSER_NODE')
                     if not node:raise ValueError('Explicit browser runtime required')
