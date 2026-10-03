@@ -109,3 +109,6 @@ Browser trust of the disposable self-signed certificate remains bypassed explici
 
 
 October 2 provider prerequisite: fixed-endpoint read-only DigitalOcean account checker added with account:read scope, no redirects, bounded response, no identity/secret output or resource creation. Five tests pass. Actual local invocation reports token_not_configured; no provider account verified. See DIGITALOCEAN-IMPLEMENTATION.md.
+
+
+October 2 actual Linux key rotation/recovery: runtime MountedKeys+SpacesObjects fictional versioned storage preserve original/corrected document and encoded W2 bytes across activekeychange/separate local recoverycopy. Missing historicalkey deniesold/newstillreads;0644/symlinkreject. Actualprobe and16targetedtests pass, independentreviewnoimportantdefects. No hostedSpaces/externalcustody/DB/MFA claim. Details KEY-RECOVERY.md and KEY-ROTATION-EVIDENCE.json.

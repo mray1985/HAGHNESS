@@ -1,0 +1,13 @@
+{
+  "environment": "actual Linux filesystem with fictional SDK storage",
+  "rotation_exact_original_correction": "passed",
+  "encoded_tax_inputs_exact_after_key_recovery": "passed",
+  "tax_scope": "codec and encrypted adapter only; database and MFA not part of this probe",
+  "missing_historical_key_denied": true,
+  "active_key_remains_readable": true,
+  "separate_fixture_key_copy_recovery": "passed",
+  "broad_permissions_and_symlink_denied": true,
+  "plaintext_absent_from_objects": true,
+  "hosted_spaces": "not_run",
+  "external_key_custody": "not_verified"
+}
