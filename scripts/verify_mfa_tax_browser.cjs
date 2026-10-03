@@ -71,12 +71,21 @@ let stage='startup';
       assert.equal(await page.locator('#expenses').innerText(),'$320.00');
     }
     stage='document-download';
+    const receiptRow=page.locator('#document-list li').filter({has:page.locator('button')}).filter({hasText:fixture.document}).filter({hasText:'Current version'});
+    assert.equal(await receiptRow.count(),1);
     await page.locator('#support-document').selectOption(JSON.stringify([fixture.document,fixture.version]));
-    const download=page.waitForEvent('download');
-    await page.locator('#support-download').click();
-    const stream=await (await download).createReadStream();let bytes=[];
-    for await(const chunk of stream)bytes.push(chunk);
-    assert.equal(Buffer.concat(bytes).toString(),'Fictional receipt correction');
+    for(const button of [receiptRow.getByRole('button',{name:'Download this version'}),page.locator('#support-download')]){
+      const download=page.waitForEvent('download');await button.click();
+      const stream=await (await download).createReadStream();let bytes=[];
+      for await(const chunk of stream)bytes.push(chunk);
+      assert.equal(Buffer.concat(bytes).toString(),'Fictional receipt correction');
+    }
+    stage='document-correction-choice';
+    await receiptRow.getByRole('button',{name:'Add a corrected version'}).click();
+    assert.equal(await page.locator('#document-mode').inputValue(),'correction');
+    assert.equal(await page.locator('#correction-document').inputValue(),fixture.document);
+    assert.equal(await page.locator('#correction-reason').inputValue(),'');
+    assert.equal(await page.locator('#document-form [name=file]').inputValue(),'');
     stage='foreign-scope';
     await page.locator('#manual-scope summary').click();
     await page.locator('#scope-form [name=profile]').fill('cedar');
@@ -120,7 +129,7 @@ let stage='startup';
     assert.equal((await context.request.get(fixture.origin+'/api/connected/tax/inputs?profile=orchard&business=business&year=2026')).status(),401);
     assert.deepEqual(errors,[]);
     console.log(JSON.stringify({rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
-      rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
+      rendered_document_list_download_and_correction_choice:'passed',rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
       authentication:'actual browser password and OTP through HTTPS callback',browser_certificate_trust:'not verified; disposable self-signed fixture',
       browser_storage_empty:true,mobile_overflow:false,
       elapsed_seconds:Math.round((performance.now()-started)/100)/10,

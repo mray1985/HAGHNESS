@@ -69,7 +69,23 @@ byId('entry-form').addEventListener('submit',async event=>{
 async function listDocuments(){
   const current=generation;
   const list=byId('document-list');list.replaceChildren();
-  try{const result=await request('/api/connected/documents?'+scopeQuery());if(current!==generation)return;for(const version of result.versions){const item=document.createElement('li');item.textContent=version.document_id+' · '+version.created_at+' · '+(version.previous_version_id?'corrected version':'original');list.append(item);}}
+  try{const result=await request('/api/connected/documents?'+scopeQuery());if(current!==generation)return;
+    const superseded=new Set(result.versions.map(version=>version.previous_version_id));
+    for(const version of result.versions){
+      const item=document.createElement('li');item.dataset.version=version.version_id;
+      const description=document.createElement('p');description.textContent=version.document_id+' | '+version.created_at+' | '+(version.previous_version_id?'corrected version':'original')+' | '+(superseded.has(version.version_id)?'Earlier version':'Current version');item.append(description);
+      const actions=document.createElement('div');actions.className='document-actions';
+      const download=document.createElement('button');download.type='button';download.textContent='Download this version';download.onclick=()=>{if(current===generation)downloadDocument(version.document_id,version.version_id);};actions.append(download);
+      if(!superseded.has(version.version_id)){
+        const correct=document.createElement('button');correct.type='button';correct.textContent='Add a corrected version';
+        correct.onclick=()=>{
+          if(current!==generation||!scope)return;
+          uploadRevision++;pendingUpload=null;byId('document-form').reset();byId('document-mode').value='correction';byId('correction-document').value=version.document_id;
+          byId('correction-reason').focus();status('Explain what changed and choose the corrected file. The original will be preserved.');
+        };actions.append(correct);
+      }
+      item.append(actions);list.append(item);
+    }}
   catch(error){if(current!==generation)return;const item=document.createElement('li');item.textContent=error.message;list.append(item);}
 }
 byId('document-form').addEventListener('input',()=>{uploadRevision++;pendingUpload=null;});
@@ -162,13 +178,17 @@ byId('support-form').addEventListener('submit',async event=>{
   }catch(error){if(current===generation)status(error.message);}finally{button.disabled=!canReview;}
 });
 
-byId('support-download').addEventListener('click',async()=>{
-  if(!scope||!byId('support-document').value){status('Select a document first.');return;}
-  const current=generation,[documentId,version]=JSON.parse(byId('support-document').value);
+async function downloadDocument(documentId,version){
+  if(!scope)return;
+  const current=generation;
   try{const result=await request('/api/connected/document?'+scopeQuery()+'&'+new URLSearchParams({document:documentId,version}));
     if(current!==generation)return;
     const bytes=Uint8Array.from(atob(result.data),c=>c.charCodeAt(0));
     const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
     const link=document.createElement('a');link.href=url;link.download='supporting-document';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }catch(error){if(current===generation)status(error.message);}
+}
+byId('support-download').addEventListener('click',()=>{
+  if(!scope||!byId('support-document').value){status('Select a document first.');return;}
+  const [documentId,version]=JSON.parse(byId('support-document').value);downloadDocument(documentId,version);
 });

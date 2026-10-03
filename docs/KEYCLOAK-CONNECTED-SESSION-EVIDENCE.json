@@ -25,6 +25,7 @@
     "rendered_browser_checks": {
       "rendered_tax_save_reload_reopen": "passed",
       "rendered_books_periods_documents_handoff": "passed",
+      "rendered_document_list_download_and_correction_choice": "passed",
       "rendered_permitted_case_choice": "passed",
       "rendered_foreign_scope_clears_data": true,
       "rendered_logout_denies_tax": true,
@@ -33,7 +34,7 @@
       "browser_certificate_trust": "not verified; disposable self-signed fixture",
       "browser_storage_empty": true,
       "mobile_overflow": false,
-      "elapsed_seconds": 5.9,
+      "elapsed_seconds": 6.2,
       "timing_scope": "single local fictional browser run, includes browser password/OTP; excludes fixture wait and runtime startup"
     },
     "same_real_mfa_session_tax_save_reopen": "passed",
@@ -65,6 +66,7 @@
     "hosted_workflow": "not_run",
     "otp_enrollment": "pre-enrolled fictional fixture; not tested"
   },
+  "otp_enrollment_checks": {},
   "realm_template_sha256": "3d831b9c4f264e2659394d7dc9fb594c12a179943fb58bb8be7127e05d460c75",
   "hosted_identity": "not_run",
   "runtime_uploads_activated": false
