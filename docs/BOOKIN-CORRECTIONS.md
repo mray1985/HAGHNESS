@@ -46,3 +46,14 @@ in KEYCLOAK-NGINX-SESSION-EVIDENCE.json; its rendered portion measured 23.4
 seconds in this fictional local run, excluding fixture startup/waits. This does
 not verify hosted payroll, deposits, tax deductibility or the new payroll fixture's
 backup recovery.
+
+Subsequent payroll recovery check: actual isolated direct and transferred
+PostgreSQL/encrypted-bundle restores passed the new payroll fixture. The $200
+original and $250 replacement retain exact sources, payroll expense/payable
+reversal/replacement postings and the original reporting period. Both recovered
+books show $930 profit, with $125 owner payments recorded/$0 confirmed; superseded
+records are excluded. Ten ledger records and both review statements are recovered.
+The local run measured 8.937 seconds. DATABASE-RESTORE-EVIDENCE.json supersedes
+the prior paragraph's missing payroll recovery evidence; its scanner and transfer
+store remain fictional, and keys remain on this computer rather than independent
+host-loss custody.

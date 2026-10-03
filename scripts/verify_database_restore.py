@@ -38,18 +38,22 @@ ROOT = Path(__file__).resolve().parents[1]
 LOCAL = ROOT / '.connected-local'
 BIN = LOCAL / 'postgresql/pgsql/bin'
 
+PAYROLL_ORIGINAL=dict(id='recovery-payroll-original',date='2026-10-02',kind='employee_payroll_obligation',amount_minor=20000)
+
 LATEST_CORRECTIONS=(
     dict(id='recovery-cash',date='2026-11-04',kind='correction',replaces='sale-cash',amount_minor=50000,
          reason='Clarify fictional cash sales',support_changes={'explanation':'Fictional recovery cash clarification'}),
     dict(id='recovery-payment',date='2026-11-04',kind='correction',replaces='owner-estimate',amount_minor=12500,
-         reason='Correct fictional payment amount'))
+         reason='Correct fictional payment amount'),
+    dict(id='recovery-payroll-fixed',date='2026-11-04',kind='correction',replaces='recovery-payroll-original',amount_minor=25000,
+         reason='Correct fictional payroll accrual'))
 
 
 def verify_latest_corrections(ledger,owner,scope):
     history={event['id']:event for event in ledger.history(owner,scope)}
     fixture=json.loads((ROOT/'docs/fixtures/day8-connected-workflow.json').read_text(encoding='utf-8'))
-    expected={event['id']:event for event in fixture['events']}
-    for event_id in ('sale-cash','owner-estimate'):
+    expected={event['id']:event for event in (*fixture['events'],PAYROLL_ORIGINAL)}
+    for event_id in expected:
         if history[event_id]['source']!=expected[event_id]:raise ValueError('Recovered original source changed')
     cash,payment=history['recovery-cash'],history['recovery-payment']
     if (history['sale-cash'].get('explanation')!='Aggregate fictional market sales'
@@ -59,16 +63,28 @@ def verify_latest_corrections(ledger,owner,scope):
             or payment['amount_minor']!=12500 or payment['posting_date']!='2026-10-03'
             or payment.get('status')!='recorded_unverified' or payment.get('government_confirmation') is not None):
         raise ValueError('Recovered correction history mismatch')
+    payroll=history['recovery-payroll-fixed']
+    if (history[PAYROLL_ORIGINAL['id']]['amount_minor']!=20000
+            or payroll['amount_minor']!=25000 or payroll['effective_kind']!='employee_payroll_obligation'
+            or payroll['posting_date']!='2026-10-02'
+            or payroll['replacement_postings']!=[{'account':'payroll_expense','amount_minor':25000},
+                {'account':'payroll_payable','amount_minor':-25000}]
+            or payroll['postings']!=[{'account':'payroll_expense','amount_minor':-20000},
+                {'account':'payroll_payable','amount_minor':20000},
+                {'account':'payroll_expense','amount_minor':25000},
+                {'account':'payroll_payable','amount_minor':-25000}]):
+        raise ValueError('Recovered payroll obligation correction mismatch')
     for correction in LATEST_CORRECTIONS:
         if history[correction['id']]['source']!=correction:raise ValueError('Recovered correction source changed')
     for period in ('month','quarter','year'):
         projection=ledger.project(owner,scope,period,10)
-        if (projection['book_profit_minor']!=118000 or projection['reserve_scenario_minor']!=37500
+        if (projection['book_profit_minor']!=93000 or projection['reserve_scenario_minor']!=37500
                 or projection['owner_payments_recorded_minor']!=12500 or projection['owner_payments_confirmed_minor']!=0
-                or not {'recovery-cash','recovery-payment'}<=set(projection['source_event_ids'])
-                or {'sale-cash','owner-estimate'}&set(projection['source_event_ids'])):
+                or not {'recovery-cash','recovery-payment','recovery-payroll-fixed'}<=set(projection['source_event_ids'])
+                or {'sale-cash','owner-estimate','recovery-payroll-original'}&set(projection['source_event_ids'])):
             raise ValueError('Recovered correction projection mismatch')
-    return {'original_cash_and_payment_preserved':True,'cash_explanation_amendment_preserved':True,
+    return {'payroll_original_and_correction_preserved':True,'payroll_obligation_minor':25000,
+            'original_cash_and_payment_preserved':True,'cash_explanation_amendment_preserved':True,
             'recorded_payment_minor':12500,'confirmed_payment_minor':0,'original_periods_and_no_double_count':True}
 
 
@@ -100,9 +116,10 @@ def main():
     original_confirmation=dict(ledger_revision=6,reviewed_through='2026-10-03',confirmed=True,
         reason='Compared fictional card and cash entries',idempotency_key='restore-records-original')
     confirmations.submit(owner,scope,original_confirmation)
+    ledger.post_event(owner,scope,PAYROLL_ORIGINAL)
     for event in LATEST_CORRECTIONS:ledger.post_event(owner,scope,event)
     if confirmations.view(owner,scope)['status']!='stale':raise ValueError('Correction did not invalidate review')
-    confirmations.submit(owner,scope,{**original_confirmation,'ledger_revision':8,
+    confirmations.submit(owner,scope,{**original_confirmation,'ledger_revision':10,
         'reason':'Reviewed the fictional corrected entries','idempotency_key':'restore-records-current'})
     confirmation_before=confirmations.view(owner,scope)
     if (len(confirmation_before['history'])!=2 or confirmation_before['status']!='current'
@@ -163,7 +180,7 @@ def main():
                   'w2s':[{'box1':f.get('box1',''),'box2':f.get('box2','')} for f in forms],
                   'retirement_forms':[]}
         estimate=estimate_connected_return(PostgresLedger(restored_documents.repository),owner,scope,scenario)
-        if (estimate['business_draft']['book_profit_minor']!=118000
+        if (estimate['business_draft']['book_profit_minor']!=93000
                 or estimate['refund'] is not None or estimate['balance_due'] is not None
                 or estimate['may_prepare_return'] is not False or estimate['wages']!=200):
             raise ValueError('Reopened connected tax draft disagrees')
@@ -227,7 +244,7 @@ def main():
     latest_correction_checks=verify_latest_corrections(recovered_ledger,owner,scope)
     if RecordConfirmations(PostgresRepository(recovered_dsn)).view(owner,scope)!=confirmation_before:
         raise ValueError('Recovered confirmation history or authority changed')
-    if recovered_ledger.project(owner,scope,'year')['book_profit_minor'] != 118000:
+    if recovered_ledger.project(owner,scope,'year')['book_profit_minor'] != 93000:
         raise ValueError('Recovered draft disagrees with fixture')
     try:
         recovered_ledger.project(owner,Scope('cedar','cedar-business',2026),'year')
@@ -329,7 +346,7 @@ def main():
         raise ValueError('Transferred correction verification differs')
     if RecordConfirmations(transfer_repo).view(owner,scope)!=confirmation_before:
         raise ValueError('Transferred confirmation history or authority changed')
-    if PostgresLedger(transfer_repo).project(owner,scope,'year')['book_profit_minor']!=118000:
+    if PostgresLedger(transfer_repo).project(owner,scope,'year')['book_profit_minor']!=93000:
         raise ValueError('Transferred books differ')
     recovered_support=recovered_ledger.project(owner,scope,'year')
     transferred_support=PostgresLedger(transfer_repo).project(owner,scope,'year')
@@ -414,9 +431,9 @@ def main():
     if any(result['recovery_verified'] or result['archive_integrity_verified'] or result['deletion_authorized'] for result in (current_health,stale_health)):
         raise ValueError('Backup monitor overstates authority')
     elapsed = time.perf_counter()-started
-    report = {'records_confirmation_restore_checks':{'original_and_current_history_preserved':True,'current_revision':8,'independently_verified':False,'filing_authorized':False},'latest_correction_restore_checks':latest_correction_checks,'environment':'local fictional PostgreSQL only','database_restore':'passed','database_backup_encryption':'passed_authenticated_stream', 'database_recovery_key':'separate ignored recovery-key file; excluded from archive','tables':counts,
+    report = {'records_confirmation_restore_checks':{'original_and_current_history_preserved':True,'current_revision':10,'independently_verified':False,'filing_authorized':False},'latest_correction_restore_checks':latest_correction_checks,'environment':'local fictional PostgreSQL only','database_restore':'passed','database_backup_encryption':'passed_authenticated_stream', 'database_recovery_key':'separate ignored recovery-key file; excluded from archive','tables':counts,
               'elapsed_seconds':round(elapsed,3),'source_database_preserved':True,'fixture_source':'new isolated database; existing test data untouched',
-              'recovered_book_profit_minor':118000,'recovered_cross_profile_denial':'passed',
+              'recovered_book_profit_minor':93000,'recovered_cross_profile_denial':'passed',
               'aws_backup_restore':'not_run','document_object_restore':'passed_local_encrypted_files',
               'document_versions_recovered':4,'document_cross_profile_denial':'passed',
               'wrong_key_denial':'passed','encrypted_backup_plaintext_check':'passed',
@@ -430,8 +447,8 @@ def main():
               'transferred_support_review_queue_matches':True,'transferred_tables_match_snapshot':True,'tax_input_reference_restore':'passed_actual_saved_original_and_correction',
               'saved_tax_input_restore':'passed_current_and_original_exact_input_and_metadata',
               'saved_tax_input_cross_profile_denial':'passed','saved_tax_input_wrong_key_denial':'passed',
-              'reopened_connected_draft':'passed_wages200_book_profit118000_combined_balance_held','transferred_original_and_correction':'passed',
-              'transferred_book_profit_minor':118000,'transferred_cross_profile_denial':'passed',
+              'reopened_connected_draft':'passed_wages200_book_profit93000_combined_balance_held','transferred_original_and_correction':'passed',
+              'transferred_book_profit_minor':93000,'transferred_cross_profile_denial':'passed',
               'hosted_storage_restore':'not_run','scanner':'synthetic fixture bypass only'}
     (ROOT/'docs/DATABASE-RESTORE-EVIDENCE.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))

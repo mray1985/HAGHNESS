@@ -113,3 +113,20 @@ Ten receipt tests pass, including retrieval after deleting the local receipt and
 ## Saved HATax input restoration
 
 Current actual local recovery evidence now includes tax-input originals and corrections, not just a reference-table fixture. TaxInputs reopens exact encrypted input and server metadata from both local AES objects and downloaded completed-bundle objects after actual pg_restore. All seven tables reconcile; four document versions and two tax-input references are restored. Wrong-key and foreign-profile reads reject. Recomputed connected drafts retain business totals and hold combined balances pending treatment. Current single fixture elapsed7.994s; no live Spaces, externally recovered historical key, scheduled retention or hosted-browser proof is established. See TAX-INPUT-PERSISTENCE.md and DATABASE-RESTORE-EVIDENCE.json.
+
+## Current correction-aware recovery fixture
+
+The latest actual local recovery run also includes a $200 employee payroll
+obligation corrected to $250. Direct and transferred encrypted-bundle restores
+preserve all ten ledger records, exact original/source histories, payroll expense
+and payroll payable postings, original month/quarter/year, and two record-review
+statements with current revision 10. Recovered profit is $930; owner payments
+remain $125 recorded/$0 confirmed. Four document versions and two saved tax-input
+versions remain intact. The run measured 8.937 seconds.
+
+DATABASE-RESTORE-EVIDENCE.json records the executed proof; mutation tests reject
+changed original payroll amount and changed effective account type. The recovery
+harness uses real PostgreSQL with fictional local encrypted objects/transfer
+storage and synthetic scanning. Separate ignored local key files do not establish
+independent off-host key custody or provider recovery. Scheduling, expiry and
+customer-document activation remain governed by the existing hosted gates.

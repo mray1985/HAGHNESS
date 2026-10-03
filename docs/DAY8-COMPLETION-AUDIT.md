@@ -86,3 +86,14 @@ password/OTP, excluding startup/waits. This is a recorded obligation correction,
 not payroll calculation, payment or verified tax treatment. Latest standalone
 restore evidence predates this new payroll fixture; hosted recovery and other
 release gates remain incomplete.
+
+Recovery evidence is now refreshed for payroll-obligation corrections as well.
+The actual isolated direct and transferred encrypted PostgreSQL restores preserve
+ten ledger records, exact original and correction sources, payroll reversal and
+replacement account postings, original reporting periods, four document versions,
+two tax input versions and two record-confirmation statements (current revision
+10). Both recovered drafts show $930 book profit and $125 owner payments recorded
+versus $0 confirmed, with no superseded entry counted again. Run: 8.937 seconds.
+DATABASE-RESTORE-EVIDENCE.json records the proof. This supersedes the preceding
+payroll checkpoint's missing local recovery evidence; its off-host key custody,
+provider storage, hosted restore and activation gates still remain incomplete.

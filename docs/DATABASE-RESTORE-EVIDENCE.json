@@ -1,11 +1,13 @@
 {
   "records_confirmation_restore_checks": {
     "original_and_current_history_preserved": true,
-    "current_revision": 8,
+    "current_revision": 10,
     "independently_verified": false,
     "filing_authorized": false
   },
   "latest_correction_restore_checks": {
+    "payroll_original_and_correction_preserved": true,
+    "payroll_obligation_minor": 25000,
     "original_cash_and_payment_preserved": true,
     "cash_explanation_amendment_preserved": true,
     "recorded_payment_minor": 12500,
@@ -20,16 +22,16 @@
     "profiles": 2,
     "businesses": 2,
     "grants": 7,
-    "ledger_events": 8,
+    "ledger_events": 10,
     "document_versions": 4,
     "support_reviews": 1,
     "tax_input_versions": 2,
     "record_confirmations": 2
   },
-  "elapsed_seconds": 11.232,
+  "elapsed_seconds": 8.937,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
-  "recovered_book_profit_minor": 118000,
+  "recovered_book_profit_minor": 93000,
   "recovered_cross_profile_denial": "passed",
   "aws_backup_restore": "not_run",
   "document_object_restore": "passed_local_encrypted_files",
@@ -70,9 +72,9 @@
   "saved_tax_input_restore": "passed_current_and_original_exact_input_and_metadata",
   "saved_tax_input_cross_profile_denial": "passed",
   "saved_tax_input_wrong_key_denial": "passed",
-  "reopened_connected_draft": "passed_wages200_book_profit118000_combined_balance_held",
+  "reopened_connected_draft": "passed_wages200_book_profit93000_combined_balance_held",
   "transferred_original_and_correction": "passed",
-  "transferred_book_profit_minor": 118000,
+  "transferred_book_profit_minor": 93000,
   "transferred_cross_profile_denial": "passed",
   "hosted_storage_restore": "not_run",
   "scanner": "synthetic fixture bypass only"
