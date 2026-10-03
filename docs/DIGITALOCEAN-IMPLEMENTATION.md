@@ -41,3 +41,18 @@ Official references: https://docs.digitalocean.com/products/app-platform/ and ht
 HATax is included in the connected service at `/tax`. The protected handoff reads authorized Bookin projections and holds the refund estimate when business records need tax review. Personal form drafts remain in page memory; protected durable form saving and filing are unfinished. See BOOKIN-HATAX-HANDOFF.md.
 
 Linux native-service, nginx and ClamD settings templates are now in deploy/digitalocean/droplet/. See its README for explicit activation gates and current validation limits.
+
+
+## Read-only account prerequisite check
+
+With a DigitalOcean token already supplied through the operator's protected environment, run:
+
+```powershell
+.venv/Scripts/python.exe -m scripts.check_digitalocean_account
+```
+
+The command reads DIGITALOCEAN_ACCESS_TOKEN and performs only HTTPS GET https://api.digitalocean.com/v2/account. Use account:read scope; it does not need resource creation permissions. It refuses redirects and bounds/validates the response. Output includes only status/email-verification booleans and explicit resources_created=false/deployment_verified=false. Account email, name, UUID, status message, token and provider error details are not printed. Do not put the token in command arguments, source files or chat.
+
+Exit 0 means the account prerequisite is active with verified email; exit 1 means an account warning/lock/unverified condition; exit 2 means missing token or inability to establish account status. Passing does not confirm billing, resource quotas, correct team, Spaces policies, deployment permissions, backups or recovery. Confirm the intended account/team in the provider console before paid provisioning.
+
+Official endpoint and scope reference: https://docs.digitalocean.com/reference/api/reference/account/. Five focused tests passed. The actual local invocation reported token_not_configured; no provider account or resource was verified or changed. Deployment remains pending user-controlled account setup.

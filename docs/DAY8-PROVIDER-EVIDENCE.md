@@ -41,7 +41,7 @@ Illustrative bank-data-only budget: 100 newly verified accounts, 100 ownership c
 
 The [current DigitalOcean cost scenario](DIGITALOCEAN-COST-PLAN.md) prices application/scanner, identity, a single-node database, Spaces and optional daily VM backups at a $129.05 component subtotal. A complete quote still needs retained backups, key recovery, overages, monitoring, operations and support. Treasury and Schwab integration charges require written provider terms. No complete monthly total has been verified.
 
-The latest saved actual local recovery run took 7.994 seconds, restoring six snapshot tables, six ledger events, four document versions, two saved tax-input references and support-review history, with scope and wrong-key denials. Private backup locator copy/readback also passed through the fictional local store. This single sample is not p50/p95, hosted recovery time or user completion time.
+The latest saved actual local recovery run took 8.777 seconds, restoring seven snapshot tables, six ledger events, four document versions, two saved tax-input references and support-review history, with scope and wrong-key denials. Private backup locator copy/readback also passed through the fictional local store. This single sample is not p50/p95, hosted recovery time or user completion time.
 
 For future measurements, record environment, trial ID, start/end UTC, elapsed seconds, success/error, provider confirmation and charges for each phase: login/MFA, original upload, correction, draft calculation, restore, bank linking, payment confirmation and IRA funding. Report task time separately from settlement time and failures separately from successful observations. Provider phases remain unmeasured.
 
@@ -106,3 +106,6 @@ The browser journey measured 6.3 seconds in one automated fictional run, includi
 Windows could not reach the local Java IPv6-mapped loopback listener during initial rendered-login attempts. The local fixture now uses -Djava.net.preferIPv4Stack=true; socket inspection confirmed 127.0.0.1:8843, and the full rendered journey passed. This follows Oracle's networking property documentation: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/doc-files/net-properties.html. This fixture-specific choice does not alter hosted configuration. Failure diagnostics contain fixed step/error-type or network-code labels only.
 
 Browser trust of the disposable self-signed certificate remains bypassed explicitly for this fixture, while separate protocol checks verify hostname/certificate trust. Real-user OTP enrollment/recovery, hosted DigitalOcean/Spaces, external key recovery, operational retention/alerts and filing remain unverified. The latest KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json supersedes earlier cookie-reuse-only checkpoints.
+
+
+October 2 provider prerequisite: fixed-endpoint read-only DigitalOcean account checker added with account:read scope, no redirects, bounded response, no identity/secret output or resource creation. Five tests pass. Actual local invocation reports token_not_configured; no provider account verified. See DIGITALOCEAN-IMPLEMENTATION.md.
