@@ -26,3 +26,19 @@ Application corrections use new UUID object keys and preserve original metadata.
 Six injected-client tests verify ciphertext/private uploads, exact versions, original recovery across key rotation, wrong key/corruption/swapped-object denial, invalid inputs, stream bounds/closing, missing keys and cross-bucket denial. Independent review found no important defect. These are adapter tests, not hosted bucket-policy, live provider or scan verification.
 
 The existing isolated encrypted-file/PostgreSQL recovery proof remains useful local evidence. It does not prove a Spaces backup or independent recovery-key service. Hosted provisioning, quote, backup schedule and the complete signed-in client journey remain unfinished.
+
+## Read-only configuration check
+
+October 3, 2026. With an existing bucket and credentials supplied privately through the operator environment, run from the repository root:
+
+```powershell
+.venv/Scripts/python.exe -m scripts.check_spaces_configuration
+```
+
+It requires `HA_SPACES_REGION`, `HA_SPACES_BUCKET`, `HA_SPACES_ACCESS_KEY` and `HA_SPACES_SECRET_KEY`. Do not put secrets in arguments, source or chat. It calls only GetBucketVersioning and GetBucketAcl, never writes objects, creates resources or changes policies/versioning. Credentials must permit these observations; permission denial reports unavailable, not a pass. No fallback to ambient AWS credentials occurs. TLS verification is enabled and the SDK request guard permits only HTTPS GETs for these two operations at the explicitly selected regional endpoint and bucket, including retries.
+
+Exit 0 means the observed versioning status is exactly Enabled and the bucket ACL grants only its canonical owner FULL_CONTROL. Exit 1 means an observed setting does not pass; exit 2 means configuration is absent/invalid or observation failed. Output contains fixed status/boolean fields, not bucket names, owner IDs, keys or raw SDK diagnostics. The command does not activate uploads.
+
+**This is not complete privacy verification.** Objects can have different ACLs, bucket policies can affect access, and CDN settings are not observed. `private_objects_verified`, `cdn_or_bucket_policy_verified`, `recovery_verified` and `deployment_verified` remain false even when these two checks pass. Complete the fictional authenticated/anonymous object, MFA, scanner and independent recovery tests before client use. DigitalOcean documents [versioning through the regional API](https://docs.digitalocean.com/products/spaces/how-to/enable-versioning/) and [bucket policies](https://docs.digitalocean.com/products/spaces/how-to/configure-bucket-policies/); limited-access keys and bucket policies have compatibility constraints, so review the selected access model before configuration changes.
+
+Eight tests pass: owner/public/nonowner/malformed ACL handling, versioning states, input validation, missing config, sanitized failure, explicit SDK settings/request guards and actual SDK serialization with synthetic transport. These are not live provider results. The actual local command reports configuration_not_supplied and all readiness flags false; no resource was changed.
