@@ -66,6 +66,28 @@ let stage='startup';
     assert.equal(await page.locator('#profit').innerText(),'$1,180.00');
     assert.match(await page.locator('#payments').innerText(),/recorded: \$100\.00.*confirmed: \$0\.00/);
     assert.match(await page.locator('#review-list').innerText(),/advertising:.*supporting document changed/);
+    stage='reserve-choice';
+    const revisionBeforeReserve=await page.locator('#revision').innerText();
+    assert.equal(await page.locator('#reserve-total').innerText(),'$375.00');
+    assert.equal(await page.locator('#reserve-extra-dollars').isEnabled(),false);
+    await page.locator('#reserve-percent').fill('17.25');
+    await page.locator('#reserve-extra-choice').selectOption('yes');
+    await page.locator('#reserve-extra-dollars').fill('10.01');
+    const reserveUpdated=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/connected/draft');
+    await page.locator('#reserve-form button').click();
+    assert.equal((await reserveUpdated).status(),200);
+    await page.waitForFunction(()=>document.querySelector('#reserve-total').textContent==='$268.76');
+    assert.equal(await page.locator('#reserve-base').innerText(),'$258.75');
+    assert.equal(await page.locator('#reserve-extra').innerText(),'$10.01');
+    assert.equal(await page.locator('#revision').innerText(),revisionBeforeReserve);
+    assert.equal(await page.locator('#profit').innerText(),'$1,180.00');
+    assert.match(await page.locator('#payments').innerText(),/recorded: \$100\.00.*confirmed: \$0\.00/);
+    await page.setViewportSize({width:390,height:844});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    const reserveScreenshot=require('node:path').resolve(__dirname,'../output/reserve-choice.png');
+    require('node:fs').mkdirSync(require('node:path').dirname(reserveScreenshot),{recursive:true});
+    await page.locator('#reserve-plan').screenshot({path:reserveScreenshot});
+    await page.setViewportSize({width:1280,height:900});
     stage='record-confirmation-save';
     await page.locator('#confirmation-through').waitFor({state:'visible'});
     await page.waitForFunction(()=>!document.querySelector('#confirmation-choice').disabled);
@@ -94,7 +116,16 @@ let stage='startup';
       await page.waitForLoadState('networkidle');
       assert.equal(await page.locator('#profit').innerText(),'$1,180.00');
       assert.equal(await page.locator('#expenses').innerText(),'$320.00');
+      assert.equal(await page.locator('#reserve-total').innerText(),'$268.76');
     }
+    stage='reserve-choice';
+    await page.locator('#reserve-extra-choice').selectOption('no');
+    assert.equal(await page.locator('#reserve-extra-dollars').inputValue(),'');
+    await page.locator('#reserve-form button').click();
+    await page.waitForFunction(()=>document.querySelector('#reserve-total').textContent==='$258.75');
+    await page.locator('#reserve-percent').fill('25');
+    await page.locator('#reserve-form button').click();
+    await page.waitForFunction(()=>document.querySelector('#reserve-total').textContent==='$375.00');
     stage='payment-correction-save';
     await page.locator('#entry-history li[data-entry="owner-estimate"]').getByRole('button',{name:'Correct this entry'}).click();
     assert.equal(await page.locator('#entry-form [name=amount]').inputValue(),'100.00');
@@ -162,6 +193,10 @@ let stage='startup';
     assert.equal(await page.locator('#document-list li').count(),0);
     assert.equal(await page.locator('#entry-history li').count(),0);
     assert.equal(await page.locator('#confirmation-history li').count(),0);
+    assert.equal(await page.locator('#reserve-percent').inputValue(),'25');
+    assert.equal(await page.locator('#reserve-extra-choice').inputValue(),'no');
+    assert.equal(await page.locator('#reserve-extra-dollars').inputValue(),'');
+    assert.equal(await page.locator('#reserve-total').innerText(),'—');
     assert.equal(await page.locator('#confirmation-choice').isDisabled(),true);
     assert.equal(await page.locator('#confirmation-choice').isChecked(),false);
     assert.equal(await page.locator('#confirmation-through').inputValue(),'');
@@ -201,7 +236,7 @@ let stage='startup';
     await page.locator('#login-panel').waitFor({state:'visible'});
     assert.equal((await context.request.get(fixture.origin+'/api/connected/tax/inputs?profile=orchard&business=business&year=2026')).status(),401);
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({rendered_records_confirmation_saved_and_invalidated:'passed',rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
+    console.log(JSON.stringify({rendered_reserve_choices_and_periods:'passed',rendered_records_confirmation_saved_and_invalidated:'passed',rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
       rendered_document_list_download_and_correction_choice:'passed',rendered_cash_explanation_amendment_persisted:'passed',rendered_payment_correction_preserves_unverified_original:'passed',rendered_entry_history_correction_choice:'passed',rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
       authentication:'actual browser password and OTP through HTTPS callback',browser_certificate_trust:'not verified; disposable self-signed fixture',
       browser_storage_empty:true,mobile_overflow:false,

@@ -57,3 +57,16 @@ correction invalidation, unrelated-profile review-field/history clearing, mobile
 layout, protected tax draft reopening and logout denial. Final rendered portion:
 7.4 seconds for the fictional fixture, excluding startup/OTP waits. A mobile
 panel screenshot and the evidence limits are saved in RECORD-CONFIRMATIONS.md.
+
+The reserve-choice checkpoint replaces the fixed 25% scenario with an explicit
+0–100% choice and an optional extra amount applied once to the selected period.
+It is a read-only preview: no bank transfer, IRS payment or persisted election.
+Fresh Windows PostgreSQL suite: 298 ran, 294 passed, four Linux-only skips.
+The actual local MFA/nginx/PG/ClamD/encrypted-object browser fixture passed
+reserve period calculations, unchanged books/payments, mobile layout, unrelated
+case clearing, and the existing protected save/reopen/logout workflow. Rendered
+portion: 9.2 seconds, including password/OTP and excluding startup/waits.
+RESERVE-CHOICE.md records the scope and screenshot. The form picker now orders
+letter-starting names first and number-starting names last; its browser check
+also covers filtered order and W-2 selection. Hosted/payment/filing gates remain
+incomplete.

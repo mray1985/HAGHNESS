@@ -1,6 +1,6 @@
 'use strict';
 const byId=id=>document.getElementById(id);
-let csrf='',scope=null,pendingEvent=null,pendingUpload=null,generation=0,uploadRevision=0,entryRevision=0;
+let csrf='',scope=null,pendingEvent=null,pendingUpload=null,generation=0,uploadRevision=0,entryRevision=0,projectionRevision=0;
 const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value/100);
 function status(message){byId('status').textContent=message;}
 async function request(path,body){
@@ -12,12 +12,15 @@ async function request(path,body){
 }
 function scopeQuery(){return new URLSearchParams(scope).toString();}
 async function refresh(){
-  const current=generation;confirmationState=null;syncConfirmationControls();
-  const draft=await request('/api/connected/draft?'+scopeQuery()+'&'+new URLSearchParams({period:byId('period').value,month:byId('month').value}));
-  if(current!==generation)return;
+  const current=generation,projectionToken=++projectionRevision;confirmationState=null;syncConfirmationControls();
+  const isCurrent=()=>current===generation&&projectionToken===projectionRevision;
+  const draft=await request('/api/connected/draft?'+scopeQuery()+'&'+new URLSearchParams({period:byId('period').value,month:byId('month').value,...reserveValues()}));
+  if(!isCurrent())return;
   byId('income').textContent=money(draft.income_minor);byId('expenses').textContent=money(draft.expense_minor);byId('profit').textContent=money(draft.book_profit_minor);
   byId('revision').textContent='Ledger revision '+draft.ledger_revision+' · source entries: '+draft.source_event_ids.join(', ');
-  byId('reserve').textContent='Optional 25% of recorded receipts reserve scenario: '+money(draft.reserve_scenario_minor)+'. No money moved.';
+  byId('reserve').textContent='Reserve scenario: '+draft.reserve_percent+'% of recorded receipts plus '+money(draft.reserve_extra_minor)+' extra = '+money(draft.reserve_scenario_minor)+'. No money moved.';
+  byId('reserve-base').textContent=money(draft.reserve_percentage_minor);byId('reserve-extra').textContent=money(draft.reserve_extra_minor);byId('reserve-total').textContent=money(draft.reserve_scenario_minor);
+  byId('reserve-preview-status').textContent='Preview for the selected '+byId('period').value+'. This is a savings choice, not tax owed or money paid.';
   byId('payments').textContent='Owner payments recorded: '+money(draft.owner_payments_recorded_minor)+' · government-confirmed: '+money(draft.owner_payments_confirmed_minor);
   const list=byId('review-list');list.replaceChildren();
   const completeness=document.createElement('li');completeness.textContent='Entry completeness has not been verified. Check for income or expenses you have not entered. Add a missing transaction under Book entries; attach a missing receipt under Documents. Reviewing receipts does not confirm that every transaction is entered.';list.append(completeness);
@@ -27,22 +30,24 @@ async function refresh(){
   for(const question of draft.support_review_queue||[]){const row=document.createElement('li');row.textContent=question.event_id+': '+question.reasons.map(reason=>reviewReasons[reason]||'Further review needed').join('; ');list.append(row);}
   if(draft.support_review_required.length&&!draft.support_review_queue){const item=document.createElement('li');item.textContent=draft.support_review_required.length+' entries still need their supporting information reviewed. A typed record ID does not establish reviewed support.';list.append(item);}
   const item=document.createElement('li');item.textContent='Confirm income, expense eligibility and support before final return preparation.';list.append(item);
-  await loadConfirmation(draft.ledger_revision);if(current!==generation)return;
-  const entries=await loadEntries();if(current!==generation)return;
+  await loadConfirmation(draft.ledger_revision,projectionToken);if(!isCurrent())return;
+  const entries=await loadEntries();if(!isCurrent())return;
   await loadSupport(entries);
-  if(current!==generation)return;
+  if(!isCurrent())return;
   status('Draft updated from recorded entries. Final tax calculations remain unavailable.');
 }
 function clearOpenCase({keepScopeForm=false}={}){
-  generation++;uploadRevision++;entryRevision++;reviewRevision++;scope=null;
+  generation++;uploadRevision++;entryRevision++;reviewRevision++;projectionRevision++;scope=null;
   pendingEvent=null;pendingUpload=null;pendingReview=null;canReview=false;supportEntries=[];
   confirmationState=null;pendingConfirmation=null;confirmationBusy=false;
   byId('confirmation-form').reset();byId('confirmation-history').replaceChildren();
   byId('confirmation-status').textContent='Open permitted records to check your review status.';
   byId('confirmation-statement').textContent='Review statement will appear after permitted records open.';syncConfirmationControls();
   byId('support-save').disabled=true;byId('support-access').textContent='Open permitted records to check review access.';
-  for(const id of ['entry-form','document-form','support-form'])byId(id).reset();
-  syncEntryMode();
+  for(const id of ['entry-form','document-form','support-form','reserve-form'])byId(id).reset();
+  syncEntryMode();syncReserveChoice();
+  byId('reserve-preview-status').textContent='Open your records to preview a choice.';
+  for(const id of ['reserve-base','reserve-extra','reserve-total'])byId(id).textContent='—';
   if(!keepScopeForm)byId('scope-form').reset();
   for(const id of ['support-history','support-entry','document-list','review-list','entry-history'])byId(id).replaceChildren();
   byId('support-document').replaceChildren(new Option('No document selected',''));
@@ -252,11 +257,11 @@ function syncConfirmationControls(){
   for(const id of ['confirmation-through','confirmation-reason','confirmation-choice'])byId(id).disabled=!allowed;
   byId('confirmation-save').disabled=!allowed||!byId('confirmation-choice').checked;
 }
-async function loadConfirmation(displayedRevision){
+async function loadConfirmation(displayedRevision,projectionToken){
   const current=generation;confirmationState=null;syncConfirmationControls();
   try{
     const view=await request('/api/connected/records/confirmations?'+scopeQuery());
-    if(current!==generation)return;
+    if(current!==generation||projectionToken!==projectionRevision)return;
     confirmationState=view;
     if(view.ledger_revision!==displayedRevision){
       confirmationState.can_confirm=false;
@@ -274,8 +279,8 @@ async function loadConfirmation(displayedRevision){
     byId('confirmation-through').max=view.today<scope.year+'-12-31'?view.today:scope.year+'-12-31';
     byId('confirmation-history').replaceChildren();
     for(const record of view.history){const row=document.createElement('li');row.textContent=record.recorded_at+' · '+record.actor+' · ledger revision '+record.ledger_revision+' · reviewed through '+record.reviewed_through+' · '+record.reason;byId('confirmation-history').append(row);}
-  }catch(error){if(current===generation)byId('confirmation-status').textContent='Review status unavailable: '+error.message;}
-  if(current===generation)syncConfirmationControls();
+  }catch(error){if(current===generation&&projectionToken===projectionRevision)byId('confirmation-status').textContent='Review status unavailable: '+error.message;}
+  if(current===generation&&projectionToken===projectionRevision)syncConfirmationControls();
 }
 byId('confirmation-form').addEventListener('input',()=>{pendingConfirmation=null;syncConfirmationControls();});
 byId('confirmation-form').addEventListener('submit',async event=>{
@@ -291,4 +296,25 @@ byId('confirmation-form').addEventListener('submit',async event=>{
     if(current===generation)status('Your review statement was saved. Receipt review, tax treatment and filing still need their own checks.');
   }catch(error){if(current===generation)byId('confirmation-status').textContent=error.message+' Reopen the case if entries changed; retry preserves the same statement.';}
   finally{if(current===generation){confirmationBusy=false;syncConfirmationControls();}}
+});
+
+function reserveValues(){return {reserve_percent:byId('reserve-percent').value,
+  reserve_extra_choice:byId('reserve-extra-choice').value,
+  reserve_extra_dollars:byId('reserve-extra-choice').value==='yes'?byId('reserve-extra-dollars').value:''};}
+function syncReserveChoice(){
+  const extra=byId('reserve-extra-choice').value==='yes';
+  byId('reserve-extra-label').hidden=!extra;byId('reserve-extra-dollars').disabled=!extra;byId('reserve-extra-dollars').required=extra;
+  if(!extra)byId('reserve-extra-dollars').value='';
+}
+byId('reserve-extra-choice').addEventListener('change',syncReserveChoice);
+byId('reserve-form').addEventListener('input',()=>{
+  projectionRevision++;
+  byId('reserve-preview-status').textContent='Choice changed. Click Preview reserve to calculate it.';
+  for(const id of ['reserve-base','reserve-extra','reserve-total'])byId(id).textContent='—';
+  byId('reserve').textContent='Reserve choice changed; preview it to see the new scenario.';
+});
+byId('reserve-form').addEventListener('submit',async event=>{
+  event.preventDefault();if(!scope){status('Open permitted records first.');return;}
+  const current=generation;const expectedProjection=projectionRevision+1;
+  try{await refresh();}catch(error){if(current===generation&&expectedProjection===projectionRevision)byId('reserve-preview-status').textContent=error.message;}
 });

@@ -34,6 +34,7 @@
       "owned_proxy_stopped": true
     },
     "rendered_browser_checks": {
+      "rendered_reserve_choices_and_periods": "passed",
       "rendered_records_confirmation_saved_and_invalidated": "passed",
       "rendered_tax_save_reload_reopen": "passed",
       "rendered_books_periods_documents_handoff": "passed",
@@ -49,7 +50,7 @@
       "browser_certificate_trust": "not verified; disposable self-signed fixture",
       "browser_storage_empty": true,
       "mobile_overflow": false,
-      "elapsed_seconds": 7.4,
+      "elapsed_seconds": 9.2,
       "timing_scope": "single local fictional browser run, includes browser password/OTP; excludes fixture wait and runtime startup"
     },
     "same_real_mfa_session_tax_save_reopen": "passed",

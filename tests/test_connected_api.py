@@ -140,3 +140,15 @@ class ApiTests(unittest.TestCase):
         handler.respond(fake,503,{'error':'Service unavailable'})
         self.assertTrue(fake.close_connection)
         self.assertEqual(fake.wfile.write.call_count,1)
+
+    def test_read_only_reserve_choice_requires_explicit_extra_and_preserves_ledger(self):
+        scope={'profile':'orchard','business':'business','year':2026}
+        self.request('POST','/api/connected/events',{'scope':scope,'event':{'id':'sale','date':'2026-10-02','kind':'income','amount_minor':150000}})
+        url='/api/connected/draft?profile=orchard&business=business&year=2026&period=month&month=10'
+        status,result=self.request('GET',url+'&reserve_percent=17.25&reserve_extra_choice=yes&reserve_extra_dollars=10.01')
+        self.assertEqual(status,200);self.assertEqual(result['reserve_scenario_minor'],26876)
+        self.assertEqual(result['ledger_revision'],1);self.assertEqual(result['book_profit_minor'],150000)
+        self.assertEqual(self.request('GET',url)[1]['reserve_scenario_minor'],37500)
+        for query in ('reserve_percent=NaN','reserve_percent=101','reserve_extra_choice=no&reserve_extra_dollars=10','reserve_extra_choice=yes&reserve_extra_dollars=1.001'):
+            self.assertEqual(self.request('GET',url+'&'+query)[0],400)
+        self.assertEqual(self.request('GET',url,signed=False)[0],401)

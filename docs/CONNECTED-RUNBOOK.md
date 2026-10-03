@@ -47,3 +47,8 @@ existing users. See RECORD-CONFIRMATIONS.md. Apply its table using the migration
 role and arrange SELECT access for separately managed backup readers, including
 future-object default privileges, before claiming new-table backup coverage.
 User statements do not independently verify complete books or authorize filing.
+
+Reserve choices are read-only previews through the protected draft GET. No new
+migration or payment permission is needed. Percentage and optional extra amount
+clear on refresh or case change. See RESERVE-CHOICE.md for supported values,
+rounding, reporting-period behavior and the actual local MFA browser evidence.

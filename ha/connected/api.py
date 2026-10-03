@@ -166,7 +166,11 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
                     from .access import permitted_cases
                     return self.respond(200,{'cases':permitted_cases(principal,ledger.repository)})
                 if path == '/api/connected/draft' and not mutate:
-                    return self.respond(200,ledger.project(principal,self.scope(query),query.get('period','year'),int(query.get('month','1'))))
+                    from .reserve import reserve_choice
+                    rate,extra=reserve_choice(query.get('reserve_percent','25'),
+                        query.get('reserve_extra_choice','no'),query.get('reserve_extra_dollars',''))
+                    return self.respond(200,ledger.project(principal,self.scope(query),query.get('period','year'),
+                        int(query.get('month','1')),rate,reserve_extra_minor=extra))
                 if path == '/api/connected/events' and not mutate:
                     return self.respond(200,{'events':ledger.history(principal,self.scope(query))})
                 if path == '/api/connected/events' and mutate:

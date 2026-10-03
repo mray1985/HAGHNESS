@@ -51,6 +51,25 @@ class PostgresTests(unittest.TestCase):
         self.assertEqual(draft['owner_payments_confirmed_minor'],0)
         self.assertEqual(len(fresh.history(self.owner,self.scope)),6)
 
+    def test_reserve_choices_are_read_only_and_not_persisted(self):
+        self.ledger.post_event(self.owner, self.scope,
+            dict(id='sale', date='2026-10-02', kind='income', amount_minor=150000))
+        self.ledger.post_event(self.owner, self.scope,
+            dict(id='payment', date='2026-10-02', kind='owner_estimated_tax_payment',
+                 amount_minor=10000, status='recorded_unverified', government_confirmation=None))
+        before = self.ledger.history(self.owner, self.scope)
+        fresh = PostgresLedger(PostgresRepository(DSN))
+        for period in ('month', 'quarter', 'year'):
+            draft = fresh.project(self.owner, self.scope, period, 10, '0.1725', reserve_extra_minor=1001)
+            self.assertEqual(draft['reserve_percentage_minor'], 25875)
+            self.assertEqual(draft['reserve_extra_minor'], 1001)
+            self.assertEqual(draft['reserve_scenario_minor'], 26876)
+            self.assertEqual(draft['book_profit_minor'], 150000)
+            self.assertEqual(draft['owner_payments_recorded_minor'], 10000)
+            self.assertEqual(draft['owner_payments_confirmed_minor'], 0)
+        self.assertEqual(fresh.history(self.owner, self.scope), before)
+        self.assertEqual(fresh.project(self.owner, self.scope, 'year')['reserve_scenario_minor'], 37500)
+
     def test_retry_conflict_and_revoked_membership(self):
         event = dict(id='sale',date='2026-10-02',kind='income',amount_minor=1000)
         self.ledger.post_event(self.owner,self.scope,event)

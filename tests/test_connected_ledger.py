@@ -155,3 +155,23 @@ class LedgerTests(unittest.TestCase):
         for index,value in enumerate(({},[],{'method':'card'},{'evidence':'forged'},{'explanation':True},{'explanation':' '},{'explanation':'x'*2001})):
             with self.subTest(value=value),self.assertRaises(ValueError):self.post({**base,'id':'invalid-'+str(index),'support_changes':value})
         with self.assertRaises(ValueError):self.post({'id':'not-correction','date':'2026-10-01','kind':'income','amount_minor':1000,'support_changes':{'explanation':'New'}})
+
+    def test_chosen_reserve_and_extra_do_not_change_books_or_payments(self):
+        self.post(dict(id='sale',date='2026-10-02',kind='income',amount_minor=150000))
+        self.post(dict(id='payment',date='2026-10-03',kind='owner_estimated_tax_payment',amount_minor=10000,status='recorded_unverified'))
+        before=self.ledger.history(self.owner,self.scope)
+        for period in ('month','quarter','year'):
+            draft=self.ledger.project(self.owner,self.scope,period,10,'0.1725',reserve_extra_minor=1001)
+            self.assertEqual(draft['reserve_percentage_minor'],25875)
+            self.assertEqual(draft['reserve_extra_minor'],1001)
+            self.assertEqual(draft['reserve_scenario_minor'],26876)
+            self.assertEqual(draft['reserve_percent'],'17.25')
+            self.assertEqual(draft['book_profit_minor'],150000)
+            self.assertEqual(draft['owner_payments_recorded_minor'],10000)
+            self.assertEqual(draft['owner_payments_confirmed_minor'],0)
+            self.assertFalse(draft['reserve_moves_money']);self.assertFalse(draft['may_prepare_return'])
+        self.assertEqual(before,self.ledger.history(self.owner,self.scope))
+        for extra in (True,-1,1.5,10**15+1):
+            with self.assertRaises(ValueError):self.ledger.project(self.owner,self.scope,'year',reserve_extra_minor=extra)
+        for rate in ('bad','NaN','Infinity','1.1'):
+            with self.assertRaises(ValueError):self.ledger.project(self.owner,self.scope,'year',reserve_rate=rate)

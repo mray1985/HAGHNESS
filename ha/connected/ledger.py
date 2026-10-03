@@ -6,7 +6,7 @@ inject a transactional durable store; this is not a complete tax engine.
 from copy import deepcopy
 from datetime import date
 from threading import RLock
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from .access import authorize
 
 def has_text(value):
@@ -100,11 +100,16 @@ class Ledger:
         with self.lock:
             return deepcopy(self.store.get(scope, []))
 
-    def project(self, principal, scope, period, month=1, reserve_rate='0.25'):
+    def project(self, principal, scope, period, month=1, reserve_rate='0.25', *, reserve_extra_minor=0):
         authorize(principal, scope, 'read', self.repository)
         if period not in ('month', 'quarter', 'year') or type(month) is not int or not 1 <= month <= 12:
             raise ValueError('Invalid reporting period')
-        rate = Decimal(reserve_rate)
+        try:
+            rate = Decimal(reserve_rate)
+        except (InvalidOperation,TypeError,ValueError):
+            raise ValueError('Invalid reserve rate') from None
+        if type(reserve_extra_minor) is not int or not 0 <= reserve_extra_minor <= 10**15:
+            raise ValueError('Invalid extra reserve amount')
         if not rate.is_finite() or not 0 <= rate <= 1:
             raise ValueError('Invalid reserve rate')
         history = self.history(principal, scope)
@@ -115,9 +120,12 @@ class Ledger:
         expense = sum(e['amount_minor'] for e in effective if e['effective_kind'] in ('expense', 'employee_payroll_obligation'))
         payments = [e for e in effective if e['effective_kind'] == 'owner_estimated_tax_payment']
         operating=[e for e in effective if e['effective_kind'] in ('income','expense','employee_payroll_obligation')]
+        percentage_minor = int((income * rate).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
         return {'ledger_revision': len(history), 'income_minor': income, 'expense_minor': expense,
                 'book_profit_minor': income - expense,
-                'reserve_scenario_minor': int((income * rate).quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
+                'reserve_scenario_minor': percentage_minor + reserve_extra_minor,
+                'reserve_percentage_minor':percentage_minor, 'reserve_extra_minor':reserve_extra_minor,
+                'reserve_percent':format((rate * 100).normalize(),'f'), 'reserve_extra_applies':'once_to_selected_period',
                 'reserve_basis': 'recorded_receipts', 'reserve_moves_money': False,
                 'owner_payments_recorded_minor': sum(e['amount_minor'] for e in payments),
                 'owner_payments_confirmed_minor': sum(e['amount_minor'] for e in payments if e.get('status') == 'government_confirmed'),
