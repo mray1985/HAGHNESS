@@ -60,7 +60,7 @@ For future measurements, record environment, trial ID, start/end UTC, elapsed se
 | Growth proposal | Day 7 says none was written; new unsent discussion draft now saved |
 | Costs/times | Published bank-data rates and one local recovery measurement; five local API workflow timings saved; full quote/provider timings pending |
 
-Current regression checkpoint: 209 tests, 207 passed with real PostgreSQL, two Linux-only tests skipped. Later dated entries below record the intervening changes; older entries describe their checkpoint rather than current limitations. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.
+Current regression checkpoint: 240 tests with real PostgreSQL; 238 passed on Windows and two Linux-only tests passed separately on Linux. Later dated entries below record the intervening changes; older entries describe their checkpoint rather than current limitations. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.
 
 
 ## Real MFA saved-tax-input checkpoint
@@ -121,3 +121,6 @@ October 2: signed-in HA Bookin users can choose their current read-permitted pro
 Fifteen API/access tests passed, including unsigned/logout denial, duplicate grants, another subject's grant, upload-only authority, mismatched profile/business and revocation. The actual Keycloak password/OTP, PostgreSQL and ClamD composed browser probe passed choosing the permitted case and the full existing connected journey. Its automated browser portion measured 7 seconds locally, not customer completion time. Owned services stopped afterward.
 
 The completed run logged a server-side TLS disconnect while a browser navigation cancelled an in-flight response; functional checks passed, but disconnect-log handling remains a follow-up. Query cost currently includes one ownership lookup per distinct granted business; larger firm inventories need a joined/paginated repository query. Labels currently use IDs because a client display-name directory is not implemented. Hosted provider setup and recovery remain unverified. Evidence: KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json.
+
+
+October 2 transport follow-up: deterministic tests reproduced the double-response traceback after BrokenPipeError, ConnectionResetError or TLS SSLEOFError. JSON response socket writes and dispatch now close the disconnected connection without retrying a 503 response. Other exceptions retain normal validation/service-error handling. Full actual PostgreSQL regression: 240 tests, 238 passed on Windows, two Linux-only cleanup tests skipped there and passed separately on Linux. Independent review found no important response defects. Actual password/OTP HTTPS/PG/ClamD rendered journey passed without the previous disconnect traceback; local browser portion measured 5.9 seconds, not customer completion time. Owned services stopped. Hosted provider, recovery and operational gates remain open.

@@ -5,6 +5,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 import json
+import ssl
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 from ha.returns import estimate_w2
@@ -46,16 +47,19 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
 
         def respond(self, status, value, headers=None):
             data = json.dumps(value).encode()
-            self.send_response(status)
-            self.send_header('Content-Type','application/json; charset=utf-8')
-            self.send_header('Content-Length',str(len(data)))
-            self.send_header('Cache-Control','no-store')
-            self.send_header('X-Content-Type-Options','nosniff')
-            self.send_header('Content-Security-Policy',"default-src 'self'; frame-ancestors 'none'; base-uri 'none'")
-            for key, value in headers or []:
-                self.send_header(key,value)
-            self.end_headers()
-            self.wfile.write(data)
+            try:
+                self.send_response(status)
+                self.send_header('Content-Type','application/json; charset=utf-8')
+                self.send_header('Content-Length',str(len(data)))
+                self.send_header('Cache-Control','no-store')
+                self.send_header('X-Content-Type-Options','nosniff')
+                self.send_header('Content-Security-Policy',"default-src 'self'; frame-ancestors 'none'; base-uri 'none'")
+                for key, value in headers or []:
+                    self.send_header(key,value)
+                self.end_headers()
+                self.wfile.write(data)
+            except (BrokenPipeError,ConnectionResetError,ssl.SSLEOFError):
+                self.close_connection=True
 
         def cookies(self):
             jar = SimpleCookie()
@@ -214,6 +218,8 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
                     data = documents.read(principal,self.scope(query),query['document'],query['version'])
                     return self.respond(200,{'data':base64.b64encode(data).decode()})
                 return self.respond(404,{'error':'Resource unavailable'})
+            except (BrokenPipeError,ConnectionResetError,ssl.SSLEOFError):
+                self.close_connection=True
             except PermissionError:
                 self.respond(404,{'error':'Resource unavailable'})
             except RequestVerificationError:

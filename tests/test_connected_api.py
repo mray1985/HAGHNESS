@@ -119,3 +119,24 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request('GET',path)[1],{'cases':[]})
         self.sessions.logout(self.cookie)
         self.assertEqual(self.request('GET',path)[0],401)
+
+    def test_transport_disconnect_ends_response_without_retry(self):
+        import ssl
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        handler=self.server.RequestHandlerClass
+        for error in (BrokenPipeError(),ConnectionResetError(),ssl.SSLEOFError()):
+            fake=SimpleNamespace(path='/api/health',respond=Mock(side_effect=error),close_connection=False)
+            handler.dispatch(fake,False)
+            self.assertEqual(fake.respond.call_count,1)
+            self.assertTrue(fake.close_connection)
+    def test_json_error_response_disconnect_is_quiet(self):
+        import ssl
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        handler=self.server.RequestHandlerClass
+        fake=SimpleNamespace(send_response=Mock(),send_header=Mock(),end_headers=Mock(),
+            wfile=SimpleNamespace(write=Mock(side_effect=ssl.SSLEOFError())),close_connection=False)
+        handler.respond(fake,503,{'error':'Service unavailable'})
+        self.assertTrue(fake.close_connection)
+        self.assertEqual(fake.wfile.write.call_count,1)
