@@ -22,6 +22,9 @@
     "password_direct_grant_disabled": true
   },
   "connected_session_checks": {
+    "document_load_checks": {
+      "document_load": "not_run"
+    },
     "ingress_checks": {
       "mode": "actual local nginx to real HA fixture",
       "hosted_ingress": "not_run",
@@ -45,7 +48,7 @@
       "browser_certificate_trust": "not verified; disposable self-signed fixture",
       "browser_storage_empty": true,
       "mobile_overflow": false,
-      "elapsed_seconds": 6.6,
+      "elapsed_seconds": 7,
       "timing_scope": "single local fictional browser run, includes browser password/OTP; excludes fixture wait and runtime startup"
     },
     "same_real_mfa_session_tax_save_reopen": "passed",

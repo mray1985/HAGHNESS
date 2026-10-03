@@ -112,20 +112,20 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
             query = {k:v[0] for k,v in parse_qs(urlparse(self.path).query).items()}
             try:
                 if not mutate and path == '/api/health':
-                    return self.respond(200,{'ok':True,'connected':True,'login_configured':login is not None,
+                    return self.respond(200,{'ok':True,'connected':True,'tax_workspace':True,'login_configured':login is not None,
                         'documents_configured':documents is not None,'may_prepare_return':False})
                 if mutate and path == '/api/return/estimate':
                     # Stateless arithmetic only: never reads or writes protected records.
                     if int(self.headers.get('Content-Length','0')) > 256 * 1024:
                         raise ValueError('Tax scenario too large')
                     return self.respond(200,estimate_w2(self.payload()))
-                if not mutate and path in ('/','/connected.html','/connected.js','/connected.css','/tax','/return.js','/return.css'):
-                    name = 'connected.html' if path == '/' else 'index.html' if path == '/tax' else path.lstrip('/')
+                if not mutate and path in ('/','/home','/home.html','/home.js','/home.css','/connected.html','/connected.js','/connected.css','/tax','/index.html','/return.js','/return.css'):
+                    name = 'home.html' if path in ('/','/home') else 'index.html' if path == '/tax' else path.lstrip('/')
                     target = WEB / name
                     if not target.is_file():
                         return self.respond(404,{'error':'Page unavailable'})
                     data = target.read_bytes()
-                    if path == "/tax":
+                    if name == "index.html":
                         data = data.replace(b'href="/tools.html">Tax tools',b'href="/connected.html">HA Bookin')
                     self.send_response(200)
                     self.send_header('Content-Type',{'html':'text/html','js':'text/javascript','css':'text/css'}[name.rsplit('.',1)[1]]+'; charset=utf-8')

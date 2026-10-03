@@ -4,14 +4,18 @@
 browser workspace. Calculations are deterministic; optional explanations use
 retrieved public IRS passages and a model running on this machine.
 
-The home page now starts with **About you → Click your form → W-2 confirmation
-→ Layout choice → Matching box entry → State questions → Review**. Multiple
-W-2s and state rows are supported. The live preview currently includes only
-single-filer W-2 wages, the basic standard deduction, ordinary federal brackets
-and box 2 withholding. Other boxes are captured but their tax treatment is
-unfinished. No complete return, official PDF export, document import or filing
-is available. Client identity stays in page memory; refreshing clears entries.
-Use fictional information until durable protected return storage is connected.
+The public home page opens **HA Bookin’** or **HATax**. HATax starts with
+**About you → Click your form → Form confirmation → Layout choice → Matching
+box entry → State questions → Review**. Multiple W-2s and state rows are
+supported; the limited federal estimate includes single-filer wages and
+supported retirement distributions. Other boxes and complete tax treatment
+remain unfinished. No complete return, official PDF export, document import,
+or filing is available.
+
+The standalone tax preview clears entries on refresh. The connected service
+supports protected draft versions and reopening under the same MFA session as
+Bookin’, when identity, database and document services are configured. Use
+fictional information: hosted access, recovery and filing are not verified.
 
 Built from the repository inventory in `HA_GitHub_IRS_100_Page_Inventory_2026-09-29.xlsx`,
 following IRS rules as published. Covers federal Form 1040 core mechanics for
@@ -68,11 +72,27 @@ Zero dependencies. Python 3.10+ standard library only — no `pip install`.
 
 ```bash
 python ha/server.py
-# UI    http://127.0.0.1:8765/
+# Home  http://127.0.0.1:8765/
+# Tax   http://127.0.0.1:8765/tax
 # API   http://127.0.0.1:8765/api/health
 ```
 
 Binds to **loopback only** by default, so it is not reachable from your network.
+
+### Connected public home, Bookin’ and HATax
+
+```powershell
+.venv/Scripts/python.exe -m ha.connected.server --port 8766
+# Home    http://127.0.0.1:8766/
+# Bookin  http://127.0.0.1:8766/connected.html
+# HATax   http://127.0.0.1:8766/tax
+```
+
+Without configuration this opens a locked entrance and fictional stateless
+HATax preview. It does not enable saving or sign-in. Configured protected access
+requires the HTTPS setup in [CONNECTED-RUNBOOK.md](docs/CONNECTED-RUNBOOK.md).
+The home chooser keeps both workspaces on the connected origin, including
+when hosted. See [PUBLIC-WEBSITE.md](docs/PUBLIC-WEBSITE.md).
 
 ### Optional local IRS assistant
 

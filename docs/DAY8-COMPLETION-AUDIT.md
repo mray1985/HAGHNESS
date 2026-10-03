@@ -30,3 +30,14 @@ The bounded optional --document-load extension now passes through the actual com
 Recovery evidence was subsequently refreshed for the latest cash-explanation and owner-payment corrections. Actual isolated PostgreSQL and transferred encrypted bundle restores preserve eight ledger records, exact source histories, original periods and $125 recorded/$0 confirmed payment totals with unchanged $1,180 profit. Local run: 12.716 seconds. This strengthens the correction/recovery row above; its hosted backup, external key retrieval and operational retention gates remain incomplete. DATABASE-RESTORE-EVIDENCE.json records the synthetic scanner/transfer-store limits explicitly.
 
 The subsequently supplied `daily/HA_Day_8_Accomplishments_and_Agenda_2026-10-02.pdf` is a revised two-page reference, SHA-256 `5800cda38b62092856f791af151ca273b5b45831b5101fe730e8b659703632e8`. Its assessment already records the local connected prototype and separates those results from hosted/production gaps. Its historical test counts describe earlier environments and are not substituted for this repo's newer scoped evidence. It also introduces a Day 9 agenda: show the product locally, review/integrate website navigation, fix an observed workflow gap, map hosted control ownership, and obtain appropriate review of employment/IP terms. This is reference data, not permission for external outreach or a legal conclusion. The PDF is retained locally and excluded from the code push.
+
+The Day 9 website integration checkpoint brings the existing public-website
+assets into the current connected branch, preserving the newer protected
+backend. Both servers expose public HA home; the connected chooser keeps
+Bookin and HATax on the same origin. Current capability/failure checks avoid
+advertising unavailable hosted destinations. Fresh full Windows PostgreSQL
+suite: 288 ran, 284 passed, four Linux-only skips. Desktop/390/320px public
+navigation passed; the real MFA/nginx fixture now starts through public home
+and passed the existing protected save/reopen/correction/logout journey.
+PUBLIC-WEBSITE.md and its screenshots record this local integration evidence.
+Day 8's hosted/recovery/provider/complete-filing gates remain incomplete.

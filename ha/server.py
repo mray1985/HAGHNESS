@@ -4,7 +4,8 @@ Standard library only. No Flask, no FastAPI, no pip install. Bind to loopback
 by default so the tool is not exposed to the network.
 
 Routes
-  GET  /                       the AIM-style client
+  GET  /                       public HA website
+  GET  /tax                    HATax form workspace
   GET  /<static>               files from web/
   GET  /api/health             liveness + version
   GET  /api/attestation        full limited-status + coverage + checklist
@@ -129,7 +130,9 @@ class Handler(BaseHTTPRequestHandler):
         route = parsed.path
         query = parse_qs(parsed.query)
 
-        if route in ("/", "/index.html", "/tax"):
+        if route in ("/", "/home", "/home.html"):
+            return self._static("home.html")
+        if route in ("/index.html", "/tax"):
             return self._static("index.html")
         if route.startswith("/api/"):
             return self._api_get(route, query)
@@ -161,6 +164,8 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/api/health":
             return self._send_json({
                 "ok": True,
+                "tax_workspace": True,
+                "connected": False,
                 "disclaimer_short": DISCLAIMER_SHORT,
                 **environment(),
             })
