@@ -1,5 +1,6 @@
 """Actual isolated nginx template probe with fictional upstream; no hosted/MFA claim."""
 import argparse
+from contextlib import contextmanager
 import ctypes
 from datetime import datetime,timedelta,timezone
 import hashlib
@@ -76,6 +77,49 @@ class TempWatcher:
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs):return None
+
+
+@contextmanager
+def connected_proxy(binary,certificate_root,upstream_port,tls_port=8844):
+    """Use the deployment proxy around the real fixture app; no hosted claim."""
+    if os.name!='posix':raise ValueError('Linux proxy probe required')
+    template=Path('deploy/digitalocean/droplet/nginx.conf.example').read_text(encoding='utf-8')
+    report={'mode':'actual local nginx to real HA fixture','hosted_ingress':'not_run'}
+    process=None;watch=None
+    with tempfile.TemporaryDirectory(prefix='ha-connected-proxy-') as folder:
+        root=Path(folder);root.chmod(0o700)
+        try:
+            for name in ('cert.pem','key.pem'):
+                (root/name).write_bytes((certificate_root/name).read_bytes());(root/name).chmod(0o600)
+            directories=('client-temp','proxy-temp','fastcgi-temp','uwsgi-temp','scgi-temp')
+            for name in directories:(root/name).mkdir(mode=0o700)
+            watch=TempWatcher([root/name for name in directories])
+            with socket.socket() as handle:
+                handle.bind(('127.0.0.1',0));http_port=handle.getsockname()[1]
+            (root/'nginx.conf').write_text(fixture_config(template,root,http_port,tls_port,upstream_port),encoding='utf-8')
+            command=[str(Path(binary).resolve(strict=True)),'-p',str(root)+'/', '-c',str(root/'nginx.conf'),'-e','/dev/null']
+            if subprocess.run(command+['-t'],capture_output=True,timeout=10).returncode:raise ValueError('Connected nginx template invalid')
+            process=subprocess.Popen(command,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+            for _ in range(50):
+                if process.poll() is not None:raise ValueError('Connected nginx exited')
+                try:
+                    with socket.create_connection(('127.0.0.1',tls_port),timeout=.2):pass
+                    break
+                except OSError:time.sleep(.1)
+            else:raise ValueError('Connected nginx readiness failed')
+            yield report
+            os.killpg(process.pid,signal.SIGQUIT);process.wait(timeout=5);process=None
+            if watch.changed() or any(any((root/name).iterdir()) for name in directories):raise ValueError('Connected proxy temporary write observed')
+            if (root/'inherited-access.log').read_bytes() or (root/'inherited-error.log').read_bytes():raise ValueError('Connected proxy request log observed')
+            report.update({'template_sha256':hashlib.sha256(template.encode()).hexdigest(),
+                'temporary_body_create_write_events':False,'inherited_request_logs_empty':True,
+                'owned_proxy_stopped':True})
+        finally:
+            if process is not None and process.poll() is None:
+                os.killpg(process.pid,signal.SIGTERM)
+                try:process.wait(timeout=5)
+                except subprocess.TimeoutExpired:os.killpg(process.pid,signal.SIGKILL);process.wait()
+            if watch is not None:watch.close()
 
 
 def run_probe(binary,template):

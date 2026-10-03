@@ -52,10 +52,12 @@ def main():
     parser.add_argument('--realm-file')
     parser.add_argument('--mfa-login',action='store_true')
     parser.add_argument('--connected-session',action='store_true')
+    parser.add_argument('--nginx-proxy')
     parser.add_argument('--otp-enrollment',action='store_true')
     parser.add_argument('--rendered-enrollment',action='store_true')
     parser.add_argument('--automatic-enrollment',action='store_true')
     args=parser.parse_args()
+    if args.nginx_proxy and not args.connected_session:raise ValueError('Proxy probe requires connected session')
     if args.automatic_enrollment and not args.otp_enrollment:raise ValueError('Automatic enrollment requires enrollment fixture')
     if args.rendered_enrollment and not args.otp_enrollment:raise ValueError('Rendered enrollment requires protocol enrollment fixture')
     if args.otp_enrollment and not args.mfa_login:raise ValueError('Enrollment probe requires MFA fixture')
@@ -187,7 +189,7 @@ def main():
                 session_checks={}
                 if args.connected_session:
                     from verify_keycloak_session import verify_session
-                    session_checks=verify_session(origin,context,password,otp_secret,keys,NoRedirect,root)
+                    session_checks=verify_session(origin,context,password,otp_secret,keys,NoRedirect,root,nginx_binary=args.nginx_proxy)
                 report={'environment':'local Ubuntu Keycloak dev runtime only',
                     'https_discovery':'passed','hostname_and_certificate_verification':True,
                     'rsa_keys_available':True,'issuer':discovery['issuer'],

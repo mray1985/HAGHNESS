@@ -44,6 +44,8 @@ Linux native-service, nginx and ClamD settings templates are now in deploy/digit
 
 October 3: actual isolated local nginx now validates the proxy template and fictional redirect/callback, large upload/download, oversized-body rejection and upstream failure paths. An inherited HTTP redirect request-log leak was reproduced and fixed. No temporary-body create/write events or inherited request logs were observed in the covered paths. See NGINX-PROXY-VERIFICATION.md and NGINX-PROXY-EVIDENCE.json. This does not establish hosted ingress or application MFA/storage through nginx; account setup, activation and operational recovery remain pending.
 
+The subsequent optional composed proxy mode now also passes real HA password/OTP, PostgreSQL16, ClamD and encrypted local documents through nginx, including the rendered Bookin/HATax journey. This supersedes the application-through-proxy gap above for local fictional fixtures only. See KEYCLOAK-NGINX-SESSION-EVIDENCE.json and NGINX-PROXY-VERIFICATION.md. Hosted ingress, provider database/Spaces, browser certificate trust, activation and operational recovery remain unverified.
+
 
 ## Read-only account prerequisite check
 

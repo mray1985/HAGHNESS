@@ -3,10 +3,10 @@ from pathlib import Path
 import shutil
 import subprocess
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock,patch
 
 if os.name=='posix':
-    from scripts.verify_keycloak_session import isolated_database
+    from scripts.verify_keycloak_session import isolated_database,session_ingress
 
 @unittest.skipUnless(os.name=='posix','Linux PostgreSQL orchestration only')
 class SessionProbeCleanupTests(unittest.TestCase):
@@ -38,3 +38,21 @@ class SessionProbeCleanupTests(unittest.TestCase):
         root=self.exercise_failed_start(fail_stop=True)
         try:self.assertTrue((root/'data/postmaster.pid').exists())
         finally:shutil.rmtree(root)
+
+    def test_proxy_startup_failure_stops_fixture_application(self):
+        server=Mock();server.server_port=18808
+        with patch('scripts.verify_nginx_proxy.connected_proxy',side_effect=ValueError('fictional proxy failure')):
+            with self.assertRaisesRegex(ValueError,'fictional proxy failure'):
+                with session_ingress(server,Path('/tmp/fictional'),'fictional-nginx'):
+                    self.fail('Failed proxy yielded ingress')
+        server.shutdown.assert_called_once()
+        server.server_close.assert_called_once()
+
+    def test_direct_ingress_exception_stops_fixture_application(self):
+        server=Mock()
+        with self.assertRaisesRegex(ValueError,'fictional workflow failure'):
+            with session_ingress(server,Path('/tmp/fictional'),None) as report:
+                self.assertEqual(report['mode'],'direct fixture HTTPS')
+                raise ValueError('fictional workflow failure')
+        server.shutdown.assert_called_once()
+        server.server_close.assert_called_once()

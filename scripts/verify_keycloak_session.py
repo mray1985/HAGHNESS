@@ -98,7 +98,23 @@ LeaveTemporaryFiles no
                 try:process.wait(timeout=15)
                 except subprocess.TimeoutExpired:process.kill();process.wait()
 
-def verify_session(identity_origin,context,password,secret,keys,no_redirect_class,root):
+@contextmanager
+def session_ingress(server,root,nginx_binary):
+    thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+    try:
+        if nginx_binary:
+            if __package__:
+                from .verify_nginx_proxy import connected_proxy
+            else:
+                from verify_nginx_proxy import connected_proxy
+            with connected_proxy(nginx_binary,root,server.server_port) as report:
+                yield report
+        else:
+            yield {'mode':'direct fixture HTTPS','hosted_ingress':'not_run'}
+    finally:
+        server.shutdown();server.server_close();thread.join(timeout=10)
+
+def verify_session(identity_origin,context,password,secret,keys,no_redirect_class,root,nginx_binary=None):
     # The preceding MFA probe consumed this fixture's current TOTP counter.
     # Wait for the next period instead of relying on reusable OTP policy.
     time.sleep(31-time.time()%30)
@@ -119,27 +135,27 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             return jwt.PyJWK.from_dict(matched[0]).key
         login=KeycloakLogin(identity_origin+'/realms/ha','ha-connected',app_origin+'/api/auth/callback',
             KeycloakVerifier(identity_origin+'/realms/ha','ha-connected',resolve),exchange=exchange)
-        server=create_server(('127.0.0.1',8844),Sessions(),PostgresLedger(repository),documents,login,app_origin)
-        tls=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);tls.minimum_version=ssl.TLSVersion.TLSv1_2
-        tls.load_cert_chain(root/'cert.pem',root/'key.pem');server.socket=tls.wrap_socket(server.socket,server_side=True)
-        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
-        jar=http.cookiejar.CookieJar()
-        opener=urllib.request.build_opener(urllib.request.HTTPSHandler(context=context),
-            urllib.request.HTTPCookieProcessor(jar),no_redirect_class())
-        def call(url,data=None,expected=200,headers=None):
-            try:response=opener.open(urllib.request.Request(url,data=data,headers=headers or {}),timeout=10)
-            except urllib.error.HTTPError as error:response=error
-            with response:
-                status=response.code;body=response.read(200000);result_headers=response.headers
-            if status!=expected:raise ValueError('Unexpected local connected HTTP status: '+str(status))
-            return body,result_headers
-        def api(method,path,payload=None,status=200,csrf=None):
-            headers={'Origin':app_origin}
-            if csrf:headers['X-HA-CSRF']=csrf
-            data=json.dumps(payload).encode() if method=='POST' else None
-            if data is not None:headers['Content-Type']='application/json'
-            return json.loads(call(app_origin+path,data,status,headers)[0])
-        try:
+        server=create_server(('127.0.0.1',0 if nginx_binary else 8844),Sessions(),PostgresLedger(repository),documents,login,app_origin)
+        if not nginx_binary:
+            tls=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);tls.minimum_version=ssl.TLSVersion.TLSv1_2
+            tls.load_cert_chain(root/'cert.pem',root/'key.pem');server.socket=tls.wrap_socket(server.socket,server_side=True)
+        with session_ingress(server,root,nginx_binary) as ingress_checks:
+            jar=http.cookiejar.CookieJar()
+            opener=urllib.request.build_opener(urllib.request.HTTPSHandler(context=context),
+                urllib.request.HTTPCookieProcessor(jar),no_redirect_class())
+            def call(url,data=None,expected=200,headers=None):
+                try:response=opener.open(urllib.request.Request(url,data=data,headers=headers or {}),timeout=10)
+                except urllib.error.HTTPError as error:response=error
+                with response:
+                    status=response.code;body=response.read(200000);result_headers=response.headers
+                if status!=expected:raise ValueError('Unexpected local connected HTTP status: '+str(status))
+                return body,result_headers
+            def api(method,path,payload=None,status=200,csrf=None):
+                headers={'Origin':app_origin}
+                if csrf:headers['X-HA-CSRF']=csrf
+                data=json.dumps(payload).encode() if method=='POST' else None
+                if data is not None:headers['Content-Type']='application/json'
+                return json.loads(call(app_origin+path,data,status,headers)[0])
             api('GET','/api/auth/me',status=401)
             api('GET','/api/connected/cases',status=401)
             _,headers=call(app_origin+'/api/auth/login',expected=302)
@@ -296,7 +312,7 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             api('GET','/api/auth/me',status=401)
             api('GET','/api/connected/draft?'+query,status=401)
             api('GET','/api/connected/tax/inputs?'+query,status=401)
-            return {'rendered_browser_checks':browser_checks,
+            return {'ingress_checks':ingress_checks,'rendered_browser_checks':browser_checks,
                 'same_real_mfa_session_tax_save_reopen':'passed',
                 'tax_original_correction_exact_input_and_metadata':True,'tax_csrf_edit_grant_retry_stale_checks':True,
                 'tax_foreign_revocation_and_logout_denials':True,'tax_reopened_connected_estimate_held':True,
@@ -310,5 +326,3 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
                 'eicar_upload_rejected_without_metadata_or_object':True,'grant_revocation_denies_active_session':True,'callback_replay_rejected':True,'logout_revokes_access':True,
                 'book_profit_minor':118000,'refund_withheld_pending_business_review':True,
                 'hosted_workflow':'not_run','otp_enrollment':'pre-enrolled fictional fixture; not tested'}
-        finally:
-            server.shutdown();server.server_close();thread.join(timeout=10)
