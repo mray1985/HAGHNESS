@@ -25,6 +25,26 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,req,fp,code,msg,headers,newurl):
         return None
 
+def rendered_failure(stderr):
+    """Select fixed diagnostic fields only, ignoring runtime warning lines."""
+    stages={'startup','setup','invalid-setup','invalid-feedback','valid-setup','setup-callback',
+            'fresh-login','fresh-password','fresh-otp','fresh-callback','callback-count','page-errors'}
+    if not isinstance(stderr,str) or len(stderr)>65536:return 'unknown (Error)'
+    for line in stderr.splitlines():
+        try:value=json.loads(line)
+        except (ValueError,TypeError):continue
+        if (not isinstance(value,dict) or value.get('stage') not in stages
+                or value.get('kind') not in {'TimeoutError','AssertionError','Error'}
+                or value.get('error')!='rendered enrollment verification failed'):continue
+        message=value['stage']+' ('+value['kind']
+        for key,label in [('otp_error_visible','OTP error visible'),('password_screen_visible','password screen visible'),
+                         ('setup_secret_submitted_matches','setup secret matches'),('fresh_code_submitted_matches','fresh code matches'),
+                         ('fresh_code_differs_setup','different code')]:
+            if type(value.get(key)) is bool:message+='; '+label+'='+str(value[key])
+        return message+')'
+    return 'unknown (Error)'
+
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--distribution',required=True)
@@ -33,7 +53,9 @@ def main():
     parser.add_argument('--mfa-login',action='store_true')
     parser.add_argument('--connected-session',action='store_true')
     parser.add_argument('--otp-enrollment',action='store_true')
+    parser.add_argument('--rendered-enrollment',action='store_true')
     args=parser.parse_args()
+    if args.rendered_enrollment and not args.otp_enrollment:raise ValueError('Rendered enrollment requires protocol enrollment fixture')
     if args.otp_enrollment and not args.mfa_login:raise ValueError('Enrollment probe requires MFA fixture')
     if args.connected_session and not args.mfa_login:raise ValueError('Connected probe requires MFA fixture')
     if args.mfa_login and not args.realm_file:raise ValueError('MFA probe requires realm file')
@@ -70,6 +92,9 @@ def main():
                     from verify_keycloak_mfa import fixture_enrollment_user,verify_enrollment
                     enrollment_user,enrollment_password=fixture_enrollment_user()
                     realm['users'].append(enrollment_user)
+                    if args.rendered_enrollment:
+                        rendered_user,rendered_password=fixture_enrollment_user('ha-fictional-rendered-enrollment')
+                        realm['users'].append(rendered_user)
             realm_file=root/'ha-realm.json'
             realm_file.write_text(json.dumps(realm),encoding='utf-8')
             realm_file.chmod(0o600)
@@ -144,6 +169,16 @@ def main():
                     else:raise ValueError('Password direct grant accepted')
                 mfa_checks=verify_login(origin,context,password,otp_secret,keys,NoRedirect) if args.mfa_login else {}
                 enrollment_checks=verify_enrollment(origin,context,enrollment_password,keys,NoRedirect) if args.otp_enrollment else {}
+                if args.rendered_enrollment:
+                    node=os.environ.get('HA_MFA_BROWSER_NODE')
+                    if not node:raise ValueError('Explicit browser runtime required')
+                    script=Path(__file__).resolve().with_name('verify_otp_enrollment_browser.cjs')
+                    windows_script=subprocess.run(['wslpath','-w',str(script)],check=True,capture_output=True,text=True).stdout.strip()
+                    rendered=subprocess.run([node,windows_script],input=json.dumps({'origin':origin,
+                        'username':rendered_user['username'],'password':rendered_password,'server_time_ms':time.time()*1000}),capture_output=True,text=True,timeout=120)
+                    rendered_password=''
+                    if rendered.returncode:raise ValueError('Rendered enrollment verification failed at '+rendered_failure(rendered.stderr))
+                    enrollment_checks['rendered_enrollment']=json.loads(rendered.stdout)
                 session_checks={}
                 if args.connected_session:
                     from verify_keycloak_session import verify_session

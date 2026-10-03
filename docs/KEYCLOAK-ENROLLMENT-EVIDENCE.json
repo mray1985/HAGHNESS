@@ -31,7 +31,20 @@
     "fresh_password_alone_requires_otp": true,
     "fresh_authorization_code_replay_rejected": true,
     "secret_handling": "disposable memory and temporary private identity database; not emitted",
-    "rendered_enrollment": "not_run",
+    "rendered_enrollment": {
+      "setup_instructions_and_qr_rendered": true,
+      "invalid_setup_code_keeps_challenge": true,
+      "valid_setup_completes": true,
+      "fresh_password_requires_otp": true,
+      "fresh_enrolled_otp_completes": true,
+      "client_server_counter_differed": false,
+      "code_clock": "Linux identity fixture timestamp; Windows/WSL fixture only",
+      "identity_routes_mocked": false,
+      "ha_callback": "intercepted only for rendered fixture; no HA session claim",
+      "browser_certificate_trust": "not verified; disposable self-signed fixture",
+      "screenshot": "masked setup evidence; QR/instructions and code field concealed",
+      "page_errors": []
+    },
     "device_loss_recovery": "not_run",
     "hosted_enrollment": "not_run"
   },

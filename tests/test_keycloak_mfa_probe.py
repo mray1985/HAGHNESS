@@ -57,3 +57,22 @@ class MFAProbeTests(unittest.TestCase):
         class Loop:
             def open(self,request,timeout):raise HTTPError(origin,302,'Found',{'Location':origin+'/realms/ha/login-actions/setup'},BytesIO())
         with self.assertRaises(ValueError):read_enrollment_page(Loop(),origin,origin)
+
+    def test_rendered_enrollment_fixture_has_separate_account_and_password(self):
+        from scripts.verify_keycloak_mfa import fixture_enrollment_user
+        protocol,password=fixture_enrollment_user()
+        rendered,other=fixture_enrollment_user('ha-fictional-rendered-enrollment')
+        self.assertNotEqual(protocol['username'],rendered['username']);self.assertNotEqual(password,other)
+        self.assertNotEqual(protocol['email'],rendered['email'])
+        self.assertEqual([c['type'] for c in rendered['credentials']],['password'])
+
+    def test_rendered_failure_parser_keeps_only_fixed_labels(self):
+        from scripts.verify_keycloak_runtime import rendered_failure
+        import json
+        value={'stage':'fresh-callback','kind':'TimeoutError','error':'rendered enrollment verification failed',
+               'fresh_code_submitted_matches':True,'secret':'fictional-secret'}
+        result=rendered_failure('runtime warning\n'+json.dumps(value))
+        self.assertIn('fresh-callback',result);self.assertIn('fresh code matches=True',result)
+        self.assertNotIn('fictional-secret',result)
+        self.assertEqual(rendered_failure('x'*65537),'unknown (Error)')
+        self.assertEqual(rendered_failure(json.dumps({**value,'stage':'fictional-secret'})),'unknown (Error)')

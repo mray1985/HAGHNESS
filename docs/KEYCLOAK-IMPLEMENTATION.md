@@ -1,4 +1,4 @@
-# Independent MFA implementation · Keycloak
+# Independent MFA implementation Â· Keycloak
 
 The runtime supports `HA_AUTH_PROVIDER=keycloak` alongside disabled preview
 and optional Cognito. This is code and synthetic-token verification, not a
@@ -148,3 +148,14 @@ Actual Linux HTTPS protocol probe passed with verified hostname/certificate, inv
 For eventual user onboarding, an authorized identity administrator must assign Configure OTP during account setup as appropriate. Test the actual hosted realm/user provisioning policy before inviting people. The fixture's explicit required action does not establish that all hosted new accounts automatically receive it. Lost-device recovery, account identity verification, recovery messaging, rendered enrollment and hosted behavior remain unverified; do not bypass MFA to recover access.
 
 Primary sources: [Keycloak26.8.0 administration guide](https://www.keycloak.org/docs/26.8.0/server_admin/) and [Keycloak OTP setup template](https://github.com/keycloak/keycloak/blob/26.8.0/themes/src/main/resources/theme/base/login/login-config-totp.ftl). This verifier follows the setup form's totpSecret/totp/userLabel fields without changing its authentication policy.
+
+
+## Rendered first-time enrollment - October 3
+
+The optional `--rendered-enrollment` extension now passes against actual local Keycloak screens in headless Edge. A separate fictional password-only account reaches visible setup instructions and QR. An incorrect setup code retains the challenge; correct setup completes, cookies are cleared, and a fresh password login requires the newly enrolled OTP. The next-period OTP completes the fresh login. No browser page errors occurred. Eight targeted fixture/parser/OTP tests and the Node RFC6238 six-digit vector passed. Independent review found no remaining important issues.
+
+Identity screens and routes are real. Only the HA callback is intercepted to verify destination, state and code presence; this rendered enrollment check does not create or claim an HA application session. The separate protocol enrollment check in the same successful run verifies signed-token acceptance and authorization-code replay denial. Existing connected-session evidence covers actual HA cookies, books, documents and saved tax inputs. The setup screenshot masks the entire QR/instructions section and code field; secrets, passwords and tokens are not written to reports or browser state.
+
+Initial rendered attempts rejected a fresh code despite matching setup secret and submitted code. Windows and WSL clocks differed by about five seconds. The verifier now receives the Linux fixture timestamp privately through stdin, uses that clock for both codes, waits to the next period midpoint, and asserts an advanced counter and different code. The run passed after consistent timing. Earlier failures did not record server counters, so their precise cause is not conclusively proven. This changes only disposable test timing, not MFA policy or host clocks. TOTP time-step requirements and test vectors: [RFC6238](https://www.rfc-editor.org/rfc/rfc6238.html).
+
+Successful evidence: KEYCLOAK-ENROLLMENT-EVIDENCE.json. The owned identity runtime stopped after the run. Browser acceptance of the self-signed fixture certificate remains explicit; separate protocol checks verify certificate/hostname trust. Scanning with a physical authenticator, hosted default onboarding, lost-device recovery, DigitalOcean/Spaces and filing remain unverified. This entry supersedes the earlier rendered-enrollment-not-run limitation, not those other gates.

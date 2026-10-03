@@ -104,10 +104,10 @@ def verify_login(origin,context,password,secret,keys,no_redirect_class,username=
         'application_session_reuse':'not_run'}
 
 
-def fixture_enrollment_user():
+def fixture_enrollment_user(username='ha-fictional-enrollment'):
     password=secrets.token_urlsafe(32)
-    return {'username':'ha-fictional-enrollment','enabled':True,
-        'firstName':'Fictional','lastName':'Enrollment','email':'enrollment@example.invalid',
+    return {'username':username,'enabled':True,
+        'firstName':'Fictional','lastName':'Enrollment','email':username+'@example.invalid',
         'emailVerified':True,'requiredActions':['CONFIGURE_TOTP'],
         'credentials':[{'type':'password','value':password,'temporary':False}]},password
 
