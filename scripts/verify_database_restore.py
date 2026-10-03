@@ -37,6 +37,39 @@ ROOT = Path(__file__).resolve().parents[1]
 LOCAL = ROOT / '.connected-local'
 BIN = LOCAL / 'postgresql/pgsql/bin'
 
+LATEST_CORRECTIONS=(
+    dict(id='recovery-cash',date='2026-11-04',kind='correction',replaces='sale-cash',amount_minor=50000,
+         reason='Clarify fictional cash sales',support_changes={'explanation':'Fictional recovery cash clarification'}),
+    dict(id='recovery-payment',date='2026-11-04',kind='correction',replaces='owner-estimate',amount_minor=12500,
+         reason='Correct fictional payment amount'))
+
+
+def verify_latest_corrections(ledger,owner,scope):
+    history={event['id']:event for event in ledger.history(owner,scope)}
+    fixture=json.loads((ROOT/'docs/fixtures/day8-connected-workflow.json').read_text(encoding='utf-8'))
+    expected={event['id']:event for event in fixture['events']}
+    for event_id in ('sale-cash','owner-estimate'):
+        if history[event_id]['source']!=expected[event_id]:raise ValueError('Recovered original source changed')
+    cash,payment=history['recovery-cash'],history['recovery-payment']
+    if (history['sale-cash'].get('explanation')!='Aggregate fictional market sales'
+            or cash.get('explanation')!='Fictional recovery cash clarification'
+            or cash['amount_minor']!=50000 or cash['posting_date']!='2026-10-02'
+            or history['owner-estimate']['amount_minor']!=10000
+            or payment['amount_minor']!=12500 or payment['posting_date']!='2026-10-03'
+            or payment.get('status')!='recorded_unverified' or payment.get('government_confirmation') is not None):
+        raise ValueError('Recovered correction history mismatch')
+    for correction in LATEST_CORRECTIONS:
+        if history[correction['id']]['source']!=correction:raise ValueError('Recovered correction source changed')
+    for period in ('month','quarter','year'):
+        projection=ledger.project(owner,scope,period,10)
+        if (projection['book_profit_minor']!=118000 or projection['reserve_scenario_minor']!=37500
+                or projection['owner_payments_recorded_minor']!=12500 or projection['owner_payments_confirmed_minor']!=0
+                or not {'recovery-cash','recovery-payment'}<=set(projection['source_event_ids'])
+                or {'sale-cash','owner-estimate'}&set(projection['source_event_ids'])):
+            raise ValueError('Recovered correction projection mismatch')
+    return {'original_cash_and_payment_preserved':True,'cash_explanation_amendment_preserved':True,
+            'recorded_payment_minor':12500,'confirmed_payment_minor':0,'original_periods_and_no_double_count':True}
+
 
 def main():
     config = json.loads((LOCAL/'test-database.json').read_text())
@@ -58,10 +91,12 @@ def main():
         conn.execute("INSERT INTO ha_connected.businesses VALUES ('business','orchard'),('cedar-business','cedar')")
         for action in ('read','post','correct','upload','restore','save_tax'):
             conn.execute('INSERT INTO ha_connected.grants VALUES (%s,%s,%s,%s,%s)',('orchard-owner','orchard','business',2026,action))
-    fixture = json.loads((ROOT/'docs/fixtures/day8-connected-workflow.json').read_text())
+    fixture = json.loads((ROOT/'docs/fixtures/day8-connected-workflow.json').read_text(encoding='utf-8'))
     ledger = PostgresLedger(repository)
     for event in fixture['events']:
         ledger.post_event(owner,scope,event)
+    for event in LATEST_CORRECTIONS:ledger.post_event(owner,scope,event)
+    verify_latest_corrections(ledger,owner,scope)
     run_id=uuid.uuid4().hex
     recovery_root=LOCAL/('recovery-'+run_id)
     key_root=LOCAL/'recovery-keys'
@@ -178,6 +213,7 @@ def main():
     if source_version_count!=5 or counts['document_versions']!=4:
         raise ValueError('Exported snapshot included a later committed upload')
     recovered_ledger = PostgresLedger(PostgresRepository(recovered_dsn))
+    latest_correction_checks=verify_latest_corrections(recovered_ledger,owner,scope)
     if recovered_ledger.project(owner,scope,'year')['book_profit_minor'] != 118000:
         raise ValueError('Recovered draft disagrees with fixture')
     try:
@@ -276,6 +312,8 @@ def main():
             'SELECT * FROM ha_connected.document_versions').fetchall()]
     _,transfer_objects=inspect_bundle(downloaded,backup_key_path.read_bytes(),transfer_versions)
     transfer_repo=PostgresRepository(transfer_dsn)
+    if verify_latest_corrections(PostgresLedger(transfer_repo),owner,scope)!=latest_correction_checks:
+        raise ValueError('Transferred correction verification differs')
     if PostgresLedger(transfer_repo).project(owner,scope,'year')['book_profit_minor']!=118000:
         raise ValueError('Transferred books differ')
     recovered_support=recovered_ledger.project(owner,scope,'year')
@@ -361,7 +399,7 @@ def main():
     if any(result['recovery_verified'] or result['archive_integrity_verified'] or result['deletion_authorized'] for result in (current_health,stale_health)):
         raise ValueError('Backup monitor overstates authority')
     elapsed = time.perf_counter()-started
-    report = {'environment':'local fictional PostgreSQL only','database_restore':'passed','database_backup_encryption':'passed_authenticated_stream', 'database_recovery_key':'separate ignored recovery-key file; excluded from archive','tables':counts,
+    report = {'latest_correction_restore_checks':latest_correction_checks,'environment':'local fictional PostgreSQL only','database_restore':'passed','database_backup_encryption':'passed_authenticated_stream', 'database_recovery_key':'separate ignored recovery-key file; excluded from archive','tables':counts,
               'elapsed_seconds':round(elapsed,3),'source_database_preserved':True,'fixture_source':'new isolated database; existing test data untouched',
               'recovered_book_profit_minor':118000,'recovered_cross_profile_denial':'passed',
               'aws_backup_restore':'not_run','document_object_restore':'passed_local_encrypted_files',

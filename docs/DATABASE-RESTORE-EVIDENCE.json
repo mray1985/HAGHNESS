@@ -1,4 +1,11 @@
 {
+  "latest_correction_restore_checks": {
+    "original_cash_and_payment_preserved": true,
+    "cash_explanation_amendment_preserved": true,
+    "recorded_payment_minor": 12500,
+    "confirmed_payment_minor": 0,
+    "original_periods_and_no_double_count": true
+  },
   "environment": "local fictional PostgreSQL only",
   "database_restore": "passed",
   "database_backup_encryption": "passed_authenticated_stream",
@@ -7,12 +14,12 @@
     "profiles": 2,
     "businesses": 2,
     "grants": 6,
-    "ledger_events": 6,
+    "ledger_events": 8,
     "document_versions": 4,
     "support_reviews": 1,
     "tax_input_versions": 2
   },
-  "elapsed_seconds": 9.62,
+  "elapsed_seconds": 12.716,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,
