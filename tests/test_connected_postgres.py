@@ -12,6 +12,22 @@ DSN = os.environ.get('HA_TEST_DATABASE_URL')
 
 @unittest.skipUnless(DSN, 'Real PostgreSQL test configuration unavailable')
 class PostgresTests(unittest.TestCase):
+    def test_payment_correction_is_durable_without_confirmation_or_profit_change(self):
+        original=dict(id='owner-payment',date='2026-10-02',kind='owner_estimated_tax_payment',amount_minor=10000,status='recorded_unverified',government_confirmation=None)
+        self.ledger.post_event(self.owner,self.scope,original)
+        fixed=dict(id='owner-payment-fixed',date='2026-11-02',kind='correction',replaces='owner-payment',amount_minor=12500,reason='Correct recorded payment amount')
+        self.ledger.post_event(self.owner,self.scope,fixed)
+        fresh=PostgresLedger(PostgresRepository(DSN));fresh.post_event(self.owner,self.scope,fixed)
+        history=fresh.history(self.owner,self.scope)
+        self.assertEqual(len(history),2);self.assertEqual(history[0]['source'],original)
+        self.assertEqual(history[1]['status'],'recorded_unverified');self.assertIsNone(history[1]['government_confirmation'])
+        draft=fresh.project(self.owner,self.scope,'month',10)
+        self.assertEqual(draft['owner_payments_recorded_minor'],12500);self.assertEqual(draft['owner_payments_confirmed_minor'],0)
+        self.assertEqual(draft['book_profit_minor'],0)
+        with self.assertRaises(ValueError):fresh.post_event(self.owner,self.scope,{**fixed,'id':'forged','replaces':'owner-payment-fixed','status':'government_confirmed'})
+        with self.repo.transaction() as conn:conn.execute("DELETE FROM ha_connected.grants WHERE action='correct'")
+        with self.assertRaises(PermissionError):fresh.post_event(self.owner,self.scope,{**fixed,'id':'denied','replaces':'owner-payment-fixed'})
+
     def setUp(self):
         self.repo = PostgresRepository(DSN)
         self.repo.migrate()

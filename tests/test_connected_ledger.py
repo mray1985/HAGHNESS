@@ -8,6 +8,29 @@ from ha.connected.ledger import Ledger
 
 
 class LedgerTests(unittest.TestCase):
+    def test_payment_correction_preserves_original_and_unverified_status(self):
+        original=dict(id='payment',date='2026-10-01',kind='owner_estimated_tax_payment',amount_minor=10000,status='recorded_unverified',government_confirmation=None,method='card')
+        self.post(original)
+        correction=dict(id='payment-fixed',date='2026-11-02',kind='correction',replaces='payment',amount_minor=12500,reason='Correct recorded amount')
+        fixed=self.post(correction)
+        self.assertEqual(self.post(correction),fixed)
+        self.assertEqual(fixed['status'],'recorded_unverified')
+        self.assertIsNone(fixed['government_confirmation'])
+        self.assertEqual(fixed['posting_date'],'2026-10-01')
+        self.assertEqual(self.ledger.history(self.owner,self.scope)[0]['source'],original)
+        for period in ('month','quarter','year'):
+            draft=self.ledger.project(self.owner,self.scope,period,10)
+            self.assertEqual(draft['owner_payments_recorded_minor'],12500)
+            self.assertEqual(draft['owner_payments_confirmed_minor'],0)
+            self.assertEqual(draft['book_profit_minor'],0)
+            self.assertEqual(draft['reserve_scenario_minor'],0)
+        for patch in ({'status':'government_confirmed'},{'status':'recorded_unverified'},{'government_confirmation':'fictional claim'},{'government_confirmation':None}):
+            with self.assertRaises(ValueError):self.post({**correction,'id':'forged','replaces':'payment-fixed',**patch})
+        with self.assertRaises(ValueError):self.post({**correction,'id':'stale'})
+        with self.assertRaises(ValueError):self.post({**correction,'id':'blank-reason','replaces':'payment-fixed','reason':'   '})
+        self.ledger.store[self.scope][-1].update(status='government_confirmed',government_confirmation='fictional legacy confirmation')
+        with self.assertRaises(ValueError):self.post({**correction,'id':'confirmed','replaces':'payment-fixed'})
+
     def test_source_review_claims_cannot_clear_support_queue(self):
         self.setUp()
         self.post({'id':'cash','date':'2026-10-01','kind':'income','amount_minor':1000,'method':'cash','explanation':'   ','reviewed':True})

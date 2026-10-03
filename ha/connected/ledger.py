@@ -56,8 +56,12 @@ class Ledger:
             if kind == 'correction':
                 authorize(principal, scope, 'correct', self.repository)
                 old = next((e for e in effective if e['id'] == event.get('replaces')), None)
-                if old is None or old['effective_kind'] not in ('income', 'expense') or not event.get('reason'):
-                    raise ValueError('Correction requires current operating event and reason')
+                if old is None or old['effective_kind'] not in ('income', 'expense','owner_estimated_tax_payment') or not has_text(event.get('reason')):
+                    raise ValueError('Correction requires current correctable event and reason')
+                if old['effective_kind']=='owner_estimated_tax_payment':
+                    if (old.get('status')!='recorded_unverified' or old.get('government_confirmation')
+                            or 'status' in event or 'government_confirmation' in event):
+                        raise ValueError('Payment correction cannot change government confirmation')
                 effective_kind = old['effective_kind']
                 evidence = old.get('evidence')
                 posting_date = old['posting_date']
@@ -81,6 +85,8 @@ class Ledger:
                       'evidence': evidence, 'posting_date': posting_date, 'postings': postings,
                       'method':method,'explanation':explanation,
                       'replacement_postings': [{'account': debit, 'amount_minor': amount}, {'account': credit, 'amount_minor': -amount}]}
+            if kind=='correction' and effective_kind=='owner_estimated_tax_payment':
+                record.update(status='recorded_unverified',government_confirmation=None)
             events.append(record)
             return deepcopy(record)
 

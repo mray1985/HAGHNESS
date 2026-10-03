@@ -70,6 +70,21 @@ let stage='startup';
       assert.equal(await page.locator('#profit').innerText(),'$1,180.00');
       assert.equal(await page.locator('#expenses').innerText(),'$320.00');
     }
+    stage='payment-correction-save';
+    await page.locator('#entry-history li[data-entry="owner-estimate"]').getByRole('button',{name:'Correct this entry'}).click();
+    assert.equal(await page.locator('#entry-form [name=amount]').inputValue(),'100.00');
+    await page.locator('#entry-form [name=amount]').fill('125.00');
+    await page.locator('#entry-form [name=reason]').fill('Correct fictional recorded payment amount');
+    const paymentSaved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/connected/events'&&r.request().method()==='POST');
+    await page.locator('#entry-form button').click();const paymentResponse=await paymentSaved;assert.equal(paymentResponse.status(),201);const paymentId=(await paymentResponse.json()).id;
+    await page.waitForFunction(()=>document.querySelector('#payments').textContent.includes('recorded: $125.00'));
+    stage='payment-correction-reopen';
+    const paymentHistory=await(await context.request.get(fixture.origin+'/api/connected/events?profile=orchard&business=business&year=2026')).json();
+    const priorPayment=paymentHistory.events.find(entry=>entry.id==='owner-estimate'),correctedPayment=paymentHistory.events.find(entry=>entry.id===paymentId);
+    assert.equal(priorPayment.amount_minor,10000);assert.equal(priorPayment.status,'recorded_unverified');
+    assert.equal(correctedPayment.amount_minor,12500);assert.equal(correctedPayment.status,'recorded_unverified');assert.equal(correctedPayment.government_confirmation,null);assert.equal(correctedPayment.posting_date,priorPayment.posting_date);
+    assert.match(await page.locator('#payments').innerText(),/recorded: \$125\.00.*confirmed: \$0\.00/);
+    assert.equal(await page.locator('#profit').innerText(),'$1,180.00');
     stage='cash-explanation-save';
     await page.locator('#entry-history li[data-entry="sale-cash"]').getByRole('button',{name:'Correct this entry'}).click();
     assert.equal(await page.locator('#entry-form [name=amount]').inputValue(),'500.00');
@@ -154,7 +169,7 @@ let stage='startup';
     assert.equal((await context.request.get(fixture.origin+'/api/connected/tax/inputs?profile=orchard&business=business&year=2026')).status(),401);
     assert.deepEqual(errors,[]);
     console.log(JSON.stringify({rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
-      rendered_document_list_download_and_correction_choice:'passed',rendered_cash_explanation_amendment_persisted:'passed',rendered_entry_history_correction_choice:'passed',rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
+      rendered_document_list_download_and_correction_choice:'passed',rendered_cash_explanation_amendment_persisted:'passed',rendered_payment_correction_preserves_unverified_original:'passed',rendered_entry_history_correction_choice:'passed',rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
       authentication:'actual browser password and OTP through HTTPS callback',browser_certificate_trust:'not verified; disposable self-signed fixture',
       browser_storage_empty:true,mobile_overflow:false,
       elapsed_seconds:Math.round((performance.now()-started)/100)/10,
