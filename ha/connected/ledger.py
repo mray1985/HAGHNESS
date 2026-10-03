@@ -56,7 +56,7 @@ class Ledger:
             if kind == 'correction':
                 authorize(principal, scope, 'correct', self.repository)
                 old = next((e for e in effective if e['id'] == event.get('replaces')), None)
-                if old is None or old['effective_kind'] not in ('income', 'expense','owner_estimated_tax_payment') or not has_text(event.get('reason')):
+                if old is None or old['effective_kind'] not in ('income', 'expense','owner_estimated_tax_payment','employee_payroll_obligation') or not has_text(event.get('reason')):
                     raise ValueError('Correction requires current correctable event and reason')
                 if old['effective_kind']=='owner_estimated_tax_payment':
                     if (old.get('status')!='recorded_unverified' or old.get('government_confirmation')

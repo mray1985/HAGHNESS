@@ -70,6 +70,28 @@ class PostgresTests(unittest.TestCase):
         self.assertEqual(fresh.history(self.owner, self.scope), before)
         self.assertEqual(fresh.project(self.owner, self.scope, 'year')['reserve_scenario_minor'], 37500)
 
+    def test_payroll_correction_is_durable_separate_and_permission_checked(self):
+        original=dict(id='payroll',date='2026-10-01',kind='employee_payroll_obligation',amount_minor=20000)
+        self.ledger.post_event(self.owner,self.scope,original)
+        self.ledger.post_event(self.owner,self.scope,dict(id='payment',date='2026-10-01',
+            kind='owner_estimated_tax_payment',amount_minor=10000,status='recorded_unverified',government_confirmation=None))
+        correction=dict(id='payroll-fixed',date='2026-11-02',kind='correction',replaces='payroll',amount_minor=25000,reason='Correct accrual')
+        fresh=PostgresLedger(PostgresRepository(DSN))
+        fresh.post_event(self.owner,self.scope,correction)
+        fresh.post_event(self.owner,self.scope,correction)
+        history=fresh.history(self.owner,self.scope)
+        self.assertEqual(len(history),3)
+        self.assertEqual(history[0]['source'],original)
+        self.assertEqual(history[-1]['effective_kind'],'employee_payroll_obligation')
+        for period in ('month','quarter','year'):
+            draft=fresh.project(self.owner,self.scope,period,10)
+            self.assertEqual(draft['expense_minor'],25000)
+            self.assertEqual(draft['owner_payments_recorded_minor'],10000)
+            self.assertEqual(draft['owner_payments_confirmed_minor'],0)
+        with self.repo.transaction() as conn:conn.execute("DELETE FROM ha_connected.grants WHERE action='correct'")
+        with self.assertRaises(PermissionError):fresh.post_event(self.owner,self.scope,{**correction,'id':'denied','replaces':'payroll-fixed'})
+        self.assertEqual(len(fresh.history(self.owner,self.scope)),3)
+
     def test_retry_conflict_and_revoked_membership(self):
         event = dict(id='sale',date='2026-10-02',kind='income',amount_minor=1000)
         self.ledger.post_event(self.owner,self.scope,event)
@@ -514,8 +536,19 @@ class PostgresTests(unittest.TestCase):
         self.assertEqual(request('POST',path,wrongyear)[0],404)
         bad={**body,'save':{**body['save'],'input':{**value,'year':'2025'}}}
         self.assertEqual(request('POST',path,bad)[0],400)
-        oversized={**body,'save':{**body['save'],'input':{'huge':'x'*524288}}}
-        self.assertEqual(request('POST',path,oversized)[0],400)
+        # Verify rejection before body parsing. Sending the oversized body while
+        # the server closes can produce a platform-dependent TCP reset instead
+        # of delivering its HTTP response to this test client.
+        oversized_client=http.client.HTTPConnection(*server.server_address,timeout=5)
+        try:
+            oversized_client.request('POST',path,None,{'Content-Length':'524289',
+                'Content-Type':'application/json','Origin':'https://ha.example',
+                'Cookie':'__Host-ha_session='+cookie,'X-HA-CSRF':csrf})
+            rejected=oversized_client.getresponse()
+            self.assertEqual(rejected.status,400)
+            rejected.read()
+        finally:oversized_client.close()
+        self.assertEqual(request('GET',path+query)[1]['history'][0]['snapshot_id'],saved[1]['snapshot_id'])
         with self.repo.transaction() as conn:
             conn.execute("DELETE FROM ha_connected.grants WHERE action='save_tax'")
         self.assertFalse(request('GET',path+query)[1]['can_save'])

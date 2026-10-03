@@ -46,6 +46,32 @@ class LedgerTests(unittest.TestCase):
         self.ledger.store[self.scope][-1].update(status='government_confirmed',government_confirmation='fictional legacy confirmation')
         with self.assertRaises(ValueError):self.post({**correction,'id':'confirmed','replaces':'payment-fixed'})
 
+    def test_payroll_correction_preserves_obligation_and_original_period(self):
+        original=dict(id='payroll',date='2026-10-01',kind='employee_payroll_obligation',
+            amount_minor=20000,evidence='fictional payroll report')
+        self.post(original)
+        correction=dict(id='payroll-fixed',date='2026-11-02',kind='correction',
+            replaces='payroll',amount_minor=25000,reason='Correct fictional accrued amount')
+        fixed=self.post(correction)
+        self.assertEqual(self.post(correction),fixed)
+        self.assertEqual(fixed['effective_kind'],'employee_payroll_obligation')
+        self.assertEqual(fixed['posting_date'],'2026-10-01')
+        self.assertEqual(fixed['evidence'],'fictional payroll report')
+        self.assertEqual(fixed['replacement_postings'],[
+            {'account':'payroll_expense','amount_minor':25000},
+            {'account':'payroll_payable','amount_minor':-25000}])
+        self.assertEqual(sum(p['amount_minor'] for p in fixed['postings']),0)
+        self.assertEqual(self.ledger.history(self.owner,self.scope)[0]['source'],original)
+        for period in ('month','quarter','year'):
+            draft=self.ledger.project(self.owner,self.scope,period,10)
+            self.assertEqual(draft['expense_minor'],25000)
+            self.assertEqual(draft['book_profit_minor'],-25000)
+            self.assertEqual(draft['owner_payments_recorded_minor'],0)
+            self.assertEqual(draft['owner_payments_confirmed_minor'],0)
+        self.assertEqual(self.ledger.project(self.owner,self.scope,'month',11)['expense_minor'],0)
+        with self.assertRaises(ValueError):self.post({**correction,'id':'stale'})
+        with self.assertRaises(ValueError):self.post({**correction,'id':'no-reason','replaces':'payroll-fixed','reason':' '})
+
     def test_source_review_claims_cannot_clear_support_queue(self):
         self.setUp()
         self.post({'id':'cash','date':'2026-10-01','kind':'income','amount_minor':1000,'method':'cash','explanation':'   ','reviewed':True})

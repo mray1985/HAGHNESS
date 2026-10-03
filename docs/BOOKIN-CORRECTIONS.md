@@ -1,6 +1,6 @@
 # Correct a recorded entry in HA Bookin
 
-Open your permitted business and tax year, then find the current income, expense or unverified owner estimated-tax payment entry in Recorded entry history. Choose **Correct this entry**. The entry ID and current amount are filled for you.
+Open your permitted business and tax year, then find the current income, expense, employee payroll obligation or unverified owner estimated-tax payment entry in Recorded entry history. Choose **Correct this entry**. The entry ID and current amount are filled for you.
 
 For a cash explanation, choose **Add or replace the explanation**, enter the explanation, and explain why the record changed. Leave the amount unchanged if only the explanation changes. Choose **Keep the recorded explanation** for an ordinary amount correction, or **Clear the recorded explanation** to explicitly withdraw it. Save the correction.
 
@@ -8,7 +8,9 @@ The original stays in history. The current correction preserves the original pos
 
 To resolve a missing receipt, upload the document under Supporting documents. A reviewer with explicit permission can select the current entry and current document version under Review supporting records and record a decision. A typed supporting-record ID alone does not establish reviewed support. Book profit, recorded tax payments and money actually confirmed paid remain separate; these controls do not authorize filing or initiate payments.
 
-For an owner estimated-tax payment record, enter the replacement amount and explain why the recorded amount changed. This corrects the record only: it does not send money, cancel a government payment or establish government confirmation. The original stays in history and the correction counts once on its original posting date. Recorded payments remain separate from business expenses/profit, reserve scenarios and confirmed payments. Employee payroll corrections and changes to government-confirmed records are not enabled by this action.
+For an owner estimated-tax payment record, enter the replacement amount and explain why the recorded amount changed. This corrects the record only: it does not send money, cancel a government payment or establish government confirmation. The original stays in history and the correction counts once on its original posting date. Recorded payments remain separate from business expenses/profit, reserve scenarios and confirmed payments. Changes to government-confirmed owner payment records are not enabled by this action.
+
+For an employee payroll obligation, correct the recorded accrued amount and supply a reason. The replacement retains the payroll expense/payroll payable account pair and original posting date. It reverses the prior amount and counts the new amount once; it does not turn the obligation into a cash payment or owner estimated-tax payment. This is a bookkeeping correction, not a payroll calculation, deposit or determination of tax deductibility. Original and replacement records remain available, and supporting review must address the changed entry.
 
 Payment correction API: use the existing correction envelope with the current payment's ID in `replaces`, the replacement `amount_minor`, and a nonblank `reason`. Post and correct grants are required. Omit `status` and `government_confirmation`; any such field in a payment correction is rejected. The service inherits only an unverified payment and records its replacement as `recorded_unverified` with null confirmation. Superseded or confirmed records cannot be corrected through this path.
 
@@ -33,3 +35,14 @@ and completeness of entered records. This remains self-reported, preserves
 history and becomes stale after a ledger change. It does not change the unknown
 missing-entry count, independent completeness status, receipt review or filing
 authority. See RECORD-CONFIRMATIONS.md for exact scope and verification.
+
+Payroll correction verification: 300 PostgreSQL tests ran; 296 passed and four
+Linux-only checks were skipped on Windows. The actual local MFA/nginx browser
+fixture records a $200 employee payroll obligation, corrects it to $250, preserves
+both source records and the payroll account type, and counts $250 once in book
+expenses. Owner payments remain $125 recorded/$0 government-confirmed. The
+protected tax draft remains held pending business review. Browser evidence is
+in KEYCLOAK-NGINX-SESSION-EVIDENCE.json; its rendered portion measured 23.4
+seconds in this fictional local run, excluding fixture startup/waits. This does
+not verify hosted payroll, deposits, tax deductibility or the new payroll fixture's
+backup recovery.

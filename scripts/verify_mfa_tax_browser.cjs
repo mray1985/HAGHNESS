@@ -183,6 +183,33 @@ let stage='startup';
     assert.ok(await page.locator('#entry-form [name=replaces]').inputValue());
     assert.equal(await page.locator('#entry-form [name=reason]').inputValue(),'');
     assert.equal(await page.locator('#entry-form [name=method]').isDisabled(),true);
+    stage='payroll-correction';
+    await page.locator('#entry-form [name=kind]').selectOption('employee_payroll_obligation');
+    await page.locator('#entry-form [name=date]').fill('2026-10-02');
+    await page.locator('#entry-form [name=amount]').fill('200.00');
+    const payrollPosted=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/connected/events'&&r.request().method()==='POST');
+    await page.locator('#entry-form button').click();
+    const payrollResponse=await payrollPosted;assert.equal(payrollResponse.status(),201);
+    const payrollId=(await payrollResponse.json()).id;
+    await page.waitForFunction(id=>document.querySelector('#entry-history li[data-entry="'+id+'"]')!==null,payrollId);
+    await page.locator('#entry-history li[data-entry="'+payrollId+'"]').getByRole('button',{name:'Correct this entry'}).click();
+    assert.equal(await page.locator('#entry-form [name=amount]').inputValue(),'200.00');
+    await page.locator('#entry-form [name=amount]').fill('250.00');
+    await page.locator('#entry-form [name=reason]').fill('Correct fictional accrued payroll amount');
+    const payrollFixed=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/connected/events'&&r.request().method()==='POST');
+    await page.locator('#entry-form button').click();
+    const payrollFixedResponse=await payrollFixed;assert.equal(payrollFixedResponse.status(),201);
+    const payrollFixedId=(await payrollFixedResponse.json()).id;
+    await page.waitForFunction(()=>document.querySelector('#profit').textContent==='$930.00');
+    assert.equal(await page.locator('#expenses').innerText(),'$570.00');
+    assert.match(await page.locator('#payments').innerText(),/recorded: \$125\.00.*confirmed: \$0\.00/);
+    const payrollHistory=await(await context.request.get(fixture.origin+'/api/connected/events?profile=orchard&business=business&year=2026')).json();
+    const payrollOriginal=payrollHistory.events.find(e=>e.id===payrollId),payrollReplacement=payrollHistory.events.find(e=>e.id===payrollFixedId);
+    assert.equal(payrollOriginal.amount_minor,20000);assert.equal(payrollReplacement.amount_minor,25000);
+    assert.equal(payrollReplacement.effective_kind,'employee_payroll_obligation');
+    assert.equal(payrollReplacement.posting_date,payrollOriginal.posting_date);
+    await page.waitForLoadState('networkidle');
+    assert.equal(await page.locator('#entry-history li[data-entry="'+payrollId+'"]').getByRole('button',{name:'Correct this entry'}).count(),0);
     stage='foreign-scope';
     await page.locator('#manual-scope summary').click();
     await page.locator('#scope-form [name=profile]').fill('cedar');
@@ -236,7 +263,7 @@ let stage='startup';
     await page.locator('#login-panel').waitFor({state:'visible'});
     assert.equal((await context.request.get(fixture.origin+'/api/connected/tax/inputs?profile=orchard&business=business&year=2026')).status(),401);
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({rendered_reserve_choices_and_periods:'passed',rendered_records_confirmation_saved_and_invalidated:'passed',rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
+    console.log(JSON.stringify({rendered_payroll_correction_preserves_obligation:'passed',rendered_reserve_choices_and_periods:'passed',rendered_records_confirmation_saved_and_invalidated:'passed',rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
       rendered_document_list_download_and_correction_choice:'passed',rendered_cash_explanation_amendment_persisted:'passed',rendered_payment_correction_preserves_unverified_original:'passed',rendered_entry_history_correction_choice:'passed',rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
       authentication:'actual browser password and OTP through HTTPS callback',browser_certificate_trust:'not verified; disposable self-signed fixture',
       browser_storage_empty:true,mobile_overflow:false,

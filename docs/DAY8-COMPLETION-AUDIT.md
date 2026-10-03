@@ -6,7 +6,7 @@ October 3, 2026. Current repository evidence was inspected after commit 7c0f587.
 |---|---|---|
 | Identify repository and select hosting/database/authentication/private storage | Repository HAGHNESS, development branch codex/connected-books; DigitalOcean native Droplet + managed PostgreSQL + private Spaces + Keycloak selected in DIGITALOCEAN-IMPLEMENTATION.md | Actual account/team, region, checkout costs, native service activation and hosted services |
 | Profile/business/year document links, one MFA session and unrelated-profile denial | Real Keycloak password/OTP, PostgreSQL16, ClamD, encrypted local objects and nginx API/browser fixture in KEYCLOAK-NGINX-SESSION-EVIDENCE.json; protected books/documents/tax reuse, CSRF/replay/revocation/logout checks | Repeat against deployed identity/database/Spaces; verify hosted browser certificate trust and lost-device recovery |
-| Preserve originals and record corrections | Append-only ledger and document versions, protected encrypted tax draft history; actual browser income explanation and owner payment correction with stored original/replacement readback | Hosted original/version permissions and administrator controls; employee payroll corrections remain unsupported |
+| Preserve originals and record corrections | Append-only ledger and document versions, protected encrypted tax draft history; actual browser income explanation and owner payment correction with stored original/replacement readback | Hosted original/version permissions and administrator controls; local employee payroll amount corrections now preserve their account type; hosted controls remain unverified |
 | Choose backup storage/retention and restore fictional records | Separate backup target design, 35 daily/12 monthly retention planning, disabled runner/health tools; actual isolated PostgreSQL/encrypted bundle restore in DATABASE-RESTORE-EVIDENCE.json | Live separately controlled backup storage, activated schedule/alerts/retention, independent external key retrieval and isolated hosted recovery |
 | Fictional card/cash, missing receipt, monthly/quarterly/yearly totals, correction and recorded tax payment feed HATax | docs/fixtures/day8-connected-workflow.json and real composed fixture; $1,180 profit, original histories, recorded versus confirmed payment distinction, tax save/reopen and combined estimate held | Hosted repeat, verified transaction completeness, business tax adjustments and complete state/federal filing workflow |
 | Carry Schwab proposal forward | SCHWAB-PROPOSAL-DRAFT.md, exploratory proposal and eligibility/consent/funding-year questions; no outreach performed | User/provider-approved contact, agreement and technical access; no partnership or funding promise |
@@ -70,3 +70,19 @@ RESERVE-CHOICE.md records the scope and screenshot. The form picker now orders
 letter-starting names first and number-starting names last; its browser check
 also covers filtered order and W-2 selection. Hosted/payment/filing gates remain
 incomplete.
+
+The payroll-obligation correction checkpoint adds current-entry amount correction
+with preserved original posting date and payroll expense/payroll payable accounts.
+It retains original and replacement records, requires post/correct permissions,
+and leaves owner estimated-payment totals separate. Fresh PostgreSQL suite:
+300 ran, 296 passed, four Linux-only checks skipped. An existing oversized POST
+check now sends an oversized declared length without a competing body upload,
+verifying early 400 rejection and unchanged saved history without Windows TCP
+reset races. Actual local MFA/nginx browser checks passed $200 to $250 payroll
+correction, preserved original/history, $570 expenses/$930 book profit, $125
+owner payments recorded/$0 confirmed, and the existing reserve/document/tax
+save/reopen/isolation/logout journey. Rendered portion: 23.4 seconds including
+password/OTP, excluding startup/waits. This is a recorded obligation correction,
+not payroll calculation, payment or verified tax treatment. Latest standalone
+restore evidence predates this new payroll fixture; hosted recovery and other
+release gates remain incomplete.

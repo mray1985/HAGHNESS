@@ -81,7 +81,7 @@ async function loadEntries(){
     for(const entry of result.events){
       const item=document.createElement('li'),description=document.createElement('p');item.dataset.entry=entry.id;
       description.textContent=entry.posting_date+' | '+(labels[entry.effective_kind]||'Recorded entry')+' | '+money(entry.amount_minor)+' | '+(entry.category||'No category')+' | '+entry.id+' | '+(replaced.has(entry.id)?'Earlier entry':'Current entry');item.append(description);
-      if(!replaced.has(entry.id)&&(['income','expense'].includes(entry.effective_kind)||(entry.effective_kind==='owner_estimated_tax_payment'&&entry.status==='recorded_unverified'&&!entry.government_confirmation))){
+      if(!replaced.has(entry.id)&&(['income','expense','employee_payroll_obligation'].includes(entry.effective_kind)||(entry.effective_kind==='owner_estimated_tax_payment'&&entry.status==='recorded_unverified'&&!entry.government_confirmation))){
         const correct=document.createElement('button');correct.type='button';correct.textContent='Correct this entry';
         correct.onclick=()=>{
           if(current!==generation||!scope)return;
