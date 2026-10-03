@@ -114,7 +114,7 @@ def session_ingress(server,root,nginx_binary):
     finally:
         server.shutdown();server.server_close();thread.join(timeout=10)
 
-def verify_session(identity_origin,context,password,secret,keys,no_redirect_class,root,nginx_binary=None):
+def verify_session(identity_origin,context,password,secret,keys,no_redirect_class,root,nginx_binary=None,document_load=False):
     # The preceding MFA probe consumed this fixture's current TOTP counter.
     # Wait for the next period instead of relying on reusable OTP policy.
     time.sleep(31-time.time()%30)
@@ -143,19 +143,20 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             jar=http.cookiejar.CookieJar()
             opener=urllib.request.build_opener(urllib.request.HTTPSHandler(context=context),
                 urllib.request.HTTPCookieProcessor(jar),no_redirect_class())
-            def call(url,data=None,expected=200,headers=None):
+            def call(url,data=None,expected=200,headers=None,limit=200000):
                 try:response=opener.open(urllib.request.Request(url,data=data,headers=headers or {}),timeout=10)
                 except urllib.error.HTTPError as error:response=error
                 with response:
-                    status=response.code;body=response.read(200000);result_headers=response.headers
+                    status=response.code;body=response.read(limit+1);result_headers=response.headers
+                if len(body)>limit:raise ValueError('Connected fixture response exceeds limit')
                 if status!=expected:raise ValueError('Unexpected local connected HTTP status: '+str(status))
                 return body,result_headers
-            def api(method,path,payload=None,status=200,csrf=None):
+            def api(method,path,payload=None,status=200,csrf=None,limit=200000):
                 headers={'Origin':app_origin}
                 if csrf:headers['X-HA-CSRF']=csrf
                 data=json.dumps(payload).encode() if method=='POST' else None
                 if data is not None:headers['Content-Type']='application/json'
-                return json.loads(call(app_origin+path,data,status,headers)[0])
+                return json.loads(call(app_origin+path,data,status,headers,limit)[0])
             api('GET','/api/auth/me',status=401)
             api('GET','/api/connected/cases',status=401)
             _,headers=call(app_origin+'/api/auth/login',expected=302)
@@ -297,6 +298,20 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
                     stage,_,kind=diagnostic.removeprefix('Rendered local MFA tax verification failed at ').partition(' ')
                     raise ValueError('Rendered local MFA tax verification failed at '+(stage if stage in allowed else 'unknown')+' '+(kind if kind in {'timeout','assertion','operation'} or re.fullmatch(r'net::ERR_[A-Z_]{1,80}',kind) else 'unknown'))
                 browser_checks=json.loads(browser_run.stdout)
+            load_checks={'document_load':'not_run'}
+            if document_load:
+                if __package__:
+                    from .verify_document_load import verify_document_load
+                else:
+                    from verify_document_load import verify_document_load
+                before=api('GET','/api/connected/documents?'+query)['versions']
+                def load_api(method,path,payload=None,**kwargs):
+                    return api(method,path,payload,csrf=csrf,**kwargs)
+                load_checks=verify_document_load(load_api,scope)
+                after=api('GET','/api/connected/documents?'+query)['versions']
+                if len(after)!=len(before)+4 or not all(version in after for version in before):raise ValueError('Concurrent document history changed')
+                if api('GET','/api/connected/draft?'+query)['book_profit_minor']!=118000:raise ValueError('Document load changed book profit')
+                load_checks.update(original_versions_preserved=True,book_profit_unchanged=True)
             with repository.transaction() as conn:
                 conn.execute('DELETE FROM ha_connected.grants WHERE subject=%s',(subject,))
             api('GET','/api/auth/me')
@@ -312,7 +327,7 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             api('GET','/api/auth/me',status=401)
             api('GET','/api/connected/draft?'+query,status=401)
             api('GET','/api/connected/tax/inputs?'+query,status=401)
-            return {'ingress_checks':ingress_checks,'rendered_browser_checks':browser_checks,
+            return {'document_load_checks':load_checks,'ingress_checks':ingress_checks,'rendered_browser_checks':browser_checks,
                 'same_real_mfa_session_tax_save_reopen':'passed',
                 'tax_original_correction_exact_input_and_metadata':True,'tax_csrf_edit_grant_retry_stale_checks':True,
                 'tax_foreign_revocation_and_logout_denials':True,'tax_reopened_connected_estimate_held':True,
