@@ -25,6 +25,7 @@ from ha.connected.return_draft import estimate_connected_return
 from ha.connected.backup_transfer import copy_bundle, recover_bundle
 from ha.connected.backup_receipt import write_receipt, publish_receipt, retrieve_receipt
 from ha.connected.backup_job import capture_backup
+from ha.connected.backup_monitor import check as check_backup_locator
 from ha.connected.backup_bundle import create_bundle,inspect_bundle,digest
 from ha.connected.backup_inventory import build_inventory,verify_inventory
 from ha.connected.backup_archive import encrypt_backup, decrypt_backup
@@ -322,6 +323,13 @@ def main():
     if retrieved_receipt != receipt:raise ValueError('Retrieved locator differs')
     if not remote_receipt['verified']:raise ValueError('Offhost locator failed')
     if receipt['recovery_verified'] or not receipt['copy_verified']:raise ValueError('Receipt overstates evidence')
+    monitoring_now=datetime.fromisoformat(receipt['completed_at'])
+    current_health=check_backup_locator(transfer_store,'fictional-job-backups',job['offhost']['prefix'],'nyc3',now=monitoring_now)
+    stale_health=check_backup_locator(transfer_store,'fictional-job-backups',job['offhost']['prefix'],'nyc3',now=monitoring_now+timedelta(hours=37))
+    if current_health['status']!='current_locator' or stale_health['status']!='stale_locator':
+        raise ValueError('Backup locator freshness mismatch')
+    if any(result['recovery_verified'] or result['archive_integrity_verified'] or result['deletion_authorized'] for result in (current_health,stale_health)):
+        raise ValueError('Backup monitor overstates authority')
     elapsed = time.perf_counter()-started
     report = {'environment':'local fictional PostgreSQL only','database_restore':'passed','database_backup_encryption':'passed_authenticated_stream', 'database_recovery_key':'separate ignored recovery-key file; excluded from archive','tables':counts,
               'elapsed_seconds':round(elapsed,3),'source_database_preserved':True,'fixture_source':'new isolated database; existing test data untouched',
@@ -332,7 +340,7 @@ def main():
               'key_storage':'separate ignored local recovery-key directory; not copied with object backup',
               'consistent_exported_snapshot':'passed', 'post_snapshot_upload_excluded':True, 'source_document_versions_after_snapshot':source_version_count, 'encrypted_version_inventory_restore':'passed', 'database_archive_inventory_binding':'passed',
               'completed_bundle_inspection':'passed','bundled_document_recovery':'passed','bundle_database_dump_matches_restore':'passed',
-              'consistent_backup_job':'passed','backup_job_verified_remote_copy':'passed_local_fictional_store','durable_backup_receipt':'passed_local_fixture','offhost_backup_locator':'passed_private_copy_readback_and_retrieval_fictional_store','backup_job_current_document_versions':job['document_versions'],
+              'consistent_backup_job':'passed','backup_job_verified_remote_copy':'passed_local_fictional_store','backup_locator_monitor':'passed_current_stale_without_recovery_or_deletion_claim_fictional_store','durable_backup_receipt':'passed_local_fixture','offhost_backup_locator':'passed_private_copy_readback_and_retrieval_fictional_store','backup_job_current_document_versions':job['document_versions'],
               'read_only_backup_role_capture':'passed','backup_role_write_denials':denials,'temporary_backup_role_removed':True,
               'transferred_bundle_database_restore':'passed_actual_pg_restore',
               'transfer_store':'local SDK-shaped fictional adapter; not DigitalOcean',

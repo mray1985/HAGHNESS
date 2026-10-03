@@ -12,7 +12,7 @@
     "support_reviews": 1,
     "tax_input_versions": 2
   },
-  "elapsed_seconds": 7.994,
+  "elapsed_seconds": 8.777,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,
@@ -34,6 +34,7 @@
   "bundle_database_dump_matches_restore": "passed",
   "consistent_backup_job": "passed",
   "backup_job_verified_remote_copy": "passed_local_fictional_store",
+  "backup_locator_monitor": "passed_current_stale_without_recovery_or_deletion_claim_fictional_store",
   "durable_backup_receipt": "passed_local_fixture",
   "offhost_backup_locator": "passed_private_copy_readback_and_retrieval_fictional_store",
   "backup_job_current_document_versions": 5,
