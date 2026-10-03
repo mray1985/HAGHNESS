@@ -104,3 +104,18 @@ class ApiTests(unittest.TestCase):
     def test_tax_saving_unconfigured_does_not_offer_public_fallback(self):
         for path in ('/api/connected/tax/inputs','/api/connected/tax/input'):
             self.assertEqual(self.request('GET',path+'?profile=orchard&business=business&year=2026')[0],503)
+
+    def test_case_list_uses_only_current_read_grants(self):
+        path='/api/connected/cases'
+        self.assertEqual(self.request('GET',path,signed=False)[0],401)
+        self.repo.grants.append(Grant('orchard-owner',Scope('cedar','cedar-business',2026),frozenset({'upload'})))
+        self.repo.grants.append(Grant('orchard-owner',self.scope,frozenset({'read'})))
+        self.repo.grants.append(Grant('cedar-owner',Scope('cedar','cedar-business',2026),frozenset({'read'})))
+        self.repo.grants.append(Grant('orchard-owner',Scope('orchard','cedar-business',2026),frozenset({'read'})))
+        status,result=self.request('GET',path)
+        self.assertEqual(status,200)
+        self.assertEqual(result,{'cases':[{'profile':'orchard','business':'business','year':2026}]})
+        self.repo.grants=[]
+        self.assertEqual(self.request('GET',path)[1],{'cases':[]})
+        self.sessions.logout(self.cookie)
+        self.assertEqual(self.request('GET',path)[0],401)

@@ -112,3 +112,12 @@ October 2 provider prerequisite: fixed-endpoint read-only DigitalOcean account c
 
 
 October 2 actual Linux key rotation/recovery: runtime MountedKeys+SpacesObjects fictional versioned storage preserve original/corrected document and encoded W2 bytes across activekeychange/separate local recoverycopy. Missing historicalkey deniesold/newstillreads;0644/symlinkreject. Actualprobe and16targetedtests pass, independentreviewnoimportantdefects. No hostedSpaces/externalcustody/DB/MFA claim. Details KEY-RECOVERY.md and KEY-ROTATION-EVIDENCE.json.
+
+
+## Permitted record chooser
+
+October 2: signed-in HA Bookin users can choose their current read-permitted profile/business/year from a server-provided list. Manual ID entry is in an Advanced disclosure. GET /api/connected/cases requires the existing MFA session, filters fresh grants to read scopes, validates business ownership, deduplicates and sorts. Revocation removes scopes from the next list; every later data action still checks its own permissions. The list returns IDs and year only, not tax facts or names. Picker requests guard stale responses and expose a refresh action.
+
+Fifteen API/access tests passed, including unsigned/logout denial, duplicate grants, another subject's grant, upload-only authority, mismatched profile/business and revocation. The actual Keycloak password/OTP, PostgreSQL and ClamD composed browser probe passed choosing the permitted case and the full existing connected journey. Its automated browser portion measured 7 seconds locally, not customer completion time. Owned services stopped afterward.
+
+The completed run logged a server-side TLS disconnect while a browser navigation cancelled an in-flight response; functional checks passed, but disconnect-log handling remains a follow-up. Query cost currently includes one ownership lookup per distinct granted business; larger firm inventories need a joined/paginated repository query. Labels currently use IDs because a client display-name directory is not implemented. Hosted provider setup and recovery remain unverified. Evidence: KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json.

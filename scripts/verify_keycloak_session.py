@@ -141,6 +141,7 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             return json.loads(call(app_origin+path,data,status,headers)[0])
         try:
             api('GET','/api/auth/me',status=401)
+            api('GET','/api/connected/cases',status=401)
             _,headers=call(app_origin+'/api/auth/login',expected=302)
             login_url=headers['Location'];params=parse_qs(urlparse(login_url).query)
             page=call(login_url)[0].decode('utf-8')
@@ -167,6 +168,7 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
                 for action in ('read','post','correct','upload','restore'):
                     conn.execute('INSERT INTO ha_connected.grants VALUES (%s,%s,%s,%s,%s)',(subject,'orchard','business',2026,action))
             scope={'profile':'orchard','business':'business','year':2026};query='profile=orchard&business=business&year=2026'
+            if api('GET','/api/connected/cases')!={'cases':[scope]}:raise ValueError('Case list scope mismatch')
             fixture=json.loads((Path(__file__).resolve().parents[1]/'docs/fixtures/day8-connected-workflow.json').read_text(encoding='utf-8'))
             for event in fixture['events']:api('POST','/api/connected/events',{'scope':scope,'event':event},status=201,csrf=csrf)
             draft=api('GET','/api/connected/draft?'+query)
@@ -282,6 +284,7 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             with repository.transaction() as conn:
                 conn.execute('DELETE FROM ha_connected.grants WHERE subject=%s',(subject,))
             api('GET','/api/auth/me')
+            if api('GET','/api/connected/cases')!={'cases':[]}:raise ValueError('Revoked cases remain listed')
             api('GET','/api/connected/draft?'+query,status=404)
             api('GET','/api/connected/document?'+query+suffix,status=404)
             api('GET','/api/connected/support/reviews?'+query,status=404)

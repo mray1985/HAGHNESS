@@ -152,6 +152,9 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
                 if path == '/api/auth/logout' and mutate:
                     sessions.logout(self.cookie('__Host-ha_session'))
                     return self.respond(200,{'ok':True},[('Set-Cookie','__Host-ha_session=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0')])
+                if path == '/api/connected/cases' and not mutate:
+                    from .access import permitted_cases
+                    return self.respond(200,{'cases':permitted_cases(principal,ledger.repository)})
                 if path == '/api/connected/draft' and not mutate:
                     return self.respond(200,ledger.project(principal,self.scope(query),query.get('period','year'),int(query.get('month','1'))))
                 if path == '/api/connected/events' and not mutate:

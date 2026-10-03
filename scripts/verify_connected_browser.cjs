@@ -13,6 +13,7 @@ const assert=require('node:assert/strict');
       let body={};let status=200;
       if(url.pathname==='/api/health')body={login_configured:true};
       else if(url.pathname==='/api/auth/me')body={csrf:'fictional-test-only'};
+      else if(url.pathname==='/api/connected/cases')body={cases:[]};
       else if(url.pathname==='/api/connected/documents')body={versions:[]};
       else if(url.pathname==='/api/connected/draft'){
         if(url.searchParams.get('profile')==='first')await delayed;
@@ -25,6 +26,7 @@ const assert=require('node:assert/strict');
     });
     await page.goto('http://127.0.0.1:8766/');
     await page.locator('#workspace').waitFor({state:'visible'});
+    await page.locator('#manual-scope summary').click();
     await page.locator('[name=profile]').fill('first');
     await page.locator('[name=business]').fill('business');
     await page.locator('#scope-form button').click();

@@ -48,9 +48,10 @@ let stage='startup';
     stage='books-open';
     await page.goto(fixture.origin+'/connected.html');
     await page.locator('#workspace').waitFor({state:'visible'});
-    await page.locator('#scope-form [name=profile]').fill('orchard');
-    await page.locator('#scope-form [name=business]').fill('business');
-    await page.locator('#scope-form button').click();
+    await page.waitForFunction(()=>document.querySelector('#case-choice').options.length===2);
+    assert.equal(await page.locator('#case-choice option').count(),2);
+    await page.locator('#case-choice').selectOption({index:1});
+    await page.locator('#case-open').click();
     await page.waitForFunction(()=>document.querySelector('#document-list').children.length===4);
     stage='book-totals';
     assert.equal(await page.locator('#income').innerText(),'$1,500.00');
@@ -77,6 +78,7 @@ let stage='startup';
     for await(const chunk of stream)bytes.push(chunk);
     assert.equal(Buffer.concat(bytes).toString(),'Fictional receipt correction');
     stage='foreign-scope';
+    await page.locator('#manual-scope summary').click();
     await page.locator('#scope-form [name=profile]').fill('cedar');
     await page.locator('#scope-form [name=business]').fill('cedar-business');
     await page.locator('#scope-form button').click();
@@ -118,7 +120,7 @@ let stage='startup';
     assert.equal((await context.request.get(fixture.origin+'/api/connected/tax/inputs?profile=orchard&business=business&year=2026')).status(),401);
     assert.deepEqual(errors,[]);
     console.log(JSON.stringify({rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
-      rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
+      rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
       authentication:'actual browser password and OTP through HTTPS callback',browser_certificate_trust:'not verified; disposable self-signed fixture',
       browser_storage_empty:true,mobile_overflow:false,
       elapsed_seconds:Math.round((performance.now()-started)/100)/10,

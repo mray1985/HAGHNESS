@@ -79,9 +79,28 @@ byId('document-form').addEventListener('submit',async event=>{
     if(current===generation)status(correction?'Corrected version saved. The original is preserved.':'Private document uploaded and linked to this case.');
   }catch(error){if(current===generation&&revision===uploadRevision)status(error.message);}finally{button.disabled=false;}
 });
+let caseGeneration=0;
+async function loadCases(){
+  const current=++caseGeneration;
+  byId('case-open').disabled=true;byId('case-choice').replaceChildren(new Option('Checking access…',''));
+  try{
+    const result=await request('/api/connected/cases');if(current!==caseGeneration)return;
+    byId('case-choice').replaceChildren(new Option('Choose your records',''));
+    for(const item of result.cases)byId('case-choice').append(new Option(item.profile+' · '+item.business+' · '+item.year,JSON.stringify(item)));
+    byId('case-status').textContent=result.cases.length?'Choose a business and tax year to begin.':'No records are currently available through this session.';
+    byId('case-open').disabled=!result.cases.length;
+  }catch(error){if(current!==caseGeneration)return;byId('case-choice').replaceChildren(new Option('Access unavailable',''));byId('case-status').textContent=error.message;}
+}
+byId('case-refresh').onclick=loadCases;
+byId('case-form').addEventListener('submit',event=>{
+  event.preventDefault();if(!byId('case-choice').value)return;
+  const selected=JSON.parse(byId('case-choice').value),form=byId('scope-form');
+  for(const name of ['profile','business','year'])form.elements[name].value=selected[name];
+  form.requestSubmit();
+});
 byId('logout').addEventListener('click',async()=>{try{await request('/api/auth/logout',{});location.reload();}catch(error){status(error.message);}});
 (async()=>{try{const health=await request('/api/health');if(!health.login_configured)byId('setup-message').textContent='Protected sign-in is not configured. This page cannot yet open client records.';
-  const identity=await request('/api/auth/me');csrf=identity.csrf;byId('login-panel').hidden=true;byId('workspace').hidden=false;byId('logout').hidden=false;status('Signed in. Open a client and business you are permitted to access.');
+  const identity=await request('/api/auth/me');csrf=identity.csrf;byId('login-panel').hidden=true;byId('workspace').hidden=false;byId('logout').hidden=false;status('Signed in. Choose your permitted records.');await loadCases();
 }catch(error){status(error.message);}})();
 
 let supportEntries=[],pendingReview=null,reviewRevision=0,canReview=false;
