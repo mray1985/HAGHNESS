@@ -182,7 +182,7 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
                 for profile,business in (('orchard','business'),('cedar','cedar-business')):
                     conn.execute('INSERT INTO ha_connected.profiles VALUES (%s)',(profile,))
                     conn.execute('INSERT INTO ha_connected.businesses VALUES (%s,%s)',(business,profile))
-                for action in ('read','post','correct','upload','restore'):
+                for action in ('read','post','correct','upload','restore','confirm_records'):
                     conn.execute('INSERT INTO ha_connected.grants VALUES (%s,%s,%s,%s,%s)',(subject,'orchard','business',2026,action))
             scope={'profile':'orchard','business':'business','year':2026};query='profile=orchard&business=business&year=2026'
             if api('GET','/api/connected/cases')!={'cases':[scope]}:raise ValueError('Case list scope mismatch')
@@ -294,7 +294,7 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
                     capture_output=True,timeout=90)
                 if browser_run.returncode:
                     diagnostic=browser_run.stderr.strip()
-                    allowed={'password-wait','password-action','username-fill','password-fill','password-submit','browser-password','browser-otp','browser-logout','startup','books-open','book-totals','period-totals','cash-explanation-save','cash-explanation-reopen','payment-correction-save','payment-correction-reopen','document-download','support-document-select','document-list-download','support-document-download','document-correction-choice','entry-correction-choice','foreign-scope','tax-handoff','tax-reopen','tax-save','tax-reload'}
+                    allowed={'public-home','record-confirmation-save','record-confirmation-stale','password-wait','password-action','username-fill','password-fill','password-submit','browser-password','browser-otp','browser-logout','startup','books-open','book-totals','period-totals','cash-explanation-save','cash-explanation-reopen','payment-correction-save','payment-correction-reopen','document-download','support-document-select','document-list-download','support-document-download','document-correction-choice','entry-correction-choice','foreign-scope','tax-handoff','tax-reopen','tax-save','tax-reload'}
                     stage,_,kind=diagnostic.removeprefix('Rendered local MFA tax verification failed at ').partition(' ')
                     raise ValueError('Rendered local MFA tax verification failed at '+(stage if stage in allowed else 'unknown')+' '+(kind if kind in {'timeout','assertion','operation'} or re.fullmatch(r'net::ERR_[A-Z_]{1,80}',kind) else 'unknown'))
                 browser_checks=json.loads(browser_run.stdout)

@@ -12,7 +12,7 @@ async function request(path,body){
 }
 function scopeQuery(){return new URLSearchParams(scope).toString();}
 async function refresh(){
-  const current=generation;
+  const current=generation;confirmationState=null;syncConfirmationControls();
   const draft=await request('/api/connected/draft?'+scopeQuery()+'&'+new URLSearchParams({period:byId('period').value,month:byId('month').value}));
   if(current!==generation)return;
   byId('income').textContent=money(draft.income_minor);byId('expenses').textContent=money(draft.expense_minor);byId('profit').textContent=money(draft.book_profit_minor);
@@ -27,6 +27,7 @@ async function refresh(){
   for(const question of draft.support_review_queue||[]){const row=document.createElement('li');row.textContent=question.event_id+': '+question.reasons.map(reason=>reviewReasons[reason]||'Further review needed').join('; ');list.append(row);}
   if(draft.support_review_required.length&&!draft.support_review_queue){const item=document.createElement('li');item.textContent=draft.support_review_required.length+' entries still need their supporting information reviewed. A typed record ID does not establish reviewed support.';list.append(item);}
   const item=document.createElement('li');item.textContent='Confirm income, expense eligibility and support before final return preparation.';list.append(item);
+  await loadConfirmation(draft.ledger_revision);if(current!==generation)return;
   const entries=await loadEntries();if(current!==generation)return;
   await loadSupport(entries);
   if(current!==generation)return;
@@ -35,6 +36,10 @@ async function refresh(){
 function clearOpenCase({keepScopeForm=false}={}){
   generation++;uploadRevision++;entryRevision++;reviewRevision++;scope=null;
   pendingEvent=null;pendingUpload=null;pendingReview=null;canReview=false;supportEntries=[];
+  confirmationState=null;pendingConfirmation=null;confirmationBusy=false;
+  byId('confirmation-form').reset();byId('confirmation-history').replaceChildren();
+  byId('confirmation-status').textContent='Open permitted records to check your review status.';
+  byId('confirmation-statement').textContent='Review statement will appear after permitted records open.';syncConfirmationControls();
   byId('support-save').disabled=true;byId('support-access').textContent='Open permitted records to check review access.';
   for(const id of ['entry-form','document-form','support-form'])byId(id).reset();
   syncEntryMode();
@@ -239,4 +244,51 @@ async function downloadDocument(documentId,version){
 byId('support-download').addEventListener('click',()=>{
   if(!scope||!byId('support-document').value){status('Select a document first.');return;}
   const [documentId,version]=JSON.parse(byId('support-document').value);downloadDocument(documentId,version);
+});
+
+let confirmationState=null,pendingConfirmation=null,confirmationBusy=false;
+function syncConfirmationControls(){
+  const allowed=Boolean(scope&&confirmationState?.can_confirm&&!confirmationBusy);
+  for(const id of ['confirmation-through','confirmation-reason','confirmation-choice'])byId(id).disabled=!allowed;
+  byId('confirmation-save').disabled=!allowed||!byId('confirmation-choice').checked;
+}
+async function loadConfirmation(displayedRevision){
+  const current=generation;confirmationState=null;syncConfirmationControls();
+  try{
+    const view=await request('/api/connected/records/confirmations?'+scopeQuery());
+    if(current!==generation)return;
+    confirmationState=view;
+    if(view.ledger_revision!==displayedRevision){
+      confirmationState.can_confirm=false;
+      byId('confirmation-status').textContent='Records changed while opening. Refresh this case and review the new entries before confirming.';
+    }else{
+      const latest=view.latest;
+      byId('confirmation-status').textContent=view.status==='current'
+        ? 'Review statement is recorded for ledger revision '+latest.ledger_revision+' through '+latest.reviewed_through+'. This remains a user statement, not independent verification.'
+        : view.status==='stale'?'Entries changed after the recorded review. Check the updated records and record a new review.'
+        : 'No review statement has been recorded for these entries.';
+      if(!view.can_confirm)byId('confirmation-status').textContent+=' Separate record-confirmation permission is required to submit.';
+    }
+    byId('confirmation-statement').textContent=view.statement;
+    byId('confirmation-through').min=scope.year+'-01-01';
+    byId('confirmation-through').max=view.today<scope.year+'-12-31'?view.today:scope.year+'-12-31';
+    byId('confirmation-history').replaceChildren();
+    for(const record of view.history){const row=document.createElement('li');row.textContent=record.recorded_at+' · '+record.actor+' · ledger revision '+record.ledger_revision+' · reviewed through '+record.reviewed_through+' · '+record.reason;byId('confirmation-history').append(row);}
+  }catch(error){if(current===generation)byId('confirmation-status').textContent='Review status unavailable: '+error.message;}
+  if(current===generation)syncConfirmationControls();
+}
+byId('confirmation-form').addEventListener('input',()=>{pendingConfirmation=null;syncConfirmationControls();});
+byId('confirmation-form').addEventListener('submit',async event=>{
+  event.preventDefault();if(!scope||!confirmationState?.can_confirm||!byId('confirmation-choice').checked||confirmationBusy)return;
+  const current=generation;
+  if(!pendingConfirmation)pendingConfirmation={scope:{...scope},confirmation:{ledger_revision:confirmationState.ledger_revision,
+    reviewed_through:byId('confirmation-through').value,reason:byId('confirmation-reason').value,confirmed:true,idempotency_key:crypto.randomUUID()}};
+  confirmationBusy=true;syncConfirmationControls();
+  try{
+    await request('/api/connected/records/confirmations',pendingConfirmation);
+    if(current!==generation)return;
+    pendingConfirmation=null;byId('confirmation-form').reset();await refresh();
+    if(current===generation)status('Your review statement was saved. Receipt review, tax treatment and filing still need their own checks.');
+  }catch(error){if(current===generation)byId('confirmation-status').textContent=error.message+' Reopen the case if entries changed; retry preserves the same statement.';}
+  finally{if(current===generation){confirmationBusy=false;syncConfirmationControls();}}
 });

@@ -3,3 +3,5 @@
 #document-list{padding-left:1.2rem}#document-list li{padding:.75rem 0;border-bottom:1px solid #d3ded9;overflow-wrap:anywhere}#document-list p{margin:.25rem 0 .6rem}.document-actions{display:flex;flex-wrap:wrap;gap:.5rem}.document-actions button{font-size:.85rem}
 
 #entry-history{padding-left:1.2rem}#entry-history li{padding:.75rem 0;border-bottom:1px solid #d3ded9;overflow-wrap:anywhere}#entry-history p{margin:.25rem 0 .6rem}#entry-history button{font-size:.85rem}
+
+.confirmation-choice{display:flex;align-items:flex-start;gap:12px}.confirmation-choice input[type=checkbox]{width:20px;height:20px;flex:0 0 20px;margin-top:3px}

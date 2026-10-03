@@ -27,3 +27,9 @@ If income or an expense has not been entered, add the transaction under Book ent
 Draft projections explicitly report `entry_completeness: "not_verified"` and `missing_entries: null`. Null means unknown, not zero missing transactions. Receipt/support decisions do not change these fields. The connected HATax business review carries this limitation forward and still holds combined tax/refund figures. Bank reconciliation, automatic missing-transaction detection and a verified completeness workflow are not implemented.
 
 Latest recovery check: an actual isolated PostgreSQL/encrypted bundle restore now recovers both cash-explanation and owner-payment corrections, exact original/source history and original posting periods. Recorded payments remain $125 versus confirmed $0, with no double counting or profit change. See DATABASE-RESTORE-EVIDENCE.json. The transfer store and scanner in this recovery fixture are synthetic; independent hosted recovery remains unfinished.
+
+A separately permitted user can now record a dated statement about the accuracy
+and completeness of entered records. This remains self-reported, preserves
+history and becomes stale after a ledger change. It does not change the unknown
+missing-entry count, independent completeness status, receipt review or filing
+authority. See RECORD-CONFIRMATIONS.md for exact scope and verification.

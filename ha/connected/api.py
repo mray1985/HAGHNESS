@@ -21,7 +21,7 @@ class RequestVerificationError(Exception):
     pass
 
 
-def create_server(address, sessions, ledger, documents, login, allowed_origin, *, reviews=None, tax_inputs=None):
+def create_server(address, sessions, ledger, documents, login, allowed_origin, *, reviews=None, tax_inputs=None, confirmations=None):
     if not allowed_origin.startswith('https://'):
         raise ValueError('HTTPS browser origin required')
     if reviews is None and ledger is not None and documents is not None:
@@ -35,6 +35,12 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
         if isinstance(ledger.repository, PostgresRepository) and documents.repository is ledger.repository:
             from .tax_inputs import TaxInputs
             tax_inputs = TaxInputs(ledger.repository,documents)
+
+    if confirmations is None and ledger is not None:
+        from .postgres import PostgresRepository
+        if isinstance(ledger.repository, PostgresRepository):
+            from .record_confirmation import RecordConfirmations
+            confirmations = RecordConfirmations(ledger.repository)
 
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
@@ -166,6 +172,13 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
                 if path == '/api/connected/events' and mutate:
                     body = self.payload()
                     return self.respond(201,ledger.post_event(principal,self.scope(body['scope']),body['event']))
+                if path == '/api/connected/records/confirmations':
+                    if confirmations is None:
+                        return self.respond(503,{'error':'Record confirmation is not configured'})
+                    if mutate:
+                        body=self.payload()
+                        return self.respond(201,confirmations.submit(principal,self.scope(body['scope']),body['confirmation']))
+                    return self.respond(200,confirmations.view(principal,self.scope(query)))
                 if path == '/api/connected/support/reviews':
                     if reviews is None:
                         return self.respond(503,{'error':'Supporting-record review is not configured'})

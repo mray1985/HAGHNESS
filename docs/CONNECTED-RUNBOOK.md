@@ -8,11 +8,21 @@ Run from the repository root in PowerShell:
 .\.venv\Scripts\python.exe -m ha.connected.server --port 8766
 ```
 
-Open http://127.0.0.1:8766/ for the locked preview. The HTTP loopback preview cannot establish its Secure authentication cookies. Authentication requires HTTPS with a trusted certificate or a correctly configured HTTPS reverse proxy. Do not enter taxpayer information into the preview.
+Open http://127.0.0.1:8766/ for HA home, `/connected.html` for the locked Bookin entrance, or `/tax` for HATax. The HTTP loopback preview cannot establish its Secure authentication cookies. Authentication requires HTTPS with a trusted certificate or a correctly configured HTTPS reverse proxy. Do not enter taxpayer information into the preview.
 
-The optional Cognito configuration (`HA_AUTH_PROVIDER=cognito`) requires all of `HA_DATABASE_URL`, `HA_AWS_REGION`, `HA_COGNITO_POOL`, `HA_COGNITO_CLIENT`, and `HA_COGNITO_DOMAIN`. Keep database credentials in a secret manager rather than source control. The origin must match the registered callback ending in `/api/auth/callback`. Apply migrations with a separate migration role before starting the service. The runtime does not apply migrations.
+The selected non-AWS stack uses `HA_AUTH_PROVIDER=keycloak` with all of
+`HA_DATABASE_URL`, `HA_KEYCLOAK_ISSUER`, and `HA_KEYCLOAK_CLIENT`. Do not mix
+Cognito and Keycloak settings. Keep credentials outside source control. Register
+the exact HTTPS origin callback ending in `/api/auth/callback`. Apply migrations
+with a separate migration role before starting the service; runtime startup does
+not apply them. Credential-free realm and native service instructions are in
+KEYCLOAK-IMPLEMENTATION.md and DIGITALOCEAN-IMPLEMENTATION.md. The earlier Cognito
+adapter remains optional, but AWS is not required for this selected stack.
 
-Cognito must enforce software-token MFA and authorization-code login. The server verifies that configuration before login, uses PKCE and browser-bound state, and validates the signed identity token. Sessions and login handshakes currently reside in one process: use exactly one worker until a shared session store is implemented. Restarting the service ends sessions.
+Keycloak must require password and OTP, PKCE and browser-bound state. The server
+validates signed identity tokens and the required MFA assurance. Sessions and
+login handshakes currently reside in one process: use exactly one worker until a
+shared session store is implemented. Restarting the service ends sessions.
 
 Document uploads remain unavailable by default. Explicit Spaces/key/ClamD configuration can now wire the service into the existing session; see DOCUMENT-SCANNING.md for deployment and live verification requirements. The S3 adapter and document service have tests, but those tests do not establish cloud deployment readiness.
 
@@ -30,3 +40,10 @@ Remaining release gates include a configured DigitalOcean account, independent i
 Independent Keycloak mode and required realm configuration are documented in
 `docs/KEYCLOAK-IMPLEMENTATION.md`. Select it explicitly; disabled preview remains
 the default. Signed MFA-claim tests do not prove hosted identity controls.
+
+Record review statements require the explicit `confirm_records` grant plus
+`read` for the same client/business/year. Migration 004 grants no authority to
+existing users. See RECORD-CONFIRMATIONS.md. Apply its table using the migration
+role and arrange SELECT access for separately managed backup readers, including
+future-object default privileges, before claiming new-table backup coverage.
+User statements do not independently verify complete books or authorize filing.

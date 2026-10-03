@@ -66,6 +66,24 @@ let stage='startup';
     assert.equal(await page.locator('#profit').innerText(),'$1,180.00');
     assert.match(await page.locator('#payments').innerText(),/recorded: \$100\.00.*confirmed: \$0\.00/);
     assert.match(await page.locator('#review-list').innerText(),/advertising:.*supporting document changed/);
+    stage='record-confirmation-save';
+    await page.locator('#confirmation-through').waitFor({state:'visible'});
+    await page.waitForFunction(()=>!document.querySelector('#confirmation-choice').disabled);
+    assert.equal(await page.locator('#confirmation-save').isEnabled(),false);
+    await page.locator('#confirmation-through').fill('2026-10-03');
+    await page.locator('#confirmation-reason').fill('Compared fictional card and cash entries with my records');
+    await page.locator('#confirmation-choice').check();
+    const confirmed=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/connected/records/confirmations'&&r.request().method()==='POST');
+    await page.locator('#confirmation-save').click();assert.equal((await confirmed).status(),201);
+    await page.waitForFunction(()=>document.querySelector('#confirmation-status').textContent.includes('Review statement is recorded'));
+    assert.equal(await page.locator('#confirmation-history li').count(),1);
+    assert.equal(await page.locator('#confirmation-choice').isChecked(),false);
+    await page.setViewportSize({width:390,height:844});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    const screenshotPath=require('node:path').resolve(__dirname,'../output/record-confirmation.png');
+    require('node:fs').mkdirSync(require('node:path').dirname(screenshotPath),{recursive:true});
+    await page.locator('#record-confirmation').screenshot({path:screenshotPath});
+    await page.setViewportSize({width:1280,height:900});
     stage='period-totals';
     for(const period of ['month','quarter','year']){
       await page.locator('#period').selectOption(period);
@@ -85,6 +103,9 @@ let stage='startup';
     const paymentSaved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/connected/events'&&r.request().method()==='POST');
     await page.locator('#entry-form button').click();const paymentResponse=await paymentSaved;assert.equal(paymentResponse.status(),201);const paymentId=(await paymentResponse.json()).id;
     await page.waitForFunction(()=>document.querySelector('#payments').textContent.includes('recorded: $125.00'));
+    stage='record-confirmation-stale';
+    await page.waitForFunction(()=>document.querySelector('#confirmation-status').textContent.includes('Entries changed after'));
+    assert.equal(await page.locator('#confirmation-history li').count(),1);
     stage='payment-correction-reopen';
     const paymentHistory=await(await context.request.get(fixture.origin+'/api/connected/events?profile=orchard&business=business&year=2026')).json();
     const priorPayment=paymentHistory.events.find(entry=>entry.id==='owner-estimate'),correctedPayment=paymentHistory.events.find(entry=>entry.id===paymentId);
@@ -140,6 +161,11 @@ let stage='startup';
     assert.equal(await page.locator('#profit').innerText(),'\u2014');
     assert.equal(await page.locator('#document-list li').count(),0);
     assert.equal(await page.locator('#entry-history li').count(),0);
+    assert.equal(await page.locator('#confirmation-history li').count(),0);
+    assert.equal(await page.locator('#confirmation-choice').isDisabled(),true);
+    assert.equal(await page.locator('#confirmation-choice').isChecked(),false);
+    assert.equal(await page.locator('#confirmation-through').inputValue(),'');
+    assert.equal(await page.locator('#confirmation-reason').inputValue(),'');
     assert.equal(await page.locator('#entry-form [name=method]').isDisabled(),false);
     await page.locator('#scope-form [name=profile]').fill('orchard');
     await page.locator('#scope-form [name=business]').fill('business');
@@ -175,7 +201,7 @@ let stage='startup';
     await page.locator('#login-panel').waitFor({state:'visible'});
     assert.equal((await context.request.get(fixture.origin+'/api/connected/tax/inputs?profile=orchard&business=business&year=2026')).status(),401);
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
+    console.log(JSON.stringify({rendered_records_confirmation_saved_and_invalidated:'passed',rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
       rendered_document_list_download_and_correction_choice:'passed',rendered_cash_explanation_amendment_persisted:'passed',rendered_payment_correction_preserves_unverified_original:'passed',rendered_entry_history_correction_choice:'passed',rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
       authentication:'actual browser password and OTP through HTTPS callback',browser_certificate_trust:'not verified; disposable self-signed fixture',
       browser_storage_empty:true,mobile_overflow:false,

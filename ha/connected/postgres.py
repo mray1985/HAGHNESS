@@ -33,7 +33,7 @@ class PostgresRepository:
         folder = Path(__file__).resolve().parents[2]/'migrations'
         with self.transaction() as conn:
             conn.execute("SELECT pg_advisory_xact_lock(hashtextextended('ha-schema-migrations',0))")
-            for name in ('001_connected.sql','002_support_reviews.sql','003_tax_input_versions.sql'):
+            for name in ('001_connected.sql','002_support_reviews.sql','003_tax_input_versions.sql','004_record_confirmations.sql'):
                 conn.execute((folder/name).read_text(encoding='utf-8'))
 
     def profile_for_business(self, business):
@@ -145,4 +145,8 @@ class PostgresLedger:
                 self.repository.scope_values(scope)).fetchall()
             reviews=[dict(zip(('event_id','event_fingerprint','document_id','version_id','decision'),row)) for row in rows]
             from .support_review import apply_support_reviews
-            return apply_support_reviews(projection,events,reviews,self.repository.list_versions(scope))
+            projection = apply_support_reviews(projection,events,reviews,self.repository.list_versions(scope))
+            from .record_confirmation import RecordConfirmations, confirmation_status
+            history = RecordConfirmations(self.repository)._history(conn,scope)
+            projection['records_confirmation'] = confirmation_status(events,history)
+            return projection

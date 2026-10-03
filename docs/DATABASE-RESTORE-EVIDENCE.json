@@ -1,4 +1,10 @@
 {
+  "records_confirmation_restore_checks": {
+    "original_and_current_history_preserved": true,
+    "current_revision": 8,
+    "independently_verified": false,
+    "filing_authorized": false
+  },
   "latest_correction_restore_checks": {
     "original_cash_and_payment_preserved": true,
     "cash_explanation_amendment_preserved": true,
@@ -13,13 +19,14 @@
   "tables": {
     "profiles": 2,
     "businesses": 2,
-    "grants": 6,
+    "grants": 7,
     "ledger_events": 8,
     "document_versions": 4,
     "support_reviews": 1,
-    "tax_input_versions": 2
+    "tax_input_versions": 2,
+    "record_confirmations": 2
   },
-  "elapsed_seconds": 12.716,
+  "elapsed_seconds": 11.232,
   "source_database_preserved": true,
   "fixture_source": "new isolated database; existing test data untouched",
   "recovered_book_profit_minor": 118000,

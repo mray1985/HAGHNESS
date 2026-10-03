@@ -41,3 +41,19 @@ navigation passed; the real MFA/nginx fixture now starts through public home
 and passed the existing protected save/reopen/correction/logout journey.
 PUBLIC-WEBSITE.md and its screenshots record this local integration evidence.
 Day 8's hosted/recovery/provider/complete-filing gates remain incomplete.
+
+The record-confirmation checkpoint adds an explicit permitted user's dated
+statement bound to a whole-ledger revision/fingerprint. New ledger entries or
+corrections make it stale; originals remain append-only. It does not establish
+independent completeness, receipt verification, tax treatment or filing approval.
+Fresh Windows PostgreSQL suite: 293 ran, 289 passed, four Linux-only skips.
+Actual direct and transferred encrypted restores preserved two statement records
+and the latest corrections in 11.232 seconds; external key/hosted recovery gates
+remain pending. RECORD-CONFIRMATIONS.md records the scope. The selected non-AWS
+Keycloak path and public/workspace routes are now the runbook's primary setup.
+
+Actual local MFA/nginx browser verification subsequently passed review saving,
+correction invalidation, unrelated-profile review-field/history clearing, mobile
+layout, protected tax draft reopening and logout denial. Final rendered portion:
+7.4 seconds for the fictional fixture, excluding startup/OTP waits. A mobile
+panel screenshot and the evidence limits are saved in RECORD-CONFIRMATIONS.md.

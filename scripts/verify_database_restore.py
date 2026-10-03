@@ -21,6 +21,7 @@ from ha.connected.postgres import PostgresRepository,PostgresLedger
 from ha.connected.domain import Principal,Scope
 from ha.connected.documents import Documents
 from ha.connected.tax_inputs import TaxInputs
+from ha.connected.record_confirmation import RecordConfirmations
 from ha.connected.return_draft import estimate_connected_return
 from ha.connected.backup_transfer import copy_bundle, recover_bundle
 from ha.connected.backup_receipt import write_receipt, publish_receipt, retrieve_receipt
@@ -89,13 +90,23 @@ def main():
     with repository.transaction() as conn:
         conn.execute("INSERT INTO ha_connected.profiles VALUES ('orchard'),('cedar')")
         conn.execute("INSERT INTO ha_connected.businesses VALUES ('business','orchard'),('cedar-business','cedar')")
-        for action in ('read','post','correct','upload','restore','save_tax'):
+        for action in ('read','post','correct','upload','restore','save_tax','confirm_records'):
             conn.execute('INSERT INTO ha_connected.grants VALUES (%s,%s,%s,%s,%s)',('orchard-owner','orchard','business',2026,action))
     fixture = json.loads((ROOT/'docs/fixtures/day8-connected-workflow.json').read_text(encoding='utf-8'))
     ledger = PostgresLedger(repository)
     for event in fixture['events']:
         ledger.post_event(owner,scope,event)
+    confirmations=RecordConfirmations(repository)
+    original_confirmation=dict(ledger_revision=6,reviewed_through='2026-10-03',confirmed=True,
+        reason='Compared fictional card and cash entries',idempotency_key='restore-records-original')
+    confirmations.submit(owner,scope,original_confirmation)
     for event in LATEST_CORRECTIONS:ledger.post_event(owner,scope,event)
+    if confirmations.view(owner,scope)['status']!='stale':raise ValueError('Correction did not invalidate review')
+    confirmations.submit(owner,scope,{**original_confirmation,'ledger_revision':8,
+        'reason':'Reviewed the fictional corrected entries','idempotency_key':'restore-records-current'})
+    confirmation_before=confirmations.view(owner,scope)
+    if (len(confirmation_before['history'])!=2 or confirmation_before['status']!='current'
+            or confirmation_before['independently_verified'] is not False):raise ValueError('Confirmation fixture mismatch')
     verify_latest_corrections(ledger,owner,scope)
     run_id=uuid.uuid4().hex
     recovery_root=LOCAL/('recovery-'+run_id)
@@ -165,7 +176,7 @@ def main():
         snapshot_db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
         snapshot=snapshot_db.execute('SELECT pg_export_snapshot()').fetchone()[0]
         snapshot_rows={}
-        for table in ('profiles','businesses','grants','ledger_events','document_versions','support_reviews','tax_input_versions'):
+        for table in ('profiles','businesses','grants','ledger_events','document_versions','support_reviews','tax_input_versions','record_confirmations'):
             query=psycopg.sql.SQL('SELECT * FROM ha_connected.{}').format(psycopg.sql.Identifier(table))
             snapshot_rows[table]=snapshot_db.execute(query).fetchall()
         versions=[repository._version(row) for row in snapshot_rows['document_versions']]
@@ -201,7 +212,7 @@ def main():
     recovered_dsn = make_conninfo(**{**params,'dbname':restored_name})
     with psycopg.connect(source_dsn) as original_db, psycopg.connect(recovered_dsn) as recovered_db:
         counts = {}
-        for table in ('profiles','businesses','grants','ledger_events','document_versions','support_reviews','tax_input_versions'):
+        for table in ('profiles','businesses','grants','ledger_events','document_versions','support_reviews','tax_input_versions','record_confirmations'):
             query = psycopg.sql.SQL('SELECT * FROM ha_connected.{}').format(psycopg.sql.Identifier(table))
             before = snapshot_rows[table]
             after = recovered_db.execute(query).fetchall()
@@ -214,6 +225,8 @@ def main():
         raise ValueError('Exported snapshot included a later committed upload')
     recovered_ledger = PostgresLedger(PostgresRepository(recovered_dsn))
     latest_correction_checks=verify_latest_corrections(recovered_ledger,owner,scope)
+    if RecordConfirmations(PostgresRepository(recovered_dsn)).view(owner,scope)!=confirmation_before:
+        raise ValueError('Recovered confirmation history or authority changed')
     if recovered_ledger.project(owner,scope,'year')['book_profit_minor'] != 118000:
         raise ValueError('Recovered draft disagrees with fixture')
     try:
@@ -314,6 +327,8 @@ def main():
     transfer_repo=PostgresRepository(transfer_dsn)
     if verify_latest_corrections(PostgresLedger(transfer_repo),owner,scope)!=latest_correction_checks:
         raise ValueError('Transferred correction verification differs')
+    if RecordConfirmations(transfer_repo).view(owner,scope)!=confirmation_before:
+        raise ValueError('Transferred confirmation history or authority changed')
     if PostgresLedger(transfer_repo).project(owner,scope,'year')['book_profit_minor']!=118000:
         raise ValueError('Transferred books differ')
     recovered_support=recovered_ledger.project(owner,scope,'year')
@@ -399,7 +414,7 @@ def main():
     if any(result['recovery_verified'] or result['archive_integrity_verified'] or result['deletion_authorized'] for result in (current_health,stale_health)):
         raise ValueError('Backup monitor overstates authority')
     elapsed = time.perf_counter()-started
-    report = {'latest_correction_restore_checks':latest_correction_checks,'environment':'local fictional PostgreSQL only','database_restore':'passed','database_backup_encryption':'passed_authenticated_stream', 'database_recovery_key':'separate ignored recovery-key file; excluded from archive','tables':counts,
+    report = {'records_confirmation_restore_checks':{'original_and_current_history_preserved':True,'current_revision':8,'independently_verified':False,'filing_authorized':False},'latest_correction_restore_checks':latest_correction_checks,'environment':'local fictional PostgreSQL only','database_restore':'passed','database_backup_encryption':'passed_authenticated_stream', 'database_recovery_key':'separate ignored recovery-key file; excluded from archive','tables':counts,
               'elapsed_seconds':round(elapsed,3),'source_database_preserved':True,'fixture_source':'new isolated database; existing test data untouched',
               'recovered_book_profit_minor':118000,'recovered_cross_profile_denial':'passed',
               'aws_backup_restore':'not_run','document_object_restore':'passed_local_encrypted_files',
