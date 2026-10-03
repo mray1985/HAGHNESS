@@ -25,7 +25,7 @@ from ha.connected.return_draft import estimate_connected_return
 from ha.connected.backup_transfer import copy_bundle, recover_bundle
 from ha.connected.backup_receipt import write_receipt, publish_receipt, retrieve_receipt
 from ha.connected.backup_job import capture_backup
-from ha.connected.backup_monitor import check as check_backup_locator
+from ha.connected.backup_monitor import check as check_backup_locator, discover as discover_backup_locator
 from ha.connected.backup_bundle import create_bundle,inspect_bundle,digest
 from ha.connected.backup_inventory import build_inventory,verify_inventory
 from ha.connected.backup_archive import encrypt_backup, decrypt_backup
@@ -233,17 +233,26 @@ def main():
     # SDK-shaped local ciphertext store: exercises transfer plumbing, not a provider.
     class FictionalStore:
         def __init__(self, root):
-            self.root = root; root.mkdir(mode=0o700)
+            self.root = root; root.mkdir(mode=0o700);self.keys=set()
         def path(self, bucket, name):
             return self.root / hashlib.sha256((bucket+'|'+name).encode()).hexdigest()
         def upload_fileobj(self, reader, bucket, name, ExtraArgs):
             if ExtraArgs.get('ACL') != 'private':raise ValueError('Private copy required')
             with self.path(bucket,name).open('xb') as writer:shutil.copyfileobj(reader,writer)
+            self.keys.add((bucket,name))
         def put_object(self, Bucket, Key, Body, ACL, ContentType):
             if ACL != 'private':raise ValueError('Private locator required')
-            self.path(Bucket,Key).write_bytes(Body)
+            self.path(Bucket,Key).write_bytes(Body);self.keys.add((Bucket,Key))
         def get_object(self, Bucket, Key):
+            from botocore.exceptions import ClientError
+            if (Bucket,Key) not in self.keys:raise ClientError({'Error':{'Code':'NoSuchKey'}},'GetObject')
             return {'Body':self.path(Bucket,Key).open('rb')}
+        def list_objects_v2(self, Bucket, Prefix, Delimiter, MaxKeys, ContinuationToken=None):
+            if Prefix!='ha-recovery/' or Delimiter!='/':raise ValueError('Bounded fixture listing required')
+            prefixes=sorted({name.rsplit('/',1)[0]+'/' for bucket,name in self.keys if bucket==Bucket and name.startswith(Prefix)})
+            index=int(ContinuationToken or '0');more=index+1<len(prefixes)
+            return {'IsTruncated':more,'NextContinuationToken':str(index+1),
+                    'CommonPrefixes':[{'Prefix':p} for p in prefixes[index:index+1]]}
     transfer_store=FictionalStore(recovery_root/'fictional-offhost-store')
     copied=copy_bundle(bundle,backup_key_path.read_bytes(),versions,transfer_store,'fictional-backups')
     downloaded=recovery_root/'downloaded-bundle'
@@ -324,6 +333,15 @@ def main():
     if not remote_receipt['verified']:raise ValueError('Offhost locator failed')
     if receipt['recovery_verified'] or not receipt['copy_verified']:raise ValueError('Receipt overstates evidence')
     monitoring_now=datetime.fromisoformat(receipt['completed_at'])
+    older_receipt={**receipt,'prefix':'ha-recovery/'+uuid.uuid4().hex+'/',
+                   'completed_at':(monitoring_now-timedelta(days=2)).isoformat()}
+    publish_receipt(older_receipt,transfer_store)
+    transfer_store.upload_fileobj(BytesIO(b'fictional incomplete encrypted upload'),
+        'fictional-job-backups','ha-recovery/'+uuid.uuid4().hex+'/database.habackup',{'ACL':'private'})
+    discovered=discover_backup_locator(transfer_store,'fictional-job-backups','nyc3',now=monitoring_now)
+    if (discovered['prefix']!=receipt['prefix'] or discovered['listed_prefixes']!=3
+            or discovered['receipts_observed']!=2 or discovered['recovery_verified']):
+        raise ValueError('Backup receipt discovery mismatch')
     current_health=check_backup_locator(transfer_store,'fictional-job-backups',job['offhost']['prefix'],'nyc3',now=monitoring_now)
     stale_health=check_backup_locator(transfer_store,'fictional-job-backups',job['offhost']['prefix'],'nyc3',now=monitoring_now+timedelta(hours=37))
     if current_health['status']!='current_locator' or stale_health['status']!='stale_locator':
@@ -340,7 +358,7 @@ def main():
               'key_storage':'separate ignored local recovery-key directory; not copied with object backup',
               'consistent_exported_snapshot':'passed', 'post_snapshot_upload_excluded':True, 'source_document_versions_after_snapshot':source_version_count, 'encrypted_version_inventory_restore':'passed', 'database_archive_inventory_binding':'passed',
               'completed_bundle_inspection':'passed','bundled_document_recovery':'passed','bundle_database_dump_matches_restore':'passed',
-              'consistent_backup_job':'passed','backup_job_verified_remote_copy':'passed_local_fictional_store','backup_locator_monitor':'passed_current_stale_without_recovery_or_deletion_claim_fictional_store','durable_backup_receipt':'passed_local_fixture','offhost_backup_locator':'passed_private_copy_readback_and_retrieval_fictional_store','backup_job_current_document_versions':job['document_versions'],
+              'consistent_backup_job':'passed','backup_job_verified_remote_copy':'passed_local_fictional_store','backup_locator_discovery':'passed_paginated_newest_observed_and_incomplete_prefix_fictional_store','backup_locator_monitor':'passed_current_stale_without_recovery_or_deletion_claim_fictional_store','durable_backup_receipt':'passed_local_fixture','offhost_backup_locator':'passed_private_copy_readback_and_retrieval_fictional_store','backup_job_current_document_versions':job['document_versions'],
               'read_only_backup_role_capture':'passed','backup_role_write_denials':denials,'temporary_backup_role_removed':True,
               'transferred_bundle_database_restore':'passed_actual_pg_restore',
               'transfer_store':'local SDK-shaped fictional adapter; not DigitalOcean',
