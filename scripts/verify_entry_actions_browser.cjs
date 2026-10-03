@@ -1,0 +1,29 @@
+// Fictional rendered-entry regression; does not establish authentication or persistence.
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=require(process.env.HA_PLAYWRIGHT_MODULE);
+(async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
+ const page=await browser.newPage();page.setDefaultTimeout(5000);let posted=null,granted=true,beginPost,releasePost;const postBegan=new Promise(resolve=>beginPost=resolve);const errors=[];page.on('pageerror',()=>errors.push('page error'));
+ const scope={profile:'orchard',business:'business',year:2026};
+ const base={posting_date:'2026-10-02',date:'2026-10-02',method:'cash',category:'supplies',evidence:'receipt',explanation:'Fictional cash explanation'};
+ const events=[{...base,id:'old',kind:'expense',effective_kind:'expense',amount_minor:1000},{...base,id:'current',kind:'correction',effective_kind:'expense',replaces:'old',amount_minor:1250},{...base,id:'payment',kind:'owner_estimated_tax_payment',effective_kind:'owner_estimated_tax_payment',amount_minor:10000}];
+ await page.route('http://127.0.0.1:9878/**',async route=>{const url=new URL(route.request().url());let data;
+  if(url.pathname==='/api/health')data={login_configured:true};else if(url.pathname==='/api/auth/me')data={csrf:'fictional'};
+  else if(url.pathname==='/api/connected/cases')data={cases:granted?[scope]:[]};
+  else if(url.pathname==='/api/connected/draft')data={income_minor:0,expense_minor:1250,book_profit_minor:-1250,ledger_revision:3,source_event_ids:[],reserve_scenario_minor:0,owner_payments_recorded_minor:10000,owner_payments_confirmed_minor:0,missing_receipts:[],cash_explanations_missing:[],support_review_required:[]};
+  else if(url.pathname==='/api/connected/events'){if(route.request().method()==='POST'){posted=route.request().postDataJSON();beginPost();await new Promise(resolve=>releasePost=resolve);assert.equal(route.request().headers()['x-ha-csrf'],'fictional');data={id:posted.event.id};}else data={events};}
+  else if(url.pathname==='/api/connected/documents')data={versions:[]};else if(url.pathname==='/api/connected/support/reviews')data={can_review:false,reviews:[]};
+  else if(['/connected.html','/connected.css','/connected.js'].includes(url.pathname))return route.fulfill({status:200,contentType:url.pathname.endsWith('.js')?'application/javascript':url.pathname.endsWith('.css')?'text/css':'text/html',body:fs.readFileSync(path.join('web',url.pathname.slice(1)))});
+  else throw Error('Unexpected fixture request');await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ await page.goto('http://127.0.0.1:9878/connected.html');await page.waitForFunction(()=>document.querySelector('#case-choice').options.length===2);await page.selectOption('#case-choice',JSON.stringify(scope));await page.click('#case-open');
+ await page.locator('#entry-history li').first().waitFor();assert.equal(await page.locator('#entry-history li').count(),3);assert.equal(await page.getByRole('button',{name:'Correct this entry'}).count(),1);
+ assert.match(await page.locator('#entry-history li').first().innerText(),/Earlier entry/);
+ await page.selectOption('#entry-form [name=kind]','correction');assert.equal(await page.locator('#entry-form [name=date]').evaluate(input=>input.readOnly),false);
+ await page.fill('#entry-form [name=reason]','Old reason');await page.getByRole('button',{name:'Correct this entry'}).click();
+ assert.equal(await page.inputValue('#entry-form [name=replaces]'),'current');assert.equal(await page.inputValue('#entry-form [name=amount]'),'12.50');assert.equal(await page.inputValue('#entry-form [name=reason]'),'');assert.equal(await page.isDisabled('#entry-form [name=method]'),true);assert.equal(await page.locator('#entry-form [name=date]').evaluate(input=>input.required),false);
+ await page.fill('#entry-form [name=amount]','13.25');await page.fill('#entry-form [name=reason]','Fictional correction reason');await page.click('#entry-form button');await postBegan;await page.getByRole('button',{name:'Correct this entry'}).click();await page.fill('#entry-form [name=reason]','New correction idea');releasePost();await page.waitForFunction(()=>document.querySelector('#last-entry').textContent.startsWith('Saved entry ID:'));
+ assert.deepEqual(posted.scope,{...scope,year:'2026'});assert.equal(posted.event.kind,'correction');assert.equal(posted.event.replaces,'current');assert.equal(posted.event.amount_minor,1325);assert.equal(posted.event.reason,'Fictional correction reason');assert.equal(posted.event.date,'2026-10-02');assert.equal(await page.inputValue('#entry-form [name=reason]'),'New correction idea');assert.equal(await page.inputValue('#entry-form [name=replaces]'),'current');
+ granted=false;await page.click('#case-refresh');await page.waitForFunction(()=>document.querySelector('#entry-history').children.length===0);assert.equal(await page.inputValue('#entry-form [name=replaces]'),'');
+ await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
+ console.log(JSON.stringify({fixture:'synthetic API only',current_operating_entry_selected:true,superseded_and_payment_not_correctable:true,correction_payload_scope_amount_reason_csrf:true,older_save_preserves_newer_correction:true,access_clear_removes_history:true,mobile_overflow:false,page_errors:errors}));
+}finally{await browser.close();}})().catch(error=>{console.error(error.message);process.exitCode=1;});

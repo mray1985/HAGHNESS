@@ -1,6 +1,6 @@
 'use strict';
 const byId=id=>document.getElementById(id);
-let csrf='',scope=null,pendingEvent=null,pendingUpload=null,generation=0,uploadRevision=0;
+let csrf='',scope=null,pendingEvent=null,pendingUpload=null,generation=0,uploadRevision=0,entryRevision=0;
 const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value/100);
 function status(message){byId('status').textContent=message;}
 async function request(path,body){
@@ -26,17 +26,19 @@ async function refresh(){
   for(const question of draft.support_review_queue||[]){const row=document.createElement('li');row.textContent=question.event_id+': '+question.reasons.map(reason=>reviewReasons[reason]||'Further review needed').join('; ');list.append(row);}
   if(draft.support_review_required.length&&!draft.support_review_queue){const item=document.createElement('li');item.textContent=draft.support_review_required.length+' entries still need their supporting information reviewed. A typed record ID does not establish reviewed support.';list.append(item);}
   const item=document.createElement('li');item.textContent='Confirm income, expense eligibility and support before final return preparation.';list.append(item);
-  await loadSupport();
+  const entries=await loadEntries();if(current!==generation)return;
+  await loadSupport(entries);
   if(current!==generation)return;
   status('Draft updated from recorded entries. Final tax calculations remain unavailable.');
 }
 function clearOpenCase({keepScopeForm=false}={}){
-  generation++;uploadRevision++;reviewRevision++;scope=null;
+  generation++;uploadRevision++;entryRevision++;reviewRevision++;scope=null;
   pendingEvent=null;pendingUpload=null;pendingReview=null;canReview=false;supportEntries=[];
   byId('support-save').disabled=true;byId('support-access').textContent='Open permitted records to check review access.';
   for(const id of ['entry-form','document-form','support-form'])byId(id).reset();
+  syncEntryMode();
   if(!keepScopeForm)byId('scope-form').reset();
-  for(const id of ['support-history','support-entry','document-list','review-list'])byId(id).replaceChildren();
+  for(const id of ['support-history','support-entry','document-list','review-list','entry-history'])byId(id).replaceChildren();
   byId('support-document').replaceChildren(new Option('No document selected',''));
   byId('support-entry-detail').textContent='';byId('open-hatax').href='/tax';
   for(const id of ['income','expenses','profit','reserve','payments','revision','last-entry'])byId(id).textContent='—';
@@ -48,7 +50,40 @@ byId('scope-form').addEventListener('submit',async event=>{
   try{await refresh();if(current===generation)await listDocuments();}
   catch(error){if(current===generation)status(error.message);}
 });
-byId('entry-form').addEventListener('input',()=>{pendingEvent=null;});
+function syncEntryMode(){
+  const form=byId('entry-form'),correction=form.elements.kind.value==='correction';
+  form.elements.method.disabled=correction;form.elements.date.readOnly=correction&&Boolean(form.elements.date.value);form.elements.evidence.readOnly=correction;
+  form.elements.date.required=!form.elements.date.readOnly;form.elements.reason.required=correction;
+  byId('entry-correction-note').hidden=!correction;
+}
+byId('entry-form').elements.kind.addEventListener('change',syncEntryMode);
+async function loadEntries(){
+  const current=generation,list=byId('entry-history');list.replaceChildren();
+  try{
+    const result=await request('/api/connected/events?'+scopeQuery());if(current!==generation)return null;
+    const replaced=new Set(result.events.filter(entry=>entry.kind==='correction').map(entry=>entry.replaces));
+    const labels={income:'Business income',expense:'Business expense',owner_estimated_tax_payment:'Owner tax-payment record',employee_payroll_obligation:'Employee payroll obligation'};
+    for(const entry of result.events){
+      const item=document.createElement('li'),description=document.createElement('p');item.dataset.entry=entry.id;
+      description.textContent=entry.posting_date+' | '+(labels[entry.effective_kind]||'Recorded entry')+' | '+money(entry.amount_minor)+' | '+(entry.category||'No category')+' | '+entry.id+' | '+(replaced.has(entry.id)?'Earlier entry':'Current entry');item.append(description);
+      if(!replaced.has(entry.id)&&['income','expense'].includes(entry.effective_kind)){
+        const correct=document.createElement('button');correct.type='button';correct.textContent='Correct this entry';
+        correct.onclick=()=>{
+          if(current!==generation||!scope)return;
+          const form=byId('entry-form');entryRevision++;pendingEvent=null;form.reset();
+          form.elements.kind.value='correction';form.elements.replaces.value=entry.id;form.elements.date.value=entry.posting_date;
+          form.elements.amount.value=Math.floor(entry.amount_minor/100)+'.'+String(entry.amount_minor%100).padStart(2,'0');
+          form.elements.method.value=entry.method||'card';form.elements.category.value=entry.category||'';form.elements.evidence.value=entry.evidence||'';
+          syncEntryMode();form.elements.reason.focus();status('Enter the corrected amount and a reason. The earlier entry will be preserved.');
+        };item.append(correct);
+      }
+      list.append(item);
+    }
+    if(!result.events.length){const item=document.createElement('li');item.textContent='No entries recorded for this case yet.';list.append(item);}
+    return result;
+  }catch(error){if(current===generation){const item=document.createElement('li');item.textContent='Entry history could not be loaded.';list.append(item);}return {events:[]};}
+}
+byId('entry-form').addEventListener('input',()=>{entryRevision++;pendingEvent=null;});
 byId('period-form').addEventListener('submit',async event=>{event.preventDefault();if(!scope){status('Open permitted records first.');return;}try{await refresh();}catch(error){status(error.message);}});
 byId('entry-form').addEventListener('submit',async event=>{
   event.preventDefault();if(!scope){status('Open a permitted client and business first.');return;}
@@ -62,9 +97,14 @@ byId('entry-form').addEventListener('submit',async event=>{
     if(values.method==='cash')entered.explanation=values.reason;
     pendingEvent={scope,event:entered};}
   const button=event.target.querySelector('button');button.disabled=true;
-  const current=generation;
-  try{const saved=await request('/api/connected/events',pendingEvent);if(current!==generation)return;byId('last-entry').textContent='Saved entry ID: '+saved.id;pendingEvent=null;event.target.reset();await refresh();}
-  catch(error){if(current===generation)status(error.message+' Retry preserves the same entry ID.');}finally{button.disabled=false;}
+  const current=generation,revision=entryRevision,submission=pendingEvent;
+  try{const saved=await request('/api/connected/events',submission);if(current!==generation)return;
+    byId('last-entry').textContent='Saved entry ID: '+saved.id;
+    if(pendingEvent===submission)pendingEvent=null;
+    if(revision===entryRevision){event.target.reset();syncEntryMode();}
+    await refresh();
+    if(current===generation&&revision!==entryRevision)status('The earlier entry was saved. Your newer form changes remain; check the selected entry against the updated history.');
+  }catch(error){if(current===generation)status(error.message+(revision===entryRevision?' Retry preserves the same entry ID.':' The earlier save failed; your newer form changes remain.'));}finally{button.disabled=false;}
 });
 async function listDocuments(){
   const current=generation;
@@ -144,13 +184,13 @@ function showSupportEntry(){
   const entry=supportEntries.find(e=>e.id===byId('support-entry').value);
   byId('support-entry-detail').textContent=entry?entry.posting_date+' · '+money(entry.amount_minor)+' · '+(entry.method||'Method not recorded')+' · '+(entry.category||'No category')+' · '+(entry.explanation||'No explanation'):'';
 }
-async function loadSupport(){
+async function loadSupport(entries){
   const current=generation;pendingReview=null;canReview=false;byId('support-save').disabled=true;
   byId('support-entry').replaceChildren();byId('support-history').replaceChildren();
   byId('support-document').replaceChildren(new Option('No document selected',''));
   try{
-    const [entries,documents,history]=await Promise.all([
-      request('/api/connected/events?'+scopeQuery()),request('/api/connected/documents?'+scopeQuery()),
+    const [documents,history]=await Promise.all([
+      request('/api/connected/documents?'+scopeQuery()),
       request('/api/connected/support/reviews?'+scopeQuery())]);
     if(current!==generation)return;
     canReview=history.can_review===true;byId('support-save').disabled=!canReview;byId('support-access').textContent=canReview?'You can record supporting-information decisions for this case.':'You can view supporting records. A permitted reviewer must record the decision.';
