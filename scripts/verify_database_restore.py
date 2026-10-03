@@ -23,6 +23,7 @@ from ha.connected.documents import Documents
 from ha.connected.tax_inputs import TaxInputs
 from ha.connected.record_confirmation import RecordConfirmations
 from ha.connected.return_draft import estimate_connected_return
+from ha.returns import estimate_w2
 from ha.connected.backup_transfer import copy_bundle, recover_bundle
 from ha.connected.backup_receipt import write_receipt, publish_receipt, retrieve_receipt
 from ha.connected.backup_job import capture_backup
@@ -86,6 +87,23 @@ def verify_latest_corrections(ledger,owner,scope):
     return {'payroll_original_and_correction_preserved':True,'payroll_obligation_minor':25000,
             'original_cash_and_payment_preserved':True,'cash_explanation_amendment_preserved':True,
             'recorded_payment_minor':12500,'confirmed_payment_minor':0,'original_periods_and_no_double_count':True}
+
+
+def verify_saved_tax_versions(service, owner, scope, expected):
+    """Verify exact recovered inputs and immutable metadata for every saved version."""
+    if not expected:
+        raise ValueError('Expected saved versions required')
+    current=service.open(owner,scope)
+    if current['input']!=expected[-1][0] or current['snapshot']!=expected[-1][1]:
+        raise ValueError('Recovered current tax input differs')
+    history=service.history(owner,scope)
+    if len(history)!=len(expected) or {v['snapshot_id'] for v in history}!={v[1]['snapshot_id'] for v in expected}:
+        raise ValueError('Recovered tax input history differs')
+    for value,snapshot in expected:
+        recovered=service.open(owner,scope,snapshot['snapshot_id'])
+        if recovered['input']!=value or recovered['snapshot']!=snapshot:
+            raise ValueError('Recovered saved tax version differs')
+    return current['input']
 
 
 def main():
@@ -152,38 +170,56 @@ def main():
     tax_inputs=TaxInputs(repository,documents)
     tax_original_input={'year':'2026','profile':{'firstName':'fictional original','ssn':'000-00-0000'},
                         'forms':[{'layout':'standard','box1':'001.20','box2':'',
-                                  'states':[{'state':'LA','tax':''},{'state':'TX'}]}],
+                                  'states':[{'state':'LA','tax':''},{'state':'TX'}]},
+                                 {'type':'1099-INT','layout':'stacked','payerName':'Fictional bank',
+                                  'payerTin':'00-0000000','payerAddress':'123 Example Street',
+                                  'employeeName':'Fictional recipient','ssn':'000-00-0000',
+                                  'employeeAddress':'123 Example Street','account':'Fictional interest account',
+                                  'box1':'000.50','box3':'100.00','box4':'60.00','box8':'800.00',
+                                  'box9':'','box12':'0','box14':'Fictional CUSIP',
+                                  'corrected':False,'fatca':False,'special_treatment':'no',
+                                  'states':[{'state':'LA','id':'Fictional LA','tax':'0'},
+                                            {'state':'TX','id':'Fictional TX','tax':''}]}],
                         'active':0,'stateAnswers':{'state-move':'Yes'}}
     tax_original=tax_inputs.save(owner,scope,{'input':tax_original_input,'expected_snapshot_id':None,
                                             'reason':'','idempotency_key':'restore-tax-original'})
     tax_corrected_input=json.loads(json.dumps(tax_original_input))
     tax_corrected_input['profile']['firstName']='fictional corrected'
     tax_corrected_input['forms'][0]['box1']='200.00'
+    tax_corrected_input['forms'][1]['box1']='500.00'
+    tax_corrected_input['forms'][1]['corrected']=True
+    tax_corrected_input['active']=1
     tax_corrected=tax_inputs.save(owner,scope,{'input':tax_corrected_input,
                                 'expected_snapshot_id':tax_original['snapshot_id'],
                                 'reason':'Corrected fictional wages','idempotency_key':'restore-tax-corrected'})
     def verify_saved_inputs(restored_documents):
         service=TaxInputs(restored_documents.repository,restored_documents)
-        reopened=service.open(owner,scope)
-        if reopened['input']!=tax_corrected_input or reopened['snapshot']!=tax_corrected:
-            raise ValueError('Recovered current tax input differs')
-        prior=service.open(owner,scope,tax_original['snapshot_id'])
-        if prior['input']!=tax_original_input or prior['snapshot']!=tax_original:
-            raise ValueError('Recovered original tax input differs')
-        if len(service.history(owner,scope))!=2:
-            raise ValueError('Recovered tax input history differs')
+        recovered_input=verify_saved_tax_versions(service,owner,scope,[(tax_original_input,tax_original),(tax_corrected_input,tax_corrected)])
         try:service.open(owner,Scope('cedar','cedar-business',2026))
         except PermissionError:pass
         else:raise ValueError('Recovered tax input exposed another profile')
-        forms=reopened['input']['forms']
+        forms=recovered_input['forms']
         scenario={'tax_year':'2026','filing_status':'single',
-                  'w2s':[{'box1':f.get('box1',''),'box2':f.get('box2','')} for f in forms],
-                  'retirement_forms':[]}
+                  'w2s':[{'box1':f.get('box1',''),'box2':f.get('box2','')} for f in forms if f.get('type','W-2')=='W-2'],
+                  'retirement_forms':[],
+                  'interest_forms':[{key:f[key] for key in ('box1','box3','box4','box8','corrected','fatca','special_treatment')} for f in forms if f.get('type')=='1099-INT']}
         estimate=estimate_connected_return(PostgresLedger(restored_documents.repository),owner,scope,scenario)
         if (estimate['business_draft']['book_profit_minor']!=93000
                 or estimate['refund'] is not None or estimate['balance_due'] is not None
-                or estimate['may_prepare_return'] is not False or estimate['wages']!=200):
+                or estimate['may_prepare_return'] is not False or estimate['wages']!=200
+                or estimate['taxable_interest']!=600 or estimate['tax_exempt_interest']!=800
+                or not any(item['form']=='1099-INT' and any('corrected' in reason.lower() for reason in item['reasons']) for item in estimate['review_items'])):
             raise ValueError('Reopened connected tax draft disagrees')
+        # Isolate interest review from the business-wide hold: the same recovered
+        # amounts estimate without a correction flag, but must hold with it.
+        interest_only={'tax_year':'2026','filing_status':'single','interest_forms':scenario['interest_forms']}
+        held=estimate_w2(interest_only)
+        uncorrected=json.loads(json.dumps(interest_only))
+        uncorrected['interest_forms'][0]['corrected']=False
+        baseline=estimate_w2(uncorrected)
+        if not held['needs_review'] or held['refund'] is not None or baseline['needs_review'] or baseline['refund']!=60:
+            raise ValueError('Recovered corrected interest review hold disagrees')
+
     shutil.copytree(source_objects,object_backup)
     env = dict(os.environ,PGPASSWORD=params['password'])
     args = ['-h','127.0.0.1','-p','55432','-U','ha_test_admin']
@@ -446,8 +482,11 @@ def main():
               'transfer_store':'local SDK-shaped fictional adapter; not DigitalOcean',
               'transferred_support_review_queue_matches':True,'transferred_tables_match_snapshot':True,'tax_input_reference_restore':'passed_actual_saved_original_and_correction',
               'saved_tax_input_restore':'passed_current_and_original_exact_input_and_metadata',
+              'interest_input_restore':'passed_original_corrected_exact_amounts_flags_states_identity_metadata',
+              'recovered_interest_taxable':600,'recovered_interest_tax_exempt':800,
+              'recovered_interest_corrected_form_review_held':True,
               'saved_tax_input_cross_profile_denial':'passed','saved_tax_input_wrong_key_denial':'passed',
-              'reopened_connected_draft':'passed_wages200_book_profit93000_combined_balance_held','transferred_original_and_correction':'passed',
+              'reopened_connected_draft':'passed_wages200_interest600_exempt800_book_profit93000_combined_balance_held','transferred_original_and_correction':'passed',
               'transferred_book_profit_minor':93000,'transferred_cross_profile_denial':'passed',
               'hosted_storage_restore':'not_run','scanner':'synthetic fixture bypass only'}
     (ROOT/'docs/DATABASE-RESTORE-EVIDENCE.json').write_text(json.dumps(report,indent=2)+'\n')
