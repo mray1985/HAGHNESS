@@ -1,5 +1,5 @@
 'use strict';
-// Sensitive profile values remain in this page's memory; no browser storage.
+// Inputs use page memory; explicit protected saves use the server, never browser storage.
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dollars=v=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v);
@@ -22,7 +22,7 @@ function activate(step){draft.step=step;document.querySelectorAll('[data-step]')
 function heading(text,sub){return `<h1 tabindex="-1">${text}</h1><p class="intro">${sub}</p>`;}
 function focusHeading(){document.querySelector('main h1')?.focus({preventScroll:true});window.scrollTo(0,0);}
 function profile(){activate('profile');const p=draft.profile;
-  $('#content').innerHTML=heading('Let’s start with you.','Your information belongs at the top of your return. Enter it once, then match your documents.')+`<p class="quiet">Use fictional information in this preview. Entries stay in this page’s memory and clear when refreshed.</p><form id="profile-form"><div class="profile-grid">
+  $('#content').innerHTML=heading('Let’s start with you.','Your information belongs at the top of your return. Enter it once, then match your documents.')+`<p class="quiet">${connectedScope?'This business-linked draft can be saved through your HA session. Unsaved changes clear when refreshed.':'Use fictional information in this preview. Entries stay in this page’s memory and clear when refreshed.'}</p><form id="profile-form"><div class="profile-grid">
   ${input('firstName','First name',p.firstName,'required autocomplete="off"')}${input('lastName','Last name',p.lastName,'required autocomplete="off"')}
   ${input('ssn','Social Security number',p.ssn,'type="password" inputmode="numeric" pattern="[0-9]{3}-?[0-9]{2}-?[0-9]{4}" required autocomplete="off" placeholder="000-00-0000"')}
   ${input('birthday','Date of birth',p.birthday,'type="date" required')}
@@ -71,3 +71,94 @@ document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{if(b.dataset.
 $('#tax-year').onchange=e=>{draft.year=e.target.value;updateEstimate();if(draft.step==='forms'&&draft.forms.length)entry();else if(draft.step==='review')review();};
 if(connectedScope){$('#tax-year').value=draft.year;updateEstimate();}
 profile();
+
+
+// Protected persistence is explicit; public arithmetic never saves facts.
+const persistence={history:[],snapshot:null,baseline:'',busy:false,canSave:false,ready:false,notice:'',pending:null};
+function inputSnapshot(){return JSON.parse(JSON.stringify({year:draft.year,profile:draft.profile,
+  forms:draft.forms,active:draft.active,stateAnswers:draft.stateAnswers||{}}));}
+function inputSignature(){return JSON.stringify(inputSnapshot());}
+function savingMessage(message){$('#save-status').textContent=message;}
+function refreshSaveControls(message){
+  if(!connectedScope)return;
+  const dirty=inputSignature()!==persistence.baseline;
+  $('#save-input').disabled=!persistence.ready||!persistence.canSave||persistence.busy||(!dirty&&!!persistence.snapshot)||(!persistence.snapshot&&persistence.history.length>0);
+  $('#reopen-input').disabled=!persistence.ready||!persistence.history.length||persistence.busy;
+  if(message!==undefined)persistence.notice=message;
+  if(persistence.notice)savingMessage(persistence.notice);
+  else if(persistence.ready&&!persistence.busy)savingMessage((persistence.snapshot?'Saved '+new Date(persistence.snapshot.recorded_at).toLocaleString()+'. ':'')+
+    (dirty?'Unsaved changes.':persistence.snapshot?'These entries are saved.':persistence.history.length?'Saved work found. Reopen it before editing.':'No saved work opened.')+
+    (!persistence.canSave?' This session can view saved work; editing permission is unavailable.':''));
+}
+async function protectedTax(path,options={}){
+  const identity=await fetch('/api/auth/me',{credentials:'same-origin'});
+  if(!identity.ok)throw Error('Sign in through HA Bookin to use protected saving.');
+  const session=await identity.json();
+  const response=await fetch(path,{credentials:'same-origin',...options,
+    headers:{'Content-Type':'application/json',...(options.method==='POST'?{'X-HA-CSRF':session.csrf}:{})}});
+  const value=await response.json();
+  if(!response.ok)throw Error(value.error||'Saved work is unavailable. Your screen entries are unchanged.');
+  return value;
+}
+function taxQuery(){return new URLSearchParams(connectedScope).toString();}
+async function loadSavedReferences(){
+  const result=await protectedTax('/api/connected/tax/inputs?'+taxQuery());
+  persistence.history=result.history;persistence.canSave=result.can_save===true;persistence.ready=true;
+  $('#saved-version').innerHTML='<option value="">Latest saved version</option>'+result.history.slice().reverse().map((item,index)=>
+    `<option value="${esc(item.snapshot_id)}">${index===0?'Latest · ':''}${esc(new Date(item.recorded_at).toLocaleString())} · ${esc(item.reason||'Original')}</option>`).join('');
+}
+async function saveInputs(){
+  if(persistence.busy||!persistence.canSave)return;
+  const input=inputSnapshot(),signature=JSON.stringify(input),reason=$('#save-reason').value;
+  if(persistence.snapshot&&!reason.trim()){refreshSaveControls('Enter a reason for updating saved work.');$('#save-reason').focus();return;}
+  let message='';
+  persistence.busy=true;refreshSaveControls('Saving protected entries…');
+  try{
+    const shape=JSON.stringify({input,expected_snapshot_id:persistence.snapshot?.snapshot_id||null,reason});
+    if(persistence.pending?.shape!==shape)persistence.pending={shape,body:{scope:connectedScope,
+      save:{input,expected_snapshot_id:persistence.snapshot?.snapshot_id||null,reason,idempotency_key:crypto.randomUUID()}}};
+    const snapshot=await protectedTax('/api/connected/tax/inputs',{method:'POST',body:JSON.stringify(persistence.pending.body)});
+    persistence.pending=null;
+    persistence.snapshot=snapshot;persistence.baseline=signature;$('#save-reason').value='';
+    try{await loadSavedReferences();}catch(error){persistence.ready=false;message='Entries saved, but version list could not be refreshed. Reopen this page before the next save.';return;}
+  }catch(error){message=error.message+' Screen entries have been kept.';}
+  finally{persistence.busy=false;refreshSaveControls(message);}
+}
+async function reopenInputs(){
+  if(persistence.busy)return;
+  const signature=inputSignature(),selected=$('#saved-version').value;
+  persistence.busy=true;refreshSaveControls('Opening protected entries…');
+  let message='';
+  try{
+    const result=await protectedTax('/api/connected/tax/input?'+taxQuery()+(selected?'&snapshot='+encodeURIComponent(selected):''));
+    if(inputSignature()!==signature){message='Entries changed while opening. Reopen again when you are ready to replace them.';return;}
+    if(!result.input){message='No saved work is available for this case.';return;}
+    draft.profile=result.input.profile;draft.forms=result.input.forms.map(f=>({...f,states:f.states||[{}],
+      codes:f.codes||[{},{},{},{}],checks:f.checks||{}}));draft.active=result.input.active;
+    draft.stateAnswers=result.input.stateAnswers;draft.year=result.input.year;draft.estimate=null;
+    persistence.pending=null;persistence.snapshot=result.snapshot;$('#save-reason').value='';
+    profile();draft.profileReady=$('#profile-form').checkValidity();
+    if(draft.forms.length&&draft.profileReady)entry();
+    persistence.baseline=inputSignature();updateEstimate();
+  }catch(error){message=error.message+' Screen entries have been kept.';}
+  finally{persistence.busy=false;refreshSaveControls(message);}
+}
+function requestReopen(){
+  if(persistence.busy)return;
+  if(inputSignature()!==persistence.baseline)$('#reopen-confirm').showModal();
+  else reopenInputs();
+}
+if(connectedScope){
+  $('.workspace').classList.add('protected-workspace');
+  $('#tax-saving').hidden=false;$('#tax-year').disabled=true;
+  $('#storage-note').textContent='Business-linked draft. Save explicitly before leaving; reopen saved work through this session.';
+  persistence.baseline=inputSignature();
+  $('#save-input').onclick=saveInputs;$('#reopen-input').onclick=requestReopen;
+  $('#confirm-reopen').onclick=()=>{$('#reopen-confirm').close();reopenInputs();};
+  $('#cancel-reopen').onclick=()=>$('#reopen-confirm').close();
+  for(const event of ['input','change','click'])document.addEventListener(event,()=>{
+    setTimeout(()=>{if(!persistence.busy)persistence.notice='';refreshSaveControls();},0);
+  });
+  window.addEventListener('beforeunload',event=>{if(inputSignature()!==persistence.baseline){event.preventDefault();event.returnValue='';}});
+  loadSavedReferences().then(()=>refreshSaveControls()).catch(error=>refreshSaveControls(error.message));
+}

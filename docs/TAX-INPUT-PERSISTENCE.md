@@ -1,6 +1,6 @@
 # Protected HATax input persistence
 
-Status: input codec, database reference foundation and saving/opening service implemented and tested; HTTP routes implemented; user controls are not implemented. HATax still loses entries on refresh. This is the next core workflow feature, not completed saving.
+Status: input codec, database reference foundation and saving/opening service implemented and tested; HTTP routes and rendered user controls implemented; actual composed MFA/database/browser and restored saved-input proof remain open. HATax still loses entries on refresh. This is the next core workflow feature, not completed saving.
 
 ## Current evidence
 
@@ -48,3 +48,14 @@ GET `/api/connected/tax/inputs?profile=...&business=...&year=...` returns scoped
 Routes use existing MFA-derived session and Origin/CSRF verification, with no public saving fallback. Unconfigured service returns unavailable; unrelated/missing references do not disclose input. Automatic service wiring requires a shared PostgreSQL repository and configured Documents. Operators must apply migration 003 and explicitly provision editing plus document-write grants; routes do not grant access.
 
 Actual local HTTP plus PostgreSQL tests pass unsigned, missing-CSRF, absent edit permission, explicit grant, identical retry, history/current reopen, unknown snapshot, foreign profile, wrong year, invalid/oversized input, revoked permission and logout boundaries. The HTTP fixture uses an injected synthetic MFA session and volatile unencrypted object test double, not a live provider identity/storage journey. Encryption/concurrency were tested separately in the service fixture. Final regression: 219 total, 217 passed, two Linux-only skipped. Independent review found no important issues. Rendered Save/Reopen controls, actual MFA composition, hosted proof and recovery of saved input remain unfinished; current screen still clears on refresh.
+
+
+## Rendered controls checkpoint
+
+Business-linked HATax now exposes explicit Save/Reopen, saved-version selection, correction reason and saved/unsaved status. Existing work must be reopened before editing. Replacing unsaved entries requires a modal confirmation; cancel preserves them. Reopen supplies optional form defaults, derives actual profile-form validity and recalculates the estimate. Connected year is fixed to the case. Public preview has no saving controls or browser storage.
+
+Input signatures protect async behavior: saving older input never labels newer edits saved; edits during an in-flight reopen prevent replacement. Failed saves keep screen input. Equivalent retries reuse an in-memory idempotency key until input/expected-version/reason changes; successful save/reopen clears it. No client plaintext is persisted to localStorage/sessionStorage. Leaving with unsaved work uses the browser's navigation warning.
+
+Actual Edge headless Playwright on loopback rendered HTML/JS/CSS with explicitly fictional API responses. Browser plugin not available, so the frontend-testing skill's regular Playwright fallback was used. Checks passed save, page reload/reopen, cancel/confirm replacement, edits during save/open, denied-save preservation and retry-key reuse, W-2 multiple states and optional code defaults, 1099-R reopen, viewer-disabled save, public-hidden controls, empty browser storage, desktop1440x1000/mobile390x844 no horizontal overflow and no page errors. Screenshots outside the repo were visually inspected. An early script assertion needed to wait for async reopen; a later scripted confirmation incorrectly expected a dialog after a successful save, and was corrected to create unsaved work first. Those were verifier errors, not production defects.
+
+Independent code review found no important defect. JavaScript syntax and whitespace checks passed. Backend unchanged by this checkpoint; prior actual-PostgreSQL suite remains 217 passed/two Linux-only skipped. Browser responses are fictional, not evidence of a composed production identity/storage journey. Actual MFA composition, restored saved-input reopening and live DigitalOcean permissions remain open. Failed default/unconfigured sign-in cannot save. No filing readiness is implied.

@@ -218,3 +218,6 @@ October2 taxinputservicecontinuation: sharedPGtransaction read/save_tax/scope lo
 
 
 October2 taxinputHTTPcontinuation: scopedhistory/can_save, boundedCSRFprotectedPOST, current/selectedauthenticatedinputGET. No publicfallback; unconfigured503, unsigned401, CSRF403, foreign/noedit404, invalidoversize400. ActualPGHTTPtests grant/retry/open/history/year/revocation/logout pass syntheticMFAsession+volatileobjects; encryptiontestedseparately. Fullsuite217passed2Linux-onlyskipped219total; independentreviewnoimportantfindings. HTTPwiredonlysamePG/docrepo; migration003+explicitoperatorgrantsrequired. UI/liveMFA/recoveredsavedinput notyet; screenstillclearsrefresh.
+
+
+October2 taxsaveUIcheckpoint: protected-onlysave/reopen/version/reason/status, dirtyreplaceconfirmation, fixedcaseyear, asyncsignaturespreservenewerinput, idempotencykeyreuse, optionalformdefaults/recalculate. ActualEdgePlaywrightfictionalAPI save/reload/reopen/cancel/asyncEdit/denial/retry/W2multistate/1099R/viewerdisable/publichidden/noStorage/noErrors/desktopmobileoverflow pass; screenshotsoutsideRepoinspected. Independentreviewnoimportantdefect. JSsyntax/whitespacepass; no newbackendchange. ActualMFA+PG+browser andrestoredsavedinput/hostedverificationremainopen.
