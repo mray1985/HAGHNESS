@@ -221,3 +221,6 @@ October2 taxinputHTTPcontinuation: scopedhistory/can_save, boundedCSRFprotectedP
 
 
 October2 taxsaveUIcheckpoint: protected-onlysave/reopen/version/reason/status, dirtyreplaceconfirmation, fixedcaseyear, asyncsignaturespreservenewerinput, idempotencykeyreuse, optionalformdefaults/recalculate. ActualEdgePlaywrightfictionalAPI save/reload/reopen/cancel/asyncEdit/denial/retry/W2multistate/1099R/viewerdisable/publichidden/noStorage/noErrors/desktopmobileoverflow pass; screenshotsoutsideRepoinspected. Independentreviewnoimportantdefect. JSsyntax/whitespacepass; no newbackendchange. ActualMFA+PG+browser andrestoredsavedinput/hostedverificationremainopen.
+
+
+October2 taxCSPvisualfollowup: consolecollectioncaughtlegacyinline-spacingblockedbyprotectedCSP. MovedallreturnUIinlinestyles toCSSclasses, keptCSPstrict. ActualEdgefullfictionalflowrerun passedincludingconsolehealthwithonlyintentionaldenial/favicon404allowed. No backendchange.
