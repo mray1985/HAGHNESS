@@ -55,8 +55,12 @@ function syncEntryMode(){
   form.elements.method.disabled=correction;form.elements.date.readOnly=correction&&Boolean(form.elements.date.value);form.elements.evidence.readOnly=correction;
   form.elements.date.required=!form.elements.date.readOnly;form.elements.reason.required=correction;
   byId('entry-correction-note').hidden=!correction;
+  byId('entry-explanation-choice').hidden=!correction;
+  const replacing=correction&&form.elements.explanation_mode.value==='replace';
+  byId('entry-explanation-label').hidden=!replacing;form.elements.support_explanation.required=replacing;
 }
 byId('entry-form').elements.kind.addEventListener('change',syncEntryMode);
+byId('entry-explanation-mode').addEventListener('change',syncEntryMode);
 async function loadEntries(){
   const current=generation,list=byId('entry-history');list.replaceChildren();
   try{
@@ -73,7 +77,7 @@ async function loadEntries(){
           const form=byId('entry-form');entryRevision++;pendingEvent=null;form.reset();
           form.elements.kind.value='correction';form.elements.replaces.value=entry.id;form.elements.date.value=entry.posting_date;
           form.elements.amount.value=Math.floor(entry.amount_minor/100)+'.'+String(entry.amount_minor%100).padStart(2,'0');
-          form.elements.method.value=entry.method||'card';form.elements.category.value=entry.category||'';form.elements.evidence.value=entry.evidence||'';
+          form.elements.method.value=entry.method||'card';form.elements.category.value=entry.category||'';form.elements.evidence.value=entry.evidence||'';form.elements.support_explanation.value=typeof entry.explanation==='string'?entry.explanation:'';
           syncEntryMode();form.elements.reason.focus();status('Enter the corrected amount and a reason. The earlier entry will be preserved.');
         };item.append(correct);
       }
@@ -92,7 +96,10 @@ byId('entry-form').addEventListener('submit',async event=>{
   const [whole,cents='']=values.amount.split('.');const amount=Number(whole)*100+Number(cents.padEnd(2,'0'));
   if(!Number.isSafeInteger(amount)||amount>1e15){status('Amount is outside the supported range.');return;}
   if(!pendingEvent){const entered={id:crypto.randomUUID(),date:values.date,kind:values.kind,amount_minor:amount,method:values.method,category:values.category,evidence:values.evidence||null};
-    if(values.kind==='correction'){entered.replaces=values.replaces;entered.reason=values.reason;}
+    if(values.kind==='correction'){entered.replaces=values.replaces;entered.reason=values.reason;
+      if(values.explanation_mode==='replace')entered.support_changes={explanation:values.support_explanation};
+      else if(values.explanation_mode==='clear')entered.support_changes={explanation:null};
+    }
     if(values.kind==='owner_estimated_tax_payment'){entered.status='recorded_unverified';entered.government_confirmation=null;}
     if(values.method==='cash')entered.explanation=values.reason;
     pendingEvent={scope,event:entered};}

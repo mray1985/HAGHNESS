@@ -70,6 +70,20 @@ let stage='startup';
       assert.equal(await page.locator('#profit').innerText(),'$1,180.00');
       assert.equal(await page.locator('#expenses').innerText(),'$320.00');
     }
+    stage='cash-explanation-save';
+    await page.locator('#entry-history li[data-entry="sale-cash"]').getByRole('button',{name:'Correct this entry'}).click();
+    assert.equal(await page.locator('#entry-form [name=amount]').inputValue(),'500.00');
+    await page.locator('#entry-explanation-mode').selectOption('replace');
+    await page.locator('#entry-explanation').fill('Fictional browser cash clarification');
+    await page.locator('#entry-form [name=reason]').fill('Clarify the recorded cash sales');
+    const cashSaved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/connected/events'&&r.request().method()==='POST');
+    await page.locator('#entry-form button').click();const cashResponse=await cashSaved;assert.equal(cashResponse.status(),201);const cashId=(await cashResponse.json()).id;
+    await page.waitForFunction(id=>document.querySelector('#entry-history li[data-entry="'+id+'"]')!==null,cashId);
+    stage='cash-explanation-reopen';
+    const events=await(await context.request.get(fixture.origin+'/api/connected/events?profile=orchard&business=business&year=2026')).json();
+    const originalCash=events.events.find(entry=>entry.id==='sale-cash'),newCash=events.events.find(entry=>entry.id===cashId);
+    assert.equal(originalCash.explanation,'Aggregate fictional market sales');assert.equal(newCash.explanation,'Fictional browser cash clarification');assert.equal(newCash.amount_minor,50000);assert.equal(newCash.posting_date,originalCash.posting_date);assert.equal(newCash.method,'cash');
+    await page.waitForLoadState('networkidle');assert.equal(await page.locator('#profit').innerText(),'$1,180.00');
     stage='document-download';
     const receiptRow=page.locator('#document-list li').filter({has:page.locator('button')}).filter({hasText:fixture.document}).filter({hasText:'Current version'});
     assert.equal(await receiptRow.count(),1);
@@ -140,7 +154,7 @@ let stage='startup';
     assert.equal((await context.request.get(fixture.origin+'/api/connected/tax/inputs?profile=orchard&business=business&year=2026')).status(),401);
     assert.deepEqual(errors,[]);
     console.log(JSON.stringify({rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
-      rendered_document_list_download_and_correction_choice:'passed',rendered_entry_history_correction_choice:'passed',rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
+      rendered_document_list_download_and_correction_choice:'passed',rendered_cash_explanation_amendment_persisted:'passed',rendered_entry_history_correction_choice:'passed',rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
       authentication:'actual browser password and OTP through HTTPS callback',browser_certificate_trust:'not verified; disposable self-signed fixture',
       browser_storage_empty:true,mobile_overflow:false,
       elapsed_seconds:Math.round((performance.now()-started)/100)/10,

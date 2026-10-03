@@ -26,6 +26,7 @@
       "rendered_tax_save_reload_reopen": "passed",
       "rendered_books_periods_documents_handoff": "passed",
       "rendered_document_list_download_and_correction_choice": "passed",
+      "rendered_cash_explanation_amendment_persisted": "passed",
       "rendered_entry_history_correction_choice": "passed",
       "rendered_permitted_case_choice": "passed",
       "rendered_foreign_scope_clears_data": true,
@@ -35,7 +36,7 @@
       "browser_certificate_trust": "not verified; disposable self-signed fixture",
       "browser_storage_empty": true,
       "mobile_overflow": false,
-      "elapsed_seconds": 6.7,
+      "elapsed_seconds": 6.5,
       "timing_scope": "single local fictional browser run, includes browser password/OTP; excludes fixture wait and runtime startup"
     },
     "same_real_mfa_session_tax_save_reopen": "passed",

@@ -98,3 +98,22 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.post({'id':'fake-paid','date':'2026-10-01','kind':'owner_estimated_tax_payment',
                        'amount_minor':1000,'status':'government_confirmed','government_confirmation':'typed-by-user'})
+
+    def test_explicit_cash_explanation_amendment_preserves_original_money_and_support(self):
+        self.post({'id':'cash-original','date':'2026-10-01','kind':'expense','amount_minor':1000,'method':'cash','evidence':'receipt'})
+        self.post({'id':'cash-explained','date':'2026-10-03','kind':'correction','replaces':'cash-original','amount_minor':1000,'reason':'Added cash context','support_changes':{'explanation':'Paid cash for fictional supplies'}})
+        original,current=self.ledger.history(self.owner,self.scope)
+        self.assertIsNone(original.get('explanation'));self.assertEqual(current['explanation'],'Paid cash for fictional supplies')
+        self.assertEqual(current['posting_date'],'2026-10-01');self.assertEqual(current['method'],'cash');self.assertEqual(current['evidence'],'receipt')
+        draft=self.ledger.project(self.owner,self.scope,'year');self.assertEqual(draft['expense_minor'],1000);self.assertEqual(draft['cash_explanations_missing'],[])
+        self.assertEqual(draft['support_review_required'],['cash-explained']);self.assertFalse(draft['may_prepare_return'])
+        self.post({'id':'cash-clear','date':'2026-10-04','kind':'correction','replaces':'cash-explained','amount_minor':1000,'reason':'Withdraw incorrect context','support_changes':{'explanation':None}})
+        self.assertEqual(self.ledger.project(self.owner,self.scope,'year')['cash_explanations_missing'],['cash-clear'])
+        self.assertEqual(self.ledger.history(self.owner,self.scope)[1]['explanation'],'Paid cash for fictional supplies')
+
+    def test_support_amendment_requires_explicit_bounded_explanation_only(self):
+        self.post({'id':'cash-original','date':'2026-10-01','kind':'income','amount_minor':1000,'method':'cash'})
+        base={'id':'invalid','date':'2026-10-02','kind':'correction','replaces':'cash-original','amount_minor':1000,'reason':'Update'}
+        for index,value in enumerate(({},[],{'method':'card'},{'evidence':'forged'},{'explanation':True},{'explanation':' '},{'explanation':'x'*2001})):
+            with self.subTest(value=value),self.assertRaises(ValueError):self.post({**base,'id':'invalid-'+str(index),'support_changes':value})
+        with self.assertRaises(ValueError):self.post({'id':'not-correction','date':'2026-10-01','kind':'income','amount_minor':1000,'support_changes':{'explanation':'New'}})

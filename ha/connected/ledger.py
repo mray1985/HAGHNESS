@@ -36,6 +36,13 @@ class Ledger:
                 raise ValueError('Supporting information must be bounded text')
         if kind not in ('income', 'expense', 'correction', 'owner_estimated_tax_payment', 'employee_payroll_obligation'):
             raise ValueError('Event kind unsupported')
+        if 'support_changes' in event:
+            changes=event['support_changes']
+            if kind!='correction' or not isinstance(changes,dict) or set(changes)!={'explanation'}:
+                raise ValueError('Explicit correction explanation change required')
+            value=changes['explanation']
+            if value is not None and (not has_text(value) or len(value)>2000):
+                raise ValueError('Bounded explanation or explicit clear required')
         if kind == 'owner_estimated_tax_payment' and (event.get('status') != 'recorded_unverified' or event.get('government_confirmation')):
             raise ValueError('User entry cannot establish government payment confirmation')
         with self.lock:
@@ -55,6 +62,7 @@ class Ledger:
                 evidence = old.get('evidence')
                 posting_date = old['posting_date']
                 method,explanation=old.get('method'),old.get('explanation')
+                if 'support_changes' in event:explanation=event['support_changes']['explanation']
             else:
                 effective_kind, evidence, posting_date = kind, event.get('evidence'), event['date']
                 method,explanation=event.get('method'),event.get('explanation')

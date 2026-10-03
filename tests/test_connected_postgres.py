@@ -174,6 +174,31 @@ class PostgresTests(unittest.TestCase):
         self.assertIn('entry_changed',draft['support_review_queue'][0]['reasons'])
         self.assertEqual(len(service.history(self.owner,self.scope)),2)
 
+    def test_explanation_amendment_persists_and_requires_new_review(self):
+        from ha.connected.documents import Documents,MemoryObjects
+        from ha.connected.support_review import SupportReviews
+        service=SupportReviews(self.repo,Documents(self.repo,MemoryObjects(),lambda data,mime:True))
+        with self.repo.transaction() as conn:
+            conn.execute("INSERT INTO ha_connected.grants VALUES ('orchard-owner','orchard','business',2026,'review_support')")
+        self.ledger.post_event(self.owner,self.scope,dict(id='cash-income',date='2026-10-01',kind='income',amount_minor=1000,method='cash'))
+        with self.assertRaises(ValueError):service.submit(self.owner,self.scope,dict(event_id='cash-income',decision='accepted',reason='Checked',idempotency_key='missing-explanation'))
+        amended=dict(id='cash-explained',date='2026-10-03',kind='correction',replaces='cash-income',amount_minor=1000,reason='Added explanation',support_changes={'explanation':'Fictional cash sale'})
+        self.ledger.post_event(self.owner,self.scope,amended);self.ledger.post_event(self.owner,self.scope,amended)
+        fresh=PostgresLedger(PostgresRepository(DSN));history=fresh.history(self.owner,self.scope)
+        self.assertEqual(len(history),2);self.assertIsNone(history[0].get('explanation'));self.assertEqual(history[1]['explanation'],'Fictional cash sale')
+        self.assertEqual(history[1]['posting_date'],'2026-10-01');self.assertEqual(history[1]['method'],'cash');self.assertEqual(fresh.project(self.owner,self.scope,'year')['income_minor'],1000)
+        self.assertFalse(fresh.project(self.owner,self.scope,'year')['support_review_complete'])
+        service.submit(self.owner,self.scope,dict(event_id='cash-explained',decision='accepted',reason='Checked explanation',idempotency_key='explained-review'))
+        self.assertTrue(fresh.project(self.owner,self.scope,'year')['support_review_complete'])
+        cleared=dict(id='cash-cleared',date='2026-10-04',kind='correction',replaces='cash-explained',amount_minor=1000,reason='Withdraw explanation',support_changes={'explanation':None})
+        fresh.post_event(self.owner,self.scope,cleared);draft=fresh.project(self.owner,self.scope,'year')
+        self.assertEqual(draft['income_minor'],1000);self.assertEqual(draft['cash_explanations_missing'],['cash-cleared']);self.assertFalse(draft['support_review_complete'])
+        self.assertIn('entry_changed',draft['support_review_queue'][0]['reasons']);self.assertEqual(len(service.history(self.owner,self.scope)),1)
+        with self.assertRaises(ValueError):service.submit(self.owner,self.scope,dict(event_id='cash-cleared',decision='accepted',reason='Cannot accept missing context',idempotency_key='cleared-review'))
+        with self.repo.transaction() as conn:conn.execute("DELETE FROM ha_connected.grants WHERE action='correct'")
+        with self.assertRaises(PermissionError):fresh.post_event(self.owner,self.scope,{**amended,'id':'denied-amendment','replaces':'cash-cleared'})
+        self.assertEqual(len(fresh.history(self.owner,self.scope)),3)
+
     def test_support_review_http_session_csrf_scope_and_revocation(self):
         import threading
         import http.client
