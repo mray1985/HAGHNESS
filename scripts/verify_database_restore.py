@@ -20,6 +20,8 @@ from psycopg.types.json import Jsonb
 from ha.connected.postgres import PostgresRepository,PostgresLedger
 from ha.connected.domain import Principal,Scope
 from ha.connected.documents import Documents
+from ha.connected.tax_inputs import TaxInputs
+from ha.connected.return_draft import estimate_connected_return
 from ha.connected.backup_transfer import copy_bundle, recover_bundle
 from ha.connected.backup_receipt import write_receipt, publish_receipt, retrieve_receipt
 from ha.connected.backup_job import capture_backup
@@ -52,7 +54,7 @@ def main():
     with repository.transaction() as conn:
         conn.execute("INSERT INTO ha_connected.profiles VALUES ('orchard'),('cedar')")
         conn.execute("INSERT INTO ha_connected.businesses VALUES ('business','orchard'),('cedar-business','cedar')")
-        for action in ('read','post','correct','upload','restore'):
+        for action in ('read','post','correct','upload','restore','save_tax'):
             conn.execute('INSERT INTO ha_connected.grants VALUES (%s,%s,%s,%s,%s)',('orchard-owner','orchard','business',2026,action))
     fixture = json.loads((ROOT/'docs/fixtures/day8-connected-workflow.json').read_text())
     ledger = PostgresLedger(repository)
@@ -82,13 +84,41 @@ def main():
             VALUES (%s,'orchard','business',2026,%s,%s,%s,%s,'needs_information',
                     'Fictional review fixture','fixture-reviewer','review-fixture',%s)""",
             (uuid.uuid4(),event_id,'a'*64,original.document_id,original.version_id,'b'*64))
-    # Reference-table fixture only; bytes are a receipt, not a saved tax input.
-    with repository.transaction() as conn:
-        conn.execute("""INSERT INTO ha_connected.tax_input_versions
-            (snapshot_id,profile_id,business_id,tax_year,document_id,version_id,
-             actor,reason,idempotency_key,request_fingerprint)
-            VALUES (%s,'orchard','business',2026,%s,%s,'fixture-owner','',%s,%s)""",
-            (uuid.uuid4(),original.document_id,original.version_id,'tax-reference-fixture','c'*64))
+    tax_inputs=TaxInputs(repository,documents)
+    tax_original_input={'year':'2026','profile':{'firstName':'fictional original','ssn':'000-00-0000'},
+                        'forms':[{'layout':'standard','box1':'001.20','box2':'',
+                                  'states':[{'state':'LA','tax':''},{'state':'TX'}]}],
+                        'active':0,'stateAnswers':{'state-move':'Yes'}}
+    tax_original=tax_inputs.save(owner,scope,{'input':tax_original_input,'expected_snapshot_id':None,
+                                            'reason':'','idempotency_key':'restore-tax-original'})
+    tax_corrected_input=json.loads(json.dumps(tax_original_input))
+    tax_corrected_input['profile']['firstName']='fictional corrected'
+    tax_corrected_input['forms'][0]['box1']='200.00'
+    tax_corrected=tax_inputs.save(owner,scope,{'input':tax_corrected_input,
+                                'expected_snapshot_id':tax_original['snapshot_id'],
+                                'reason':'Corrected fictional wages','idempotency_key':'restore-tax-corrected'})
+    def verify_saved_inputs(restored_documents):
+        service=TaxInputs(restored_documents.repository,restored_documents)
+        reopened=service.open(owner,scope)
+        if reopened['input']!=tax_corrected_input or reopened['snapshot']!=tax_corrected:
+            raise ValueError('Recovered current tax input differs')
+        prior=service.open(owner,scope,tax_original['snapshot_id'])
+        if prior['input']!=tax_original_input or prior['snapshot']!=tax_original:
+            raise ValueError('Recovered original tax input differs')
+        if len(service.history(owner,scope))!=2:
+            raise ValueError('Recovered tax input history differs')
+        try:service.open(owner,Scope('cedar','cedar-business',2026))
+        except PermissionError:pass
+        else:raise ValueError('Recovered tax input exposed another profile')
+        forms=reopened['input']['forms']
+        scenario={'tax_year':'2026','filing_status':'single',
+                  'w2s':[{'box1':f.get('box1',''),'box2':f.get('box2','')} for f in forms],
+                  'retirement_forms':[]}
+        estimate=estimate_connected_return(PostgresLedger(restored_documents.repository),owner,scope,scenario)
+        if (estimate['business_draft']['book_profit_minor']!=118000
+                or estimate['refund'] is not None or estimate['balance_due'] is not None
+                or estimate['may_prepare_return'] is not False or estimate['wages']!=200):
+            raise ValueError('Reopened connected tax draft disagrees')
     shutil.copytree(source_objects,object_backup)
     env = dict(os.environ,PGPASSWORD=params['password'])
     args = ['-h','127.0.0.1','-p','55432','-U','ha_test_admin']
@@ -143,7 +173,7 @@ def main():
             counts[table] = len(after)
     with psycopg.connect(source_dsn) as conn:
         source_version_count=conn.execute('SELECT count(*) FROM ha_connected.document_versions').fetchone()[0]
-    if source_version_count!=3 or counts['document_versions']!=2:
+    if source_version_count!=5 or counts['document_versions']!=4:
         raise ValueError('Exported snapshot included a later committed upload')
     recovered_ledger = PostgresLedger(PostgresRepository(recovered_dsn))
     if recovered_ledger.project(owner,scope,'year')['book_profit_minor'] != 118000:
@@ -162,6 +192,7 @@ def main():
                              (corrected,b'fictional corrected receipt')):
         actual=recovered_documents.read(owner,scope,version.document_id,version.version_id)
         if actual!=expected:raise ValueError('Recovered document bytes disagree')
+    verify_saved_inputs(recovered_documents)
     try:
         recovered_documents.read(owner,Scope('cedar','cedar-business',2026),
                                  original.document_id,original.version_id)
@@ -178,6 +209,12 @@ def main():
         pass
     else:
         raise ValueError('Restored object accepted wrong encryption key')
+    wrong_key_repo=PostgresRepository(recovered_dsn)
+    wrong_key_docs=Documents(wrong_key_repo,EncryptedLocalObjects(restored_objects,lambda:bytes(32)),
+                            lambda data,mime:False)
+    try:TaxInputs(wrong_key_repo,wrong_key_docs).open(owner,scope)
+    except ValueError:pass
+    else:raise ValueError('Restored tax input accepted wrong encryption key')
     with psycopg.connect(recovered_dsn) as conn:
         restored_versions=[repository._version(row) for row in conn.execute('SELECT * FROM ha_connected.document_versions').fetchall()]
     verify_inventory(inventory,restored_versions,EncryptedLocalObjects(restored_objects,key_path.read_bytes),archive_hash)
@@ -191,6 +228,7 @@ def main():
     for version,expected in ((original,b'fictional original receipt'),(corrected,b'fictional corrected receipt')):
         if bundled_documents.read(owner,scope,version.document_id,version.version_id)!=expected:
             raise ValueError('Bundled object recovery differs')
+    verify_saved_inputs(bundled_documents)
     # SDK-shaped local ciphertext store: exercises transfer plumbing, not a provider.
     class FictionalStore:
         def __init__(self, root):
@@ -237,6 +275,7 @@ def main():
     for version,expected in ((original,b'fictional original receipt'),(corrected,b'fictional corrected receipt')):
         if transfer_documents.read(owner,scope,version.document_id,version.version_id)!=expected:
             raise ValueError('Transferred document differs')
+    verify_saved_inputs(transfer_documents)
     try:
         transfer_documents.read(owner,Scope('cedar','cedar-business',2026),original.document_id,original.version_id)
     except PermissionError:pass
@@ -276,7 +315,7 @@ def main():
     with psycopg.connect(source_dsn) as conn:
         current_versions=[repository._version(row) for row in conn.execute('SELECT * FROM ha_connected.document_versions').fetchall()]
     inspect_bundle(job_bundle,backup_key_path.read_bytes(),current_versions)
-    if not job['completed'] or job['document_versions']!=3 or not job['offhost']['completed']:raise ValueError('Backup job did not capture current versions')
+    if not job['completed'] or job['document_versions']!=5 or not job['offhost']['completed']:raise ValueError('Backup job did not capture current versions')
     receipt=write_receipt(job,run_id+'-database','nyc3','fictional-job-backups',recovery_root/'job.receipt.json')
     remote_receipt=publish_receipt(receipt,transfer_store)
     retrieved_receipt=retrieve_receipt(transfer_store,'fictional-job-backups',job['offhost']['prefix'],'nyc3')
@@ -288,7 +327,7 @@ def main():
               'elapsed_seconds':round(elapsed,3),'source_database_preserved':True,'fixture_source':'new isolated database; existing test data untouched',
               'recovered_book_profit_minor':118000,'recovered_cross_profile_denial':'passed',
               'aws_backup_restore':'not_run','document_object_restore':'passed_local_encrypted_files',
-              'document_versions_recovered':2,'document_cross_profile_denial':'passed',
+              'document_versions_recovered':4,'document_cross_profile_denial':'passed',
               'wrong_key_denial':'passed','encrypted_backup_plaintext_check':'passed',
               'key_storage':'separate ignored local recovery-key directory; not copied with object backup',
               'consistent_exported_snapshot':'passed', 'post_snapshot_upload_excluded':True, 'source_document_versions_after_snapshot':source_version_count, 'encrypted_version_inventory_restore':'passed', 'database_archive_inventory_binding':'passed',
@@ -297,7 +336,10 @@ def main():
               'read_only_backup_role_capture':'passed','backup_role_write_denials':denials,'temporary_backup_role_removed':True,
               'transferred_bundle_database_restore':'passed_actual_pg_restore',
               'transfer_store':'local SDK-shaped fictional adapter; not DigitalOcean',
-              'transferred_support_review_queue_matches':True,'transferred_tables_match_snapshot':True,'tax_input_reference_restore':'passed_metadata_fixture_only_not_saved_input','transferred_original_and_correction':'passed',
+              'transferred_support_review_queue_matches':True,'transferred_tables_match_snapshot':True,'tax_input_reference_restore':'passed_actual_saved_original_and_correction',
+              'saved_tax_input_restore':'passed_current_and_original_exact_input_and_metadata',
+              'saved_tax_input_cross_profile_denial':'passed','saved_tax_input_wrong_key_denial':'passed',
+              'reopened_connected_draft':'passed_wages200_book_profit118000_combined_balance_held','transferred_original_and_correction':'passed',
               'transferred_book_profit_minor':118000,'transferred_cross_profile_denial':'passed',
               'hosted_storage_restore':'not_run','scanner':'synthetic fixture bypass only'}
     (ROOT/'docs/DATABASE-RESTORE-EVIDENCE.json').write_text(json.dumps(report,indent=2)+'\n')

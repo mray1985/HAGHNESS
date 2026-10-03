@@ -41,7 +41,7 @@ Illustrative bank-data-only budget: 100 newly verified accounts, 100 ownership c
 
 The [current DigitalOcean cost scenario](DIGITALOCEAN-COST-PLAN.md) prices application/scanner, identity, a single-node database, Spaces and optional daily VM backups at a $129.05 component subtotal. A complete quote still needs retained backups, key recovery, overages, monitoring, operations and support. Treasury and Schwab integration charges require written provider terms. No complete monthly total has been verified.
 
-The latest saved actual local recovery run took 8.015 seconds, restoring six snapshot tables, six ledger events, two document versions and support-review history, with scope and wrong-key denials. Private backup locator copy/readback also passed through the fictional local store. This single sample is not p50/p95, hosted recovery time or user completion time.
+The latest saved actual local recovery run took 7.994 seconds, restoring six snapshot tables, six ledger events, four document versions, two saved tax-input references and support-review history, with scope and wrong-key denials. Private backup locator copy/readback also passed through the fictional local store. This single sample is not p50/p95, hosted recovery time or user completion time.
 
 For future measurements, record environment, trial ID, start/end UTC, elapsed seconds, success/error, provider confirmation and charges for each phase: login/MFA, original upload, correction, draft calculation, restore, bank linking, payment confirmation and IRA funding. Report task time separately from settlement time and failures separately from successful observations. Provider phases remain unmeasured.
 

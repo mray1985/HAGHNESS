@@ -1,6 +1,6 @@
 # Protected HATax input persistence
 
-Status: input codec, database reference foundation and saving/opening service implemented and tested; HTTP routes and rendered user controls implemented; actual composed MFA/database/browser and restored saved-input proof remain open. HATax still loses entries on refresh. This is the next core workflow feature, not completed saving.
+Status: input codec, database reference foundation and saving/opening service implemented and tested; HTTP routes and rendered user controls implemented; actual composed MFA/database/browser and hosted proof remain open; local restored saved-input proof now passes. HATax still loses entries on refresh. This is the next core workflow feature, not completed saving.
 
 ## Current evidence
 
@@ -62,3 +62,12 @@ Independent code review found no important defect. JavaScript syntax and whitesp
 
 
 Console-health follow-up: collecting actual browser warning/error messages exposed pre-existing inline spacing styles blocked by the protected page CSP. Moved all HATax inline spacing attributes into named CSS classes without relaxing CSP. The same complete rendered-flow check then passed, with only the deliberately denied fictional API request's HTTP404 resource message (and possible missing favicon) allowed; no app warning or runtime/CSP error. This visual follow-up changes no backend rules.
+
+
+## Actual saved-input recovery checkpoint
+
+The recovery probe now uses TaxInputs to save a fictional W-2 input original and correction through the actual PostgreSQL transaction service and AES-GCM local document adapter. The former metadata-only reference fixture is replaced. Original text includes a leading-zero wage amount, blank withholding and multiple state rows; the correction changes wages and a fictional profile name. Both complete inputs and their exact server reference metadata reopen correctly after local encrypted database/object restoration, completed-bundle inspection and downloaded-bundle actual pg_restore. History contains both versions; unrelated-profile and wrong-document-key access reject.
+
+The reopened corrected input is recalculated with current restored Bookin records: wages200, book profit118000 minor units, combined refund/balance held pending business tax treatment, may_prepare_return=false. All seven snapshot tables match after restoration. Four document versions are recovered (receipt original/correction and tax-input original/correction); a fifth separately committed upload remains outside the snapshot. Actual read-only capture sees all five current versions. Locators still describe verified copies rather than granting recovery/deletion authority.
+
+Final actual probe passed in 7.994 seconds, a single local fixture measurement rather than hosted or user completion time. Storage transfer remains an explicitly fictional SDK-shaped local adapter, and scanning/identity remain synthetic in this probe. Production code unchanged; independent review found no important defect. Actual browser/MFA composition and live Spaces/key recovery/retention still need verification. Detailed current evidence: DATABASE-RESTORE-EVIDENCE.json.

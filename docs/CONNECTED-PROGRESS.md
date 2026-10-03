@@ -224,3 +224,6 @@ October2 taxsaveUIcheckpoint: protected-onlysave/reopen/version/reason/status, d
 
 
 October2 taxCSPvisualfollowup: consolecollectioncaughtlegacyinline-spacingblockedbyprotectedCSP. MovedallreturnUIinlinestyles toCSSclasses, keptCSPstrict. ActualEdgefullfictionalflowrerun passedincludingconsolehealthwithonlyintentionaldenial/favicon404allowed. No backendchange.
+
+
+October2 actualsavedtaxrestore: replacedmetadata-onlyfixture with actualTaxInputs original/correction encryptedAES+PG. Exactbothinput/servermetadata/historyreopen from localobjects, completedbundle anddownloadedbundleafteractualpg_restore. Fourdocumentversions/twotaxreferences/seven tablesmatch; fifthpost-snapshotuploadexcluded. Recomputedwages200/bookprofit118000minor holdsrefundbalance/maypreparefalse. Foreigntaxscope/wrongtaxkeydeny; actualreadonlyjobcaptures5versions. Finalprobe7.994seconds singlelocalmeasurement; independentreviewnoimportantfindings. No productionchange; identity/scanner synthetic/transferfictionalSDK explicit. ActualMFA+renderedbrowser/liveDO/keyrecovery/retentionstillopen.
