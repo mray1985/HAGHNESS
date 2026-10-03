@@ -22,6 +22,13 @@
     "password_direct_grant_disabled": true
   },
   "connected_session_checks": {
+    "same_real_mfa_session_tax_save_reopen": "passed",
+    "tax_original_correction_exact_input_and_metadata": true,
+    "tax_csrf_edit_grant_retry_stale_checks": true,
+    "tax_foreign_revocation_and_logout_denials": true,
+    "tax_reopened_connected_estimate_held": true,
+    "tax_refund_and_balance_held": true,
+    "tax_preparation_not_authorized": true,
     "real_mfa_https_callback": "passed",
     "same_session_books_tax_documents": "passed",
     "same_real_mfa_session_support_review": "passed",

@@ -61,3 +61,12 @@ For future measurements, record environment, trial ID, start/end UTC, elapsed se
 | Costs/times | Published bank-data rates and one local recovery measurement; five local API workflow timings saved; full quote/provider timings pending |
 
 Current regression checkpoint: 209 tests, 207 passed with real PostgreSQL, two Linux-only tests skipped. Later dated entries below record the intervening changes; older entries describe their checkpoint rather than current limitations. The full build remains incomplete; local evidence must not be presented as hosted security, filing readiness or a confirmed partnership.
+
+
+## Real MFA saved-tax-input checkpoint
+
+October 2: the completed local Keycloak password/OTP to HA HTTPS callback probe now saves and reopens tax inputs under the same actual opaque session used for books, tax estimates, documents and support review. Actual PostgreSQL 16, ClamD and AES-GCM local objects participate. Original and correction inputs and server metadata reopen exactly, including leading-zero amounts, blanks and multiple states. Retry preserves the original response; stale edits, missing CSRF, missing edit authority, foreign scope, revoked grants and access after logout are rejected. Revoking edit permission still permits explicitly authorized reading.
+
+Recalculating the reopened correction produces wages of $200 and book profit of $1,180. Refund and balance remain held, and preparation authority remains false. The saved KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json records each check. The final probe exited successfully, and no owned Java, PostgreSQL or ClamD fixture services remained running afterward. Two Linux cleanup tests also passed.
+
+This is actual local MFA/API evidence with fictional taxpayer data. The separate rendered-browser checks use fictional API responses; a combined rendered browser with real MFA remains pending. Hosted DigitalOcean/Spaces, real-user enrollment and recovery, external key recovery, retention execution and filing remain unverified. Runtime uploads remain unactivated.

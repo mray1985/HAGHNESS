@@ -202,12 +202,60 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             if 'document_changed' not in advertising['reasons']:raise ValueError('Corrected support did not reopen')
             if len(api('GET','/api/connected/support/reviews?'+query)['reviews'])!=1:
                 raise ValueError('Review history changed')
+            tax_input={'year':'2026','profile':{'firstName':'Fictional tax original','ssn':'000-00-0000'},
+                       'forms':[{'layout':'standard','box1':'001.20','box2':'',
+                                 'states':[{'state':'LA','tax':''},{'state':'TX'}]}],
+                       'active':0,'stateAnswers':{'state-move':'Yes'}}
+            tax_save={'scope':scope,'save':{'input':tax_input,'expected_snapshot_id':None,
+                      'reason':'','idempotency_key':'real-mfa-tax-original'}}
+            api('POST','/api/connected/tax/inputs',tax_save,status=403)
+            api('POST','/api/connected/tax/inputs',tax_save,status=404,csrf=csrf)
+            if api('GET','/api/connected/tax/inputs?'+query)['can_save']:
+                raise ValueError('Missing tax edit grant advertised as permitted')
+            with repository.transaction() as conn:
+                conn.execute('INSERT INTO ha_connected.grants VALUES (%s,%s,%s,%s,%s)',
+                             (subject,'orchard','business',2026,'save_tax'))
+            tax_original=api('POST','/api/connected/tax/inputs',tax_save,status=201,csrf=csrf)
+            if tax_original['actor']!=subject:raise ValueError('Tax saved actor differs from MFA identity')
+            if api('POST','/api/connected/tax/inputs',tax_save,status=201,csrf=csrf)!=tax_original:
+                raise ValueError('Tax retry changed snapshot')
+            tax_changed=json.loads(json.dumps(tax_input))
+            tax_changed['profile']['firstName']='Fictional tax corrected'
+            tax_changed['forms'][0]['box1']='200.00'
+            tax_correction={'scope':scope,'save':{'input':tax_changed,
+                            'expected_snapshot_id':tax_original['snapshot_id'],
+                            'reason':'Corrected fictional wage entry','idempotency_key':'real-mfa-tax-corrected'}}
+            tax_corrected=api('POST','/api/connected/tax/inputs',tax_correction,status=201,csrf=csrf)
+            current=api('GET','/api/connected/tax/input?'+query)
+            prior=api('GET','/api/connected/tax/input?'+query+'&snapshot='+tax_original['snapshot_id'])
+            if current!={'snapshot':tax_corrected,'input':tax_changed} or prior!={'snapshot':tax_original,'input':tax_input}:
+                raise ValueError('Tax input versions did not reopen exactly')
+            tax_history=api('GET','/api/connected/tax/inputs?'+query)
+            if len(tax_history['history'])!=2 or not tax_history['can_save']:
+                raise ValueError('Tax history/edit capability mismatch')
+            api('POST','/api/connected/tax/inputs',{'scope':scope,'save':{**tax_correction['save'],
+                'idempotency_key':'real-mfa-tax-stale'}},status=400,csrf=csrf)
+            api('GET','/api/connected/tax/input?profile=cedar&business=cedar-business&year=2026',status=404)
+            api('GET','/api/connected/tax/inputs?profile=cedar&business=cedar-business&year=2026',status=404)
+            reopened_estimate=api('POST','/api/connected/return/estimate',{'scope':scope,
+                'scenario':{'tax_year':'2026','w2s':[{'box1':current['input']['forms'][0]['box1'],'box2':''}]}},csrf=csrf)
+            if (reopened_estimate['wages']!=200 or reopened_estimate['refund'] is not None
+                    or reopened_estimate['balance_due'] is not None or reopened_estimate['may_prepare_return'] is not False
+                    or reopened_estimate['business_draft']['book_profit_minor']!=118000):
+                raise ValueError('Reopened tax draft differs from connected records')
+            with repository.transaction() as conn:
+                conn.execute("DELETE FROM ha_connected.grants WHERE subject=%s AND action='save_tax'",(subject,))
+            if api('GET','/api/connected/tax/inputs?'+query)['can_save']:
+                raise ValueError('Revoked tax editing still advertised')
+            api('POST','/api/connected/tax/inputs',tax_correction,status=404,csrf=csrf)
+            if api('GET','/api/connected/tax/input?'+query)['input']!=tax_changed:
+                raise ValueError('Revoking editing incorrectly removed authorized read access')
             before_objects=set(objects.root.iterdir())
             eicar=b'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
             api('POST','/api/connected/documents',{**payload,'idempotency_key':'rejected','data':base64.b64encode(eicar).decode()},status=400,csrf=csrf)
-            if len(api('GET','/api/connected/documents?'+query)['versions'])!=2:raise ValueError('Rejected upload published metadata')
+            if len(api('GET','/api/connected/documents?'+query)['versions'])!=4:raise ValueError('Rejected upload published metadata')
             if set(objects.root.iterdir())!=before_objects:raise ValueError('Rejected upload published object')
-            if any(b'Fictional receipt' in item.read_bytes() for item in before_objects):raise ValueError('Plaintext object discovered')
+            if any(any(marker in item.read_bytes() for marker in (b'Fictional receipt',b'Fictional tax')) for item in before_objects):raise ValueError('Plaintext object discovered')
             with repository.transaction() as conn:
                 conn.execute('DELETE FROM ha_connected.grants WHERE subject=%s',(subject,))
             api('GET','/api/auth/me')
@@ -215,11 +263,18 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             api('GET','/api/connected/document?'+query+suffix,status=404)
             api('GET','/api/connected/support/reviews?'+query,status=404)
             api('POST','/api/connected/support/reviews',review,status=404,csrf=csrf)
+            api('GET','/api/connected/tax/input?'+query,status=404)
+            api('POST','/api/connected/tax/inputs',tax_correction,status=404,csrf=csrf)
             call(callback,expected=404)  # HA pending exchange is single use.
             api('POST','/api/auth/logout',{},csrf=csrf)
             api('GET','/api/auth/me',status=401)
             api('GET','/api/connected/draft?'+query,status=401)
-            return {'real_mfa_https_callback':'passed','same_session_books_tax_documents':'passed','same_real_mfa_session_support_review':'passed',
+            api('GET','/api/connected/tax/inputs?'+query,status=401)
+            return {'same_real_mfa_session_tax_save_reopen':'passed',
+                'tax_original_correction_exact_input_and_metadata':True,'tax_csrf_edit_grant_retry_stale_checks':True,
+                'tax_foreign_revocation_and_logout_denials':True,'tax_reopened_connected_estimate_held':True,
+                'tax_refund_and_balance_held':True,'tax_preparation_not_authorized':True,
+                'real_mfa_https_callback':'passed','same_session_books_tax_documents':'passed','same_real_mfa_session_support_review':'passed',
                 'review_csrf_and_explicit_authority_denials':True,'review_retry_history_preserved':True,
                 'review_document_correction_reopens_queue':True,'review_foreign_scope_and_revocation_denials':True,
                 'postgresql':'isolated real PostgreSQL 16 Unix-socket cluster',

@@ -99,3 +99,12 @@ This proves the local server/API connection. It does not prove hosted DigitalOce
 ## Real MFA support-review session extension
 
 October2 composed local probe now includes the support-review API under the actual Keycloak password/OTP to HA HTTPS callback session. Missing CSRF and missing explicit review permission fail before a fictional grant is inserted. The same opaque cookie accepts scanned receipt support, preserves retry/history, and reopens advertising review after document correction. Foreign review history and active-session read/write after grant revocation fail. Actual PostgreSQL16, ClamD and AES-GCM fixture objects participate. Saved KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json identifies these checks separately. This is API/protocol evidence, not a live rendered browser, hosted Spaces, enrollment or recovery proof. Runtime uploads remain unactivated.
+
+
+## Real MFA saved-tax-input checkpoint
+
+October 2: the completed local Keycloak password/OTP to HA HTTPS callback probe now saves and reopens tax inputs under the same actual opaque session used for books, tax estimates, documents and support review. Actual PostgreSQL 16, ClamD and AES-GCM local objects participate. Original and correction inputs and server metadata reopen exactly, including leading-zero amounts, blanks and multiple states. Retry preserves the original response; stale edits, missing CSRF, missing edit authority, foreign scope, revoked grants and access after logout are rejected. Revoking edit permission still permits explicitly authorized reading.
+
+Recalculating the reopened correction produces wages of $200 and book profit of $1,180. Refund and balance remain held, and preparation authority remains false. The saved KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json records each check. The final probe exited successfully, and no owned Java, PostgreSQL or ClamD fixture services remained running afterward. Two Linux cleanup tests also passed.
+
+This is actual local MFA/API evidence with fictional taxpayer data. The separate rendered-browser checks use fictional API responses; a combined rendered browser with real MFA remains pending. Hosted DigitalOcean/Spaces, real-user enrollment and recovery, external key recovery, retention execution and filing remain unverified. Runtime uploads remain unactivated.

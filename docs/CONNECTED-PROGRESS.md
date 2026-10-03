@@ -227,3 +227,12 @@ October2 taxCSPvisualfollowup: consolecollectioncaughtlegacyinline-spacingblocke
 
 
 October2 actualsavedtaxrestore: replacedmetadata-onlyfixture with actualTaxInputs original/correction encryptedAES+PG. Exactbothinput/servermetadata/historyreopen from localobjects, completedbundle anddownloadedbundleafteractualpg_restore. Fourdocumentversions/twotaxreferences/seven tablesmatch; fifthpost-snapshotuploadexcluded. Recomputedwages200/bookprofit118000minor holdsrefundbalance/maypreparefalse. Foreigntaxscope/wrongtaxkeydeny; actualreadonlyjobcaptures5versions. Finalprobe7.994seconds singlelocalmeasurement; independentreviewnoimportantfindings. No productionchange; identity/scanner synthetic/transferfictionalSDK explicit. ActualMFA+renderedbrowser/liveDO/keyrecovery/retentionstillopen.
+
+
+## Real MFA saved-tax-input checkpoint
+
+October 2: the completed local Keycloak password/OTP to HA HTTPS callback probe now saves and reopens tax inputs under the same actual opaque session used for books, tax estimates, documents and support review. Actual PostgreSQL 16, ClamD and AES-GCM local objects participate. Original and correction inputs and server metadata reopen exactly, including leading-zero amounts, blanks and multiple states. Retry preserves the original response; stale edits, missing CSRF, missing edit authority, foreign scope, revoked grants and access after logout are rejected. Revoking edit permission still permits explicitly authorized reading.
+
+Recalculating the reopened correction produces wages of $200 and book profit of $1,180. Refund and balance remain held, and preparation authority remains false. The saved KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json records each check. The final probe exited successfully, and no owned Java, PostgreSQL or ClamD fixture services remained running afterward. Two Linux cleanup tests also passed.
+
+This is actual local MFA/API evidence with fictional taxpayer data. The separate rendered-browser checks use fictional API responses; a combined rendered browser with real MFA remains pending. Hosted DigitalOcean/Spaces, real-user enrollment and recovery, external key recovery, retention execution and filing remain unverified. Runtime uploads remain unactivated.
