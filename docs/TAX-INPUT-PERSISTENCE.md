@@ -80,3 +80,12 @@ October 2: the completed local Keycloak password/OTP to HA HTTPS callback probe 
 Recalculating the reopened correction produces wages of $200 and book profit of $1,180. Refund and balance remain held, and preparation authority remains false. The saved KEYCLOAK-CONNECTED-SESSION-EVIDENCE.json records each check. The final probe exited successfully, and no owned Java, PostgreSQL or ClamD fixture services remained running afterward. Two Linux cleanup tests also passed.
 
 This is actual local MFA/API evidence with fictional taxpayer data. The separate rendered-browser checks use fictional API responses; a combined rendered browser with real MFA remains pending. Hosted DigitalOcean/Spaces, real-user enrollment and recovery, external key recovery, retention execution and filing remain unverified. Runtime uploads remain unactivated.
+
+
+## Rendered browser with actual MFA session
+
+October 2: optional HA_MFA_BROWSER_NODE extension passed in actual headless Edge against the live local fixture, with no mocked API routes. The opaque cookie from the verified password/OTP callback is passed in memory through subprocess stdin, never written as browser state or logged. The protected /tax screen reopens the saved correction, saves a new fictional correction, reloads and reopens it again. Three saved versions are listed. Browser storage is empty, no page errors occur and the 390-pixel mobile viewport has no horizontal overflow. The final composed probe exited successfully; no owned fixture services remained running.
+
+This verifies rendered tax save/reload/reopen with actual PostgreSQL, ClamD and encrypted local objects under an actual MFA-created session. It reuses that session rather than entering password/OTP in the browser. The browser accepts the disposable self-signed fixture certificate; browser certificate trust is not proven. Separate protocol checks still verify hostname and certificate trust. Hosted DigitalOcean/Spaces, real-user enrollment/recovery, external key recovery, retention execution and filing remain pending.
+
+The extension requires the Windows Node executable via HA_MFA_BROWSER_NODE and the installed Playwright/Edge runtime. HA_PLAYWRIGHT_MODULE can override the module location. It is an optional local verifier, never a production authentication bypass. Authentication reuse follows the Playwright BrowserContext cookie API: https://playwright.dev/docs/api/class-browsercontext.

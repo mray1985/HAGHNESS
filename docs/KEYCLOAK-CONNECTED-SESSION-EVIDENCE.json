@@ -22,6 +22,14 @@
     "password_direct_grant_disabled": true
   },
   "connected_session_checks": {
+    "rendered_browser_checks": {
+      "rendered_tax_save_reload_reopen": "passed",
+      "api_mocking": false,
+      "authentication": "reused actual MFA-created opaque cookie",
+      "browser_certificate_trust": "not verified; disposable self-signed fixture",
+      "browser_storage_empty": true,
+      "mobile_overflow": false
+    },
     "same_real_mfa_session_tax_save_reopen": "passed",
     "tax_original_correction_exact_input_and_metadata": true,
     "tax_csrf_edit_grant_retry_stale_checks": true,

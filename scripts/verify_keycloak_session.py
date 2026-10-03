@@ -256,6 +256,22 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             if len(api('GET','/api/connected/documents?'+query)['versions'])!=4:raise ValueError('Rejected upload published metadata')
             if set(objects.root.iterdir())!=before_objects:raise ValueError('Rejected upload published object')
             if any(any(marker in item.read_bytes() for marker in (b'Fictional receipt',b'Fictional tax')) for item in before_objects):raise ValueError('Plaintext object discovered')
+            browser_checks={'rendered_workflow':'not_run'}
+            browser_node=os.environ.get('HA_MFA_BROWSER_NODE')
+            if browser_node:
+                # Re-enable only the fictional editor grant for this optional
+                # live browser extension after the API revocation checks.
+                with repository.transaction() as conn:
+                    conn.execute('INSERT INTO ha_connected.grants VALUES (%s,%s,%s,%s,%s)',
+                        (subject,'orchard','business',2026,'save_tax'))
+                session_cookie=next(cookie.value for cookie in jar if cookie.name=='__Host-ha_session')
+                script=Path(__file__).with_name('verify_mfa_tax_browser.cjs').resolve()
+                script_path=subprocess.check_output(['wslpath','-w',str(script)],text=True).strip()
+                browser_run=subprocess.run([browser_node,script_path],
+                    input=json.dumps({'origin':app_origin,'cookie':session_cookie}),text=True,
+                    capture_output=True,timeout=90)
+                if browser_run.returncode:raise ValueError('Rendered local MFA tax verification failed')
+                browser_checks=json.loads(browser_run.stdout)
             with repository.transaction() as conn:
                 conn.execute('DELETE FROM ha_connected.grants WHERE subject=%s',(subject,))
             api('GET','/api/auth/me')
@@ -270,7 +286,8 @@ def verify_session(identity_origin,context,password,secret,keys,no_redirect_clas
             api('GET','/api/auth/me',status=401)
             api('GET','/api/connected/draft?'+query,status=401)
             api('GET','/api/connected/tax/inputs?'+query,status=401)
-            return {'same_real_mfa_session_tax_save_reopen':'passed',
+            return {'rendered_browser_checks':browser_checks,
+                'same_real_mfa_session_tax_save_reopen':'passed',
                 'tax_original_correction_exact_input_and_metadata':True,'tax_csrf_edit_grant_retry_stale_checks':True,
                 'tax_foreign_revocation_and_logout_denials':True,'tax_reopened_connected_estimate_held':True,
                 'tax_refund_and_balance_held':True,'tax_preparation_not_authorized':True,
