@@ -10,6 +10,7 @@ def estimate_connected_return(ledger,principal,scope,scenario):
     if books['ledger_revision']:
         result.update(estimated_tax=None,refund=None,balance_due=None,needs_review=True,incomplete=True)
         result['review_items'].append({'form':'HA Bookin','index':None,'reasons':[
+            'Entry completeness has not been verified. Reviewed receipts do not establish that all transactions have been entered.',
             'Saved business records are connected to this draft. Book profit is not yet verified taxable business profit.',
             'Business tax adjustments, self-employment tax and payment treatment must be completed before showing a combined refund or balance.']})
     result['may_prepare_return']=False

@@ -20,6 +20,7 @@ async function refresh(){
   byId('reserve').textContent='Optional 25% of recorded receipts reserve scenario: '+money(draft.reserve_scenario_minor)+'. No money moved.';
   byId('payments').textContent='Owner payments recorded: '+money(draft.owner_payments_recorded_minor)+' · government-confirmed: '+money(draft.owner_payments_confirmed_minor);
   const list=byId('review-list');list.replaceChildren();
+  const completeness=document.createElement('li');completeness.textContent='Entry completeness has not been verified. Check for income or expenses you have not entered. Add a missing transaction under Book entries; attach a missing receipt under Documents. Reviewing receipts does not confirm that every transaction is entered.';list.append(completeness);
   for(const id of draft.missing_receipts){const item=document.createElement('li');item.textContent='Missing receipt: '+id;list.append(item);}
   for(const id of draft.cash_explanations_missing){const item=document.createElement('li');item.textContent='Explain the cash entry: '+id;list.append(item);}
   const reviewReasons={not_reviewed:'Supporting information has not been reviewed',entry_changed:'The entry changed after review',document_changed:'The supporting document changed after review',needs_information:'The reviewer requested more information',receipt_required:'A current receipt is needed',cash_explanation_required:'Explain the cash entry'};

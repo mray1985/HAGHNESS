@@ -19,3 +19,9 @@ POST /api/connected/events uses the existing correction envelope and read/post/c
 Verified locally with fictional data: ledger tests, actual PostgreSQL persistence/review/revocation tests, rendered amendment payload and in-flight form-race checks, and an actual MFA browser save/read journey. Hosted service configuration and filing remain unfinished.
 
 Owner payment correction verification: the full PostgreSQL suite ran 269 tests (265 passed on Windows, four Linux-only checks skipped there and passed separately). An actual MFA/nginx browser journey changes a fictional payment record from $100 to $125, rereads both versions, and verifies $125 recorded, $0 confirmed and unchanged business profit. Evidence: KEYCLOAK-NGINX-SESSION-EVIDENCE.json. No payment is initiated.
+
+## Missing transaction or missing receipt
+
+If income or an expense has not been entered, add the transaction under Book entries. If an expense is already recorded and its receipt is missing, upload the supporting document under Documents and have a permitted reviewer check it. Adding a receipt does not establish that all income and expenses have been entered.
+
+Draft projections explicitly report `entry_completeness: "not_verified"` and `missing_entries: null`. Null means unknown, not zero missing transactions. Receipt/support decisions do not change these fields. The connected HATax business review carries this limitation forward and still holds combined tax/refund figures. Bank reconciliation, automatic missing-transaction detection and a verified completeness workflow are not implemented.

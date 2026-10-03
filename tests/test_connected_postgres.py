@@ -206,6 +206,8 @@ class PostgresTests(unittest.TestCase):
         self.assertFalse(fresh.project(self.owner,self.scope,'year')['support_review_complete'])
         service.submit(self.owner,self.scope,dict(event_id='cash-explained',decision='accepted',reason='Checked explanation',idempotency_key='explained-review'))
         self.assertTrue(fresh.project(self.owner,self.scope,'year')['support_review_complete'])
+        supported=fresh.project(self.owner,self.scope,'year')
+        self.assertEqual(supported['entry_completeness'],'not_verified');self.assertIsNone(supported['missing_entries'])
         cleared=dict(id='cash-cleared',date='2026-10-04',kind='correction',replaces='cash-explained',amount_minor=1000,reason='Withdraw explanation',support_changes={'explanation':None})
         fresh.post_event(self.owner,self.scope,cleared);draft=fresh.project(self.owner,self.scope,'year')
         self.assertEqual(draft['income_minor'],1000);self.assertEqual(draft['cash_explanations_missing'],['cash-cleared']);self.assertFalse(draft['support_review_complete'])

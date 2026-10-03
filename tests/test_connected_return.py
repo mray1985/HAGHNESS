@@ -17,6 +17,9 @@ class ConnectedReturnTests(unittest.TestCase):
         self.assertIsNone(result['estimated_tax'])
         self.assertTrue(result['needs_review'])
         self.assertEqual(result['review_items'][-1]['form'],'HA Bookin')
+        self.assertEqual(result['business_draft']['entry_completeness'],'not_verified')
+        self.assertIsNone(result['business_draft']['missing_entries'])
+        self.assertIn('Entry completeness has not been verified',result['review_items'][-1]['reasons'][0])
 
     def test_scope_and_year_cannot_be_changed_to_bypass_authorization(self):
         from ha.connected.domain import Scope

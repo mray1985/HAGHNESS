@@ -121,6 +121,8 @@ class Ledger:
                 'reserve_basis': 'recorded_receipts', 'reserve_moves_money': False,
                 'owner_payments_recorded_minor': sum(e['amount_minor'] for e in payments),
                 'owner_payments_confirmed_minor': sum(e['amount_minor'] for e in payments if e.get('status') == 'government_confirmed'),
+                # Receipt review covers entered records, not omitted transactions.
+                'entry_completeness':'not_verified','missing_entries':None,
                 'missing_receipts': [e['id'] for e in effective if e['effective_kind'] == 'expense' and not has_text(e.get('evidence'))],
                 'cash_explanations_missing':[e['id'] for e in operating if e.get('method')=='cash' and not has_text(e.get('explanation'))],
                 # Source-supplied `reviewed` is not an authorized review action.

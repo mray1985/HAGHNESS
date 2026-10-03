@@ -8,6 +8,21 @@ from ha.connected.ledger import Ledger
 
 
 class LedgerTests(unittest.TestCase):
+    def test_receipts_do_not_establish_transaction_completeness(self):
+        for events in ([],[dict(id='documented',date='2026-10-01',kind='expense',amount_minor=1000,evidence='fictional receipt')]):
+            ledger=Ledger(self.repo)
+            for event in events:ledger.post_event(self.owner,self.scope,event)
+            draft=ledger.project(self.owner,self.scope,'year')
+            self.assertEqual(draft['missing_receipts'],[])
+            self.assertEqual(draft['entry_completeness'],'not_verified')
+            self.assertIsNone(draft['missing_entries'])
+            self.assertFalse(draft['may_prepare_return'])
+            from ha.connected.support_review import apply_support_reviews
+            reviewed=apply_support_reviews(draft,ledger.history(self.owner,self.scope),[],[])
+            self.assertEqual(reviewed['entry_completeness'],'not_verified')
+            self.assertIsNone(reviewed['missing_entries'])
+            if not events:self.assertTrue(reviewed['support_review_complete'])
+
     def test_payment_correction_preserves_original_and_unverified_status(self):
         original=dict(id='payment',date='2026-10-01',kind='owner_estimated_tax_payment',amount_minor=10000,status='recorded_unverified',government_confirmation=None,method='card')
         self.post(original)
