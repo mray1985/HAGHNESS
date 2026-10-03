@@ -30,7 +30,24 @@ async function refresh(){
   if(current!==generation)return;
   status('Draft updated from recorded entries. Final tax calculations remain unavailable.');
 }
-byId('scope-form').addEventListener('submit',async event=>{event.preventDefault();generation++;uploadRevision++;reviewRevision++;pendingReview=null;canReview=false;byId('support-save').disabled=true;byId('support-access').textContent='Checking review access…';supportEntries=[];byId('support-reason').value='';byId('support-decision').value='needs_information';byId('support-history').replaceChildren();byId('support-entry').replaceChildren();byId('support-document').replaceChildren(new Option('No document selected',''));byId('support-entry-detail').textContent='';pendingEvent=null;pendingUpload=null;scope=Object.fromEntries(new FormData(event.target));byId('open-hatax').href='/tax?'+new URLSearchParams(scope);for(const id of ['income','expenses','profit','reserve','payments','revision','last-entry'])byId(id).textContent='—';byId('document-list').replaceChildren();byId('review-list').replaceChildren();const current=generation;try{await refresh();if(current===generation)await listDocuments();}catch(error){if(current===generation)status(error.message);}});
+function clearOpenCase({keepScopeForm=false}={}){
+  generation++;uploadRevision++;reviewRevision++;scope=null;
+  pendingEvent=null;pendingUpload=null;pendingReview=null;canReview=false;supportEntries=[];
+  byId('support-save').disabled=true;byId('support-access').textContent='Open permitted records to check review access.';
+  for(const id of ['entry-form','document-form','support-form'])byId(id).reset();
+  if(!keepScopeForm)byId('scope-form').reset();
+  for(const id of ['support-history','support-entry','document-list','review-list'])byId(id).replaceChildren();
+  byId('support-document').replaceChildren(new Option('No document selected',''));
+  byId('support-entry-detail').textContent='';byId('open-hatax').href='/tax';
+  for(const id of ['income','expenses','profit','reserve','payments','revision','last-entry'])byId(id).textContent='—';
+}
+byId('scope-form').addEventListener('submit',async event=>{
+  event.preventDefault();clearOpenCase({keepScopeForm:true});scope=Object.fromEntries(new FormData(event.target));
+  byId('open-hatax').href='/tax?'+new URLSearchParams(scope);byId('support-access').textContent='Checking review access…';
+  const current=generation;
+  try{await refresh();if(current===generation)await listDocuments();}
+  catch(error){if(current===generation)status(error.message);}
+});
 byId('entry-form').addEventListener('input',()=>{pendingEvent=null;});
 byId('period-form').addEventListener('submit',async event=>{event.preventDefault();if(!scope){status('Open permitted records first.');return;}try{await refresh();}catch(error){status(error.message);}});
 byId('entry-form').addEventListener('submit',async event=>{
@@ -85,11 +102,14 @@ async function loadCases(){
   byId('case-open').disabled=true;byId('case-choice').replaceChildren(new Option('Checking access…',''));
   try{
     const result=await request('/api/connected/cases');if(current!==caseGeneration)return;
+    if(scope&&!result.cases.some(item=>item.profile===scope.profile&&item.business===scope.business&&String(item.year)===String(scope.year))){
+      clearOpenCase();status('Access to the open records is no longer available. Choose permitted records to continue.');
+    }
     byId('case-choice').replaceChildren(new Option('Choose your records',''));
     for(const item of result.cases)byId('case-choice').append(new Option(item.profile+' · '+item.business+' · '+item.year,JSON.stringify(item)));
     byId('case-status').textContent=result.cases.length?'Choose a business and tax year to begin.':'No records are currently available through this session.';
     byId('case-open').disabled=!result.cases.length;
-  }catch(error){if(current!==caseGeneration)return;byId('case-choice').replaceChildren(new Option('Access unavailable',''));byId('case-status').textContent=error.message;}
+  }catch(error){if(current!==caseGeneration)return;clearOpenCase();status('Case access could not be confirmed. Reopen permitted records after refreshing access.');byId('case-choice').replaceChildren(new Option('Access unavailable',''));byId('case-status').textContent=error.message;}
 }
 byId('case-refresh').onclick=loadCases;
 byId('case-form').addEventListener('submit',event=>{
