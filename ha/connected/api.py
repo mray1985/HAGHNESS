@@ -132,7 +132,7 @@ def create_server(address, sessions, ledger, documents, login, allowed_origin, *
                         return self.respond(404,{'error':'Page unavailable'})
                     data = target.read_bytes()
                     if name == "index.html":
-                        data = data.replace(b'href="/tools.html">Tax tools',b'href="/connected.html">HA Bookin')
+                        data = data.replace(b'id="books-link" href="/">HA home',b'id="books-link" href="/connected.html">HA Bookin')
                     self.send_response(200)
                     self.send_header('Content-Type',{'html':'text/html','js':'text/javascript','css':'text/css'}[name.rsplit('.',1)[1]]+'; charset=utf-8')
                     self.send_header('Content-Length',str(len(data)))

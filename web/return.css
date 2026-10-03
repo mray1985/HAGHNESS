@@ -10,3 +10,5 @@
 @media(min-width:801px){.protected-workspace .steps{grid-column:1;grid-row:1 / 3}.protected-workspace .tax-saving{grid-column:2 / -1;grid-row:1}.protected-workspace main{grid-column:2;grid-row:2}.protected-workspace .estimate{grid-column:3;grid-row:2}}
 
 .space-top-small{margin-top:12px}.space-top-large{margin-top:24px}.space-block-small{margin:12px 0 0}
+
+.tools-section{margin:24px 0 32px}.tool-form{border:1px solid var(--line);border-radius:10px;padding:20px;margin:16px 0}.tool-form ul{padding-left:22px;color:var(--muted)}.form-flag{color:#924511;font-size:13px}.top-actions #tax-tools{padding:8px 12px}@media(max-width:800px){.top-actions{gap:8px}.top-actions #tax-tools{font-size:12px;padding:6px}.top-actions #books-link{display:none}.review-table ul{padding-left:15px}}

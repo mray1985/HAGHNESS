@@ -1,0 +1,66 @@
+// Fictional rendered input against the actual local HTTP estimate, no API mocks.
+const assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/mitch/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+(async()=>{
+  const browser=await chromium.launch({channel:'msedge',headless:true});
+  try{
+    const page=await browser.newPage({viewport:{width:1280,height:900}}),errors=[];
+    page.on('pageerror',error=>errors.push(error.message));
+    await page.goto(process.env.HA_TAX_BROWSER_URL||'http://127.0.0.1:8770/tax');
+    const profile={firstName:'Fictional',lastName:'Example',ssn:'000-00-0000',birthday:'1990-01-01',address:'123 Example Street',city:'Example',state:'LA',zip:'70701'};
+    for(const [name,value] of Object.entries(profile))await page.locator(`#profile-form [name="${name}"]`).fill(value);
+    await page.getByRole('button',{name:'Continue to your forms'}).click();
+    await page.locator('[data-form="W-2"]').click();await page.locator('#confirm-w2').click();
+    await page.locator('[data-layout="standard"]').click();
+    await page.locator('[data-field="box1"]').fill('45000');await page.locator('[data-field="box2"]').fill('5200');
+    await page.waitForFunction(()=>document.querySelector('#estimate-result').textContent.includes('$1,928.50'));
+    await page.locator('[data-step="forms"]').click();await page.locator('[data-form="1099-INT"]').click();
+    await page.locator('#confirm-int').click();await page.locator('[data-int-layout="standard"]').click();
+    for(const [key,value] of Object.entries({box1:'500',box3:'100',box4:'60',box8:'800'}))await page.locator(`[data-field="${key}"]`).fill(value);
+    await page.locator('#int-special').selectOption('no');
+    await page.waitForFunction(()=>document.querySelector('#estimate-result').textContent.includes('$1,916.50'));
+    assert.equal(await page.locator('#sum-wages').innerText(),'$45,000.00');
+    assert.equal(await page.locator('#sum-interest').innerText(),'$600.00');
+    assert.equal(await page.locator('#sum-exempt-interest').innerText(),'$800.00');
+    assert.equal(await page.locator('#sum-withholding').innerText(),'$5,260.00');
+    await page.locator('[data-int-state="0"][data-key="state"]').fill('LA');
+    await page.locator('#int-add-state').click();await page.locator('[data-int-state="1"][data-key="state"]').fill('TX');
+    await page.locator('#int-change-layout').click();await page.locator('[data-int-layout="stacked"]').click();
+    assert.equal(await page.locator('[data-field="box1"]').inputValue(),'500');
+    assert.equal(await page.locator('[data-int-state="1"][data-key="state"]').inputValue(),'TX');
+    await page.locator('[data-field="box2"]').fill('10');
+    await page.waitForFunction(()=>document.querySelector('#estimate-result').textContent.includes('Return needs review'));
+    await page.locator('[data-field="box2"]').fill('');
+    await page.waitForFunction(()=>document.querySelector('#estimate-result').textContent.includes('$1,916.50'));
+    await page.setViewportSize({width:390,height:844});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    const screenshot=require('node:path').resolve(__dirname,'../docs/screenshots/interest-entry-mobile.png');
+    await page.evaluate(()=>window.scrollTo(0,0));
+    await page.screenshot({path:screenshot});
+    await page.locator('#int-next').click();assert.match(await page.locator('#content').innerText(),/LA, TX/);
+    await page.locator('#back-w2').click();
+    await page.locator('[data-document="0"]').click();assert.equal(await page.locator('[data-field="box1"]').inputValue(),'45000');
+    await page.locator('#tax-tools').click();
+    assert.match(await page.locator('#content').innerText(),/Fix this/);
+    assert.equal(await page.getByRole('button',{name:'Print completed return'}).isDisabled(),true);
+    await page.locator('[data-tool-edit="1"]').click();
+    assert.equal(await page.locator('[data-field="box1"]').inputValue(),'500');
+    await page.locator('#tax-tools').click();await page.locator('[data-tool-remove="1"]').click();
+    await page.locator('#cancel-delete').click();assert.equal(await page.locator('.tool-form').count(),2);
+    await page.locator('[data-tool-remove="1"]').click();await page.locator('#confirm-delete').click();
+    assert.equal(await page.locator('.tool-form').count(),1);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    await page.screenshot({path:require('node:path').resolve(__dirname,'../docs/screenshots/tax-tools-mobile.png')});
+    await page.waitForFunction(()=>document.querySelector('#estimate-result').textContent.includes('$1,928.50'));
+    const flags=await page.evaluate(()=>{
+      const complete={type:'W-2',employerName:'Fictional Employer, 123 Example Street',ein:'00-0000000',employeeName:'Fictional Example',ssn:'000-00-0000',employeeAddress:'123 Example Street',box1:'45000',box2:'5200',states:[{}]};
+      return {complete:formIssues(complete).filter(x=>x.level==='Fix this'),optional:formIssues({...complete,box7:''}).filter(x=>x.level==='Fix this'),invalid:formIssues({...complete,box7:'-1'}).filter(x=>x.level==='Fix this'),mismatch:formIssues({...complete,ssn:'111-11-1111'}).map(x=>x.text)};
+    });
+    assert.equal(flags.complete.length,0);assert.equal(flags.optional.length,0);assert.equal(flags.invalid.length,1);assert(flags.mismatch.some(x=>x.includes('differs from the profile')));
+    await page.locator('[data-tool-edit="0"]').click();await page.locator('#remove-w2').click();
+    assert.equal(await page.locator('#delete-confirm').isVisible(),true);await page.locator('#cancel-delete').click();
+    assert.equal(await page.locator('[data-field="box1"]').inputValue(),'45000');
+    assert.deepEqual(errors,[]);
+    console.log('PASS: actual HTTP W-2/1099-INT estimates, layout changes, review holds, multi-state rows, mobile fit, document switching and removal.');
+  }finally{await browser.close();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

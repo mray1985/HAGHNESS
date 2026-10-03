@@ -253,6 +253,30 @@ let stage='startup';
     await page.locator('#reopen-input').click();
     await page.waitForFunction(()=>document.querySelector('[name=firstName]')?.value==='Fictional browser correction');
     assert.equal(await page.locator('#saved-version option').count(),4);
+    stage='interest-profile';
+    // The earlier saved fixture is deliberately partial. Complete the required
+    // fictional profile before the form picker, as a real user must.
+    for(const [name,value] of Object.entries({lastName:'Example',ssn:'000-00-0000',birthday:'1990-01-01',address:'123 Example Street',city:'Example',state:'LA',zip:'70701'}))await page.locator('#profile-form [name="'+name+'"]').fill(value);
+    await page.getByRole('button',{name:'Continue to your forms'}).click();
+    stage='interest-tax-save';
+    await page.locator('[data-form="1099-INT"]').click();await page.locator('#confirm-int').click();
+    await page.locator('[data-int-layout="stacked"]').click();
+    for(const [key,value] of Object.entries({box1:'500.00',box3:'100.00',box4:'60.00',box8:'800.00'}))await page.locator('[data-field="'+key+'"]').fill(value);
+    await page.locator('#int-special').selectOption('no');
+    await page.locator('#save-reason').fill('Add fictional bank interest with the same MFA session');
+    const interestSaved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/connected/tax/inputs'&&r.request().method()==='POST');
+    await page.locator('#save-input').click();assert.equal((await interestSaved).status(),201);
+    stage='interest-tax-reopen';
+    await page.reload();await page.waitForFunction(()=>!document.querySelector('#reopen-input').disabled);
+    await page.locator('#reopen-input').click();
+    await page.waitForFunction(()=>document.querySelector('#int-special')?.value==='no');
+    assert.equal(await page.locator('[data-field="box1"]').inputValue(),'500.00');
+    assert.equal(await page.locator('[data-field="box8"]').inputValue(),'800.00');
+    assert.equal(await page.locator('#int-special').inputValue(),'no');
+    await page.waitForFunction(()=>document.querySelector('#sum-interest').textContent==='$600.00');
+    assert.match(await page.locator('#estimate-result').innerText(),/Return needs review/);
+    assert.equal(await page.locator('#saved-version option').count(),5);
+
     assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
     await page.setViewportSize({width:390,height:844});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
@@ -263,7 +287,7 @@ let stage='startup';
     await page.locator('#login-panel').waitFor({state:'visible'});
     assert.equal((await context.request.get(fixture.origin+'/api/connected/tax/inputs?profile=orchard&business=business&year=2026')).status(),401);
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({rendered_payroll_correction_preserves_obligation:'passed',rendered_reserve_choices_and_periods:'passed',rendered_records_confirmation_saved_and_invalidated:'passed',rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
+    console.log(JSON.stringify({rendered_interest_protected_save_reopen:'passed',rendered_payroll_correction_preserves_obligation:'passed',rendered_reserve_choices_and_periods:'passed',rendered_records_confirmation_saved_and_invalidated:'passed',rendered_tax_save_reload_reopen:'passed',rendered_books_periods_documents_handoff:'passed',
       rendered_document_list_download_and_correction_choice:'passed',rendered_cash_explanation_amendment_persisted:'passed',rendered_payment_correction_preserves_unverified_original:'passed',rendered_entry_history_correction_choice:'passed',rendered_permitted_case_choice:'passed',rendered_foreign_scope_clears_data:true,rendered_logout_denies_tax:true,api_mocking:false,
       authentication:'actual browser password and OTP through HTTPS callback',browser_certificate_trust:'not verified; disposable self-signed fixture',
       browser_storage_empty:true,mobile_overflow:false,

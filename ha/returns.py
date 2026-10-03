@@ -2,6 +2,7 @@
 from decimal import Decimal
 from ha.engine.federal import bracket_tax
 from ha.rules import D, year_block
+from ha.interest import interest_totals
 
 SUPPORTED_YEARS=('2024','2025','2026')
 SOURCES={
@@ -25,11 +26,11 @@ def estimate_w2(data):
     year=str(data.get('tax_year','2025'))
     if year not in SUPPORTED_YEARS:raise ValueError('Unsupported tax year')
     if data.get('filing_status','single')!='single':raise ValueError('This W-2 preview supports single filing status only')
-    forms=data.get('w2s',[]);retirement=data.get('retirement_forms',[])
-    if any(not isinstance(items,list) or len(items)>100 for items in (forms,retirement)):
+    forms=data.get('w2s',[]);retirement=data.get('retirement_forms',[]);interest=data.get('interest_forms',[])
+    if any(not isinstance(items,list) or len(items)>100 for items in (forms,retirement,interest)):
         raise ValueError('Up to 100 documents of each supported type are allowed')
     wages=Decimal(0);withholding=Decimal(0);retirement_income=Decimal(0)
-    incomplete=not forms and not retirement;review_items=[]
+    incomplete=not forms and not retirement and not interest;review_items=[]
     for form in forms:
         if not isinstance(form,dict):raise ValueError('W-2 object required')
         for key in ('box1','box2'):
@@ -65,18 +66,21 @@ def estimate_w2(data):
             reasons.append('Capital gains, contributions or other special amounts require review before estimating.')
         if reasons:review_items.append({'form':'1099-R','index':index+1,'reasons':reasons});incomplete=True
         else:retirement_income+=reported
-    deduction=D(year_block(year)['standard_deduction']['single']);income=wages+retirement_income
+    taxable_interest,tax_exempt_interest,interest_withholding,interest_incomplete,interest_reviews=interest_totals(interest,_amount)
+    withholding+=interest_withholding;incomplete|=interest_incomplete;review_items.extend(interest_reviews)
+    deduction=D(year_block(year)['standard_deduction']['single']);income=wages+retirement_income+taxable_interest
     taxable=max(Decimal(0),income-deduction)
     tax=bracket_tax(taxable,year_block(year)['brackets']['single']).quantize(Decimal('.01'))
     net=withholding-tax
     needs_review=bool(review_items)
     return {'tax_year':year,'wages':float(wages),'retirement_income':float(retirement_income),
+            'taxable_interest':float(taxable_interest),'tax_exempt_interest':float(tax_exempt_interest),
             'income':float(income),'withholding':float(withholding),
             'standard_deduction':float(deduction),'taxable_income':float(taxable),
             'estimated_tax':None if needs_review else float(tax),
             'refund':None if needs_review else float(max(Decimal(0),net)),
             'balance_due':None if needs_review else float(max(Decimal(0),-net)),
             'incomplete':incomplete,'needs_review':needs_review,'review_items':review_items,
-            'may_prepare_return':False,'method':'W-2 wages and supported normal pension amounts; basic deduction and ordinary federal brackets only',
+            'may_prepare_return':False,'method':'W-2 wages, supported normal pension amounts and basic 1099-INT interest; basic deduction and ordinary federal brackets only',
             'excluded':['Credits, including EIC','Other income and adjustments','Age/blindness additions, senior and other deductions','Additional taxes and special distribution treatment','State and local returns'],
-            'sources':SOURCES[year]+([f'https://www.irs.gov/pub/irs-prior/f1099r--{year}.pdf'] if retirement and year!='2026' else ['https://www.irs.gov/pub/irs-pdf/f1099r.pdf'] if retirement else [])}
+            'sources':SOURCES[year]+(['https://www.irs.gov/instructions/i1040gi','https://www.irs.gov/pub/irs-pdf/f1099int.pdf'] if interest else [])+([f'https://www.irs.gov/pub/irs-prior/f1099r--{year}.pdf'] if retirement and year!='2026' else ['https://www.irs.gov/pub/irs-pdf/f1099r.pdf'] if retirement else [])}

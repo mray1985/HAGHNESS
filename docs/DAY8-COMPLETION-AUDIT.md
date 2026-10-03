@@ -97,3 +97,7 @@ versus $0 confirmed, with no superseded entry counted again. Run: 8.937 seconds.
 DATABASE-RESTORE-EVIDENCE.json records the proof. This supersedes the preceding
 payroll checkpoint's missing local recovery evidence; its off-host key custody,
 provider storage, hosted restore and activation gates still remain incomplete.
+
+## October 3: bank interest and practical return tools
+
+Added basic 1099-INT entry, multi-state rows and ordinary-interest estimate mapping. Full local PostgreSQL suite: 306 ran, 302 passed, four platform skips. Actual local MFA encrypted interest save/reopen passed with exact entries preserved; business review continued to hold the refund. Added in-page review/removal tools and missing/invalid-entry flags, preserved saved history and the legacy reference page, and held printing unavailable. Real HTTP browser tests include removal cancellation, recalculation and mobile fit. See INTEREST-ENTRY.md and TAX-TOOLS-AND-PAYMENT-RESEARCH.md. These checks do not prove full compliance, hosted readiness, actual payment/filing or an interest-specific backup restore.

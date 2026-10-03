@@ -6,7 +6,7 @@ PROFILE_FIELDS = frozenset(('firstName', 'lastName', 'ssn', 'birthday', 'address
 TEXT_FIELDS = frozenset(('type', 'layout', 'account', 'control', 'ein', 'employeeAddress', 'employeeName',
     'employerName', 'payerAddress', 'payerName', 'payerTin', 'ssn', 'rolled_over', 'special_treatment',
     'box1', 'box2', 'box2a', 'box3', 'box4', 'box5', 'box6', 'box7', 'box8', 'box8percent',
-    'box9a', 'box9b', 'box10', 'box11', 'box13', 'box14', 'box14b'))
+    'box9', 'box9a', 'box9b', 'box10', 'box11', 'box12', 'box13', 'box14', 'box14b'))
 BOOL_FIELDS = frozenset(('taxable_not_determined', 'total_distribution', 'corrected', 'ira', 'fatca'))
 STATE_FIELDS = frozenset(('state', 'id', 'wages', 'tax', 'localWages', 'localTax', 'locality'))
 
@@ -37,7 +37,7 @@ def validate_snapshot(value, year):
         text_map({k:v for k,v in form.items() if k in TEXT_FIELDS}, TEXT_FIELDS)
         if any(type(form[k]) is not bool for k in BOOL_FIELDS & form.keys()):
             raise ValueError('Boolean checkbox required')
-        if form.get('type', 'W-2') not in ('W-2', '1099-R'):
+        if form.get('type', 'W-2') not in ('W-2', '1099-R', '1099-INT'):
             raise ValueError('Unsupported input form')
         if form.get('layout', 'standard') not in ('standard', 'stacked'):
             raise ValueError('Unsupported input layout')

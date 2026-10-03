@@ -16,12 +16,19 @@ class TaxSnapshotTests(unittest.TestCase):
         value = self.snapshot()
         self.assertEqual(decode_snapshot(encode_snapshot(value, 2025), 2025), value)
         self.assertNotIn(b'estimated_tax', encode_snapshot(value, 2025))
+    def test_interest_document_roundtrip_preserves_exact_boxes_and_state_rows(self):
+        value=self.snapshot()
+        value['forms'].append({'type':'1099-INT','layout':'stacked','box1':'000.50',
+            'box9':'','box12':'0.00','box14':'fictional-CUSIP','corrected':False,
+            'special_treatment':'unsure','states':[{'state':'LA','id':'fictional','tax':'0.00'}]})
+        self.assertEqual(decode_snapshot(encode_snapshot(value,2025),2025),value)
+
     def test_reject_wrong_year_computed_values_unknown_fields_and_unbounded_data(self):
         for value in ({**self.snapshot(), 'year': '2026'},
                       {**self.snapshot(), 'estimate': {'refund': 100}},
                       {**self.snapshot(), 'profile': {'__proto__': 'bad'}},
                       {**self.snapshot(), 'forms': [{'box1': 1.2}]},
-                      {**self.snapshot(), 'forms': [{'type': '1099-INT'}]},
+                      {**self.snapshot(), 'forms': [{'type': '1099-OID'}]},
                       {**self.snapshot(), 'forms': [{'employeeName': 'x' * 2001}]},
                       {**self.snapshot(), 'active': True}):
             with self.subTest(value=value), self.assertRaises(ValueError): encode_snapshot(value, 2025)
