@@ -22,3 +22,16 @@ The runner emits newline-delimited JSON records with format ha-backup-attempt-v1
 The service template explicitly sends stdout/stderr to the systemd journal under ha-backup. Operators can inspect `journalctl -u ha-backup.service --output=cat` and the service exit status. A started record without a terminal record means completion is unknown, including interruption. An older completed record must not hide a newer failed or unfinished attempt. Journal retention, external collection and alert delivery still require provider/operator configuration; the template has not been installed or activated here.
 
 Verification: 23 targeted tests passed. An actual disabled runner invocation emitted started/failed with matching identifiers and exited 1, confirming failure evidence without attempting capture. Hosted successful scheduling is unverified. Output changed from prose to structured JSON; update any external parser before activation.
+
+
+## Assessing the latest observed attempt
+
+```sh
+journalctl -u ha-backup.service --output=cat --since "48 hours ago" --no-pager | python -m ha.connected.backup_attempts
+```
+
+Supply an ordered window containing complete attempt records. The reader accepts at most 1 MiB and 2,048 events. Unknown fields, duplicate JSON fields, unmatched/duplicate terminal events, future or out-of-order times fail closed. A truncated window starting with a terminal record is invalid; widen the window to include its start. Mixed non-JSON service messages also cause an invalid window rather than being silently ignored.
+
+The latest observed start determines the attempt being assessed. A newer failure or unfinished attempt overrides an older completed attempt, including when an older overlapping attempt finishes later. Exit 0 means the latest observed attempt reports completion within 36 hours; exit 1 means failed, unfinished, stale or no attempt observed; exit 2 means invalid/unavailable journal evidence. The result describes only the supplied journal window. It does not prove that no newer attempt exists elsewhere, verify the current off-host locator, authenticate archives, grant deletion authority or send alerts. Check locator availability separately.
+
+Actual disabled-runner output piped into this reader reported failed and exited 1. No backup capture or hosted service activation occurred. Targeted tests include late old completions, newer failures, interrupted attempts, stale/empty windows, malformed transitions, duplicate fields, oversize input and sanitized output.

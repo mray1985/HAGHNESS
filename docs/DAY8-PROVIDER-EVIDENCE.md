@@ -92,3 +92,6 @@ October 2 backup monitor: read-only known private off-host locator CLI distingui
 
 
 October 2 backup attempt journal: runner emits bounded structured started/completed/failed records with matching attempt ID and UTC times. Completion gates verified copy and off-host locator; failure hides exception details. Service template explicitly journals output. 23 targeted tests plus actual disabled failure invocation passed; independent review no important defects. Output format changed to JSON. Hosted scheduler/journal retention/external alerts remain unconfigured. See BACKUP-MONITORING.md.
+
+
+October 2 backup attempt assessment: bounded ordered JSONL journal reader assesses latest observed start, newer failure/unfinished overrides old success including overlapping old finish. Exactschema/duplicatefields/order/future/transition checks fail closed. 28 targetedtests and actual disabledrunner-to-reader pipeline passed; independentreview no important gaps. Read-only supplied-window evidence only; separate locator check needed. Hosted journal retention/scheduler/external alerts remain open. See BACKUP-MONITORING.md.
